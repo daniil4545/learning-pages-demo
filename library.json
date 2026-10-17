@@ -1,0 +1,57 @@
+[
+  {
+    "path": "lectures/lecture-library.html",
+    "title": "Как собирается библиотека лекций",
+    "description": "Идея, алгоритм, схемы и короткий подкаст о самом инструменте.",
+    "group": "Об устройстве библиотеки",
+    "audio": "audio/lecture-library.mp3"
+  },
+  {
+    "path": "lectures/local-llm-1-start.html",
+    "title": "Локальные модели: старт",
+    "description": "Файлы моделей, память, квантование и скорость.",
+    "group": "Локальные модели"
+  },
+  {
+    "path": "lectures/local-llm-2-hardware.html",
+    "title": "Железо для локальных моделей",
+    "description": "Память ускорителей и порядок расчёта оборудования.",
+    "group": "Локальные модели"
+  },
+  {
+    "path": "lectures/local-llm-3-serving.html",
+    "title": "Сервер моделей",
+    "description": "KV-кэш, параллельные запросы и параметры генерации.",
+    "group": "Локальные модели"
+  },
+  {
+    "path": "lectures/local-llm-4-finetuning.html",
+    "title": "Дообучение и LoRA",
+    "description": "Когда менять промпт, добавлять поиск или обучать модель.",
+    "group": "Локальные модели"
+  },
+  {
+    "path": "lectures/code-understanding.html",
+    "title": "Как понимать систему",
+    "description": "Чтение кода, теория системы и документы о решениях.",
+    "group": "Инженерная практика"
+  },
+  {
+    "path": "lectures/diagram-notations.html",
+    "title": "Как читать и рисовать схемы",
+    "description": "Контекст, компоненты, обмен сообщениями и состояния.",
+    "group": "Инженерная практика"
+  },
+  {
+    "path": "lectures/observability-lab.html",
+    "title": "Наблюдаемость: логи, метрики, трассировки",
+    "description": "Теория сбора сигналов и поиска причин сбоев.",
+    "group": "Инженерная практика"
+  },
+  {
+    "path": "lectures/reverse-engineering.html",
+    "title": "Понять устройство изнутри",
+    "description": "Реверс-инжиниринг устройств и применение ИИ.",
+    "group": "Инженерная практика"
+  }
+]

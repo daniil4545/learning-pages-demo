@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дообучение и LoRA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1f9e6e;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+    --s1:#3987e5; --s2:#d95926; --s3:#3fbf8a;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  --s1:#3987e5; --s2:#d95926; --s3:#3fbf8a;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px;max-height:calc(100vh - 48px);overflow-y:auto}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:7px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t,decimal-leading-zero);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:20px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+ul.plain,ol.plain{margin:0 0 14px;padding-left:22px;max-width:70ch}
+ul.plain li,ol.plain li{margin-bottom:6px}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+pre{font:13.5px/1.55 var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;overflow-x:auto;margin:12px 0 16px}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static;max-height:none}}
+
+/* callout */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+.watch{font-size:14.5px;background:var(--res-soft);border-radius:8px;padding:10px 14px;margin:14px 0;max-width:72ch}
+.watch b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--res);display:block;margin-bottom:6px}
+.watch ul{margin:0;padding-left:18px}
+.watch li{margin-bottom:4px}
+.xref{font-size:14.5px;background:var(--proc-soft);border-radius:8px;padding:10px 14px;margin:14px 0;max-width:72ch}
+.xref b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--proc);display:block;margin-bottom:6px}
+.xref p{margin:0 0 6px}
+
+details.recall{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:10px 0;max-width:72ch;font-size:15px}
+details.recall summary{cursor:pointer;font-weight:600}
+details.recall p{margin:8px 0 2px;color:var(--muted)}
+
+/* series navigation */
+nav.series{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:22px;font-size:14px}
+nav.series span{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+nav.series a{padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);text-decoration:none}
+nav.series a.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+nav.series a:hover,nav.series a:focus-visible{border-color:var(--accent)}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cap{font-size:13px;color:var(--muted);margin:-8px 0 16px}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+
+/* intro: advance organizer */
+.intro{background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:16px 20px 8px;margin:24px 0 0;max-width:78ch}
+.intro>b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:10px}
+.intro p{font-size:15px;color:var(--muted)}
+.intro ol{margin:0 0 10px;padding-left:22px}
+.intro li{margin-bottom:8px}
+.intro li a{font:600 11px/1 var(--mono);text-decoration:none;margin-left:4px}
+
+/* figure with inline svg */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px;position:relative}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .rs{fill:var(--res-soft);stroke:var(--res);stroke-width:1.5}
+svg .oks{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+svg .ws{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .sm{font-size:11px}
+svg .pt1{fill:var(--s1);stroke:var(--paper);stroke-width:2}
+svg .pt2{fill:var(--s2);stroke:var(--paper);stroke-width:2}
+svg .lp{fill:none;stroke:var(--proc);stroke-width:2.5}
+svg .lr{fill:none;stroke:var(--res);stroke-width:2.5}
+svg .dp{fill:var(--proc)}
+svg .dr{fill:var(--res)}
+svg .pt3{fill:var(--s3);stroke:var(--paper);stroke-width:2}
+svg .pt1:hover,svg .pt2:hover,svg .pt3:hover,svg .pt1:focus,svg .pt2:focus,svg .pt3:focus{stroke:var(--ink);outline:none}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.tip{position:absolute;pointer-events:none;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:13px;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;max-width:260px;z-index:2}
+
+/* walkthrough */
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+
+/* cards */
+.mist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:14px 0}
+.mist div{background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:14px}
+.mist b{display:block;color:var(--warn);font-size:13px;margin-bottom:3px}
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px 1fr;gap:6px}
+.ex div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.tier{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 4px;margin:14px 0}
+.tier h3{margin:0 0 8px}
+.tier .meta{font:600 12px/1.5 var(--mono);color:var(--muted);margin-bottom:8px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+@media print{body{background:#fff}nav.toc{display:none}.wrap{display:block}section{break-inside:avoid-page}}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Оглавление</p>
+  <ol>
+    <li><a href="#s-known">Что уже знаешь</a></li>
+    <li><a href="#s-ways">Три способа подстроить модель</a></li>
+    <li><a href="#s-sft">Дообучение</a></li>
+    <li><a href="#s-lora">LoRA</a></li>
+    <li><a href="#s-data">Данные для обучения</a></li>
+    <li><a href="#s-train">Обучение: инструмент, память, время</a></li>
+    <li><a href="#s-serve">Несколько адаптеров на сервере</a></li>
+    <li><a href="#s-eval">Оценка до и после</a></li>
+
+    <li><a href="#s-words">Словарь</a></li>
+    <li><a href="#s-watch">Что смотреть и читать</a></li>
+    <li><a href="#s-check">Контрольные вопросы</a></li>
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <nav class="series" aria-label="Серия лекций"><span>Серия «Локальные LLM»</span><a href="local-llm-1-start.html">1. Старт</a><a href="local-llm-2-hardware.html">2. Железо</a><a href="local-llm-3-serving.html">3. Сервер и работа с моделью</a><a class="on" href="local-llm-4-finetuning.html" aria-current="page">4. Дообучение и LoRA</a></nav>
+  <span class="eyebrow">Лекция 4 из 4 · 15.10.2026 · дообучение и LoRA</span>
+  <h1>Дообучение и LoRA: когда учить модель и как не научить её чужим ошибкам</h1>
+  <p class="lead">Лекции 1-3 объясняли запуск готовой модели. Теперь разберём, когда её стоит доучить. Сквозной пример условный: компания анализирует звонки с помощью внешнего оценщика. Числа в расчётах относятся к выбранным моделям и инструментам, а не к данным компании.</p>
+  <div class="intro">
+    <b>Коротко: вся лекция за две минуты</b>
+    <ol>
+      <li>Подстроить модель можно тремя способами: промпт с примерами, RAG и дообучение. Первые два ничего в модели не меняют, их пробуют раньше. <a href="#s-ways">02</a></li>
+      <li>Дообучение (SFT) показывает модели пары «вход - правильный ответ» и чуть сдвигает её веса. Модель учится тому, что есть в данных, включая ошибки. <a href="#s-sft">03</a></li>
+      <li>LoRA не трогает веса модели. Она учит маленькую добавку: две узкие матрицы на слой. Для Qwen3.6-27B это около 0,3% размера модели. <a href="#s-lora">04</a></li>
+      <li>Данные важнее метода. При 30% неверных ответов дообученная модель стала хуже исходной. Метки внешнего оценщика сначала проверяют. <a href="#s-data">05</a></li>
+      <li>LoRA для 27B в BF16 занимает около 56 ГБ, это одна карта на 80 ГБ. 3000 звонков за 3 эпохи - около 7 часов на H100 по расчёту. <a href="#s-train">06</a></li>
+      <li>vLLM держит одну базовую модель и несколько адаптеров. Запрос выбирает адаптер полем <code>model</code>. Cloud.ru Model RUN подключает до 5 адаптеров. <a href="#s-serve">07</a></li>
+      <li>Без отложенной выборки, проверенной людьми, нельзя сказать, стало ли лучше. Эталон делают до обучения. <a href="#s-eval">08</a></li>
+    </ol>
+  </div>
+<p class="library-edition">Учебная версия для публичной библиотеки. Рабочие сведения исключены, примеры обобщены. Версии и измерения сохранены на дату исходной лекции.</p></header>
+
+
+<section id="s-known">
+  <span class="num">01</span>
+  <h2>Что уже знаешь</h2>
+  <p>Лекция 4 опирается на факты лекций 1-3. Перечитай таблицу 1: каждый факт дальше превратится в число памяти, времени обучения или в флаг сервера.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Факт</th><th>Откуда</th><th>Во что превратится здесь</th></tr></thead>
+    <tbody>
+      <tr><td>Модель - это файл с весами; размер = параметры на байт на число</td><td><a href="local-llm-1-start.html#s-fit">лекция 1, раздел 05</a></td><td>память обучения: веса плюс состояние оптимизатора</td></tr>
+      <tr><td>FP8 вдвое меньше BF16</td><td><a href="local-llm-2-hardware.html#s-gen">лекция 2, раздел 04</a></td><td>учим от BF16, запускаем с FP8: нужна проверка</td></tr>
+      <tr><td>vLLM обслуживает поток запросов на карте</td><td><a href="local-llm-3-serving.html#s-engines">лекция 3, раздел 03</a></td><td>флаги <code>--enable-lora</code> и <code>--lora-modules</code></td></tr>
+      <tr><td>Ответ по JSON-схеме</td><td><a href="local-llm-3-serving.html#s-json">лекция 3, раздел 09</a></td><td>формат уже держит сервер, учить ему модель не нужно</td></tr>
+      <tr><td>Каппа Коэна мерит согласие двух оценщиков</td><td><a href="local-llm-3-serving.html#s-quality">лекция 3, раздел 12</a></td><td>метрика эталона: модель против человека</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 1 - Опорные факты лекций 1-3.</p>
+  <details class="recall"><summary>Проверь себя: сколько весит Qwen3.6-27B в BF16 и в FP8?</summary><p>27 млрд параметров по 2 байта - около 54 ГБ в BF16. В FP8 по 1 байту - около 27 ГБ.</p></details>
+  <details class="recall"><summary>Проверь себя: что гарантирует ответ по JSON-схеме?</summary><p>Сервер разрешает только токены, которые подходят под схему. Поэтому ответ всегда разбирается. Правильность оценок схема не гарантирует.</p></details>
+  <h3>Как проходить лекцию</h3>
+  <div class="ex">
+    <div><span><b>Вечер 1: способы и механизм.</b> Разделы 01-04 и вопросы 1-5.<small>Главное видео: <a href="https://youtu.be/PVeuQu1j6Y4">Как дообучить LLM с помощью LoRA</a> - Yandex Cloud, по-русски, смотреть с <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=450">7:30</a> до <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=1140">19:00</a>.</small></span></div>
+    <div><span><b>Вечер 2: данные и обучение.</b> Разделы 05-06 и вопросы 6-8.<small>Статья: <a href="https://habr.com/ru/articles/866148/">Обучение и fine-tuning моделей простым языком</a> - Хабр, Raft, 15 мин. Видео: <a href="https://youtu.be/mksE4b9s_Xo">Самый простой путь сделать Fine Tune</a> - ИИшенка, 13 мин, по-русски.</small></span></div>
+    <div><span><b>Вечер 3: сервер и оценка.</b> Разделы 07-09 и вопросы 9-13.<small>Видео: <a href="https://youtu.be/fW2AG7puIXo">Человек и LLM</a> - Ирина Барская, Яндекс, по-русски, с <a href="https://www.youtube.com/watch?v=fW2AG7puIXo&amp;t=840">14:00</a> до <a href="https://www.youtube.com/watch?v=fW2AG7puIXo&amp;t=1100">18:20</a>.</small></span></div>
+  </div>
+  <div class="q"><b>Вывод</b>Память, FP8, vLLM и каппа из лекций 1-3 здесь становятся бюджетом обучения, флагами сервера и метрикой эталона.</div>
+</section>
+
+
+<section id="s-ways">
+  <span class="num">02</span>
+  <h2>Три способа подстроить модель</h2>
+  <h3>Что это</h3>
+  <p>Подстроить модель под задачу - значит добиться, чтобы она отвечала так, как нужно тебе, а не как в среднем по интернету. Проще говоря, модель надо научить правилам компании: что считать возражением клиента и за что ставить 2, а за что 0. Знание можно положить в три места: в текст промпта, в базу, откуда его достаёт поиск, или в веса модели (рис. 1).</p>
+  <figure>
+    <div class="ttl">Рисунок 1 - Где живёт знание при трёх способах</div>
+    <svg class="d" viewBox="0 0 760 250" role="img" aria-label="Промпт с примерами: примеры вписаны в промпт. RAG: поиск достаёт похожие записи из базы и вставляет в промпт. Дообучение: данные один раз превращаются в адаптер, который подключается к модели.">
+      <text class="b" x="10" y="42">Промпт с примерами</text>
+      <rect class="box" x="200" y="20" width="170" height="44" rx="6"/><text x="285" y="47" text-anchor="middle">Промпт + 1-2 примера</text>
+      <line class="ln" x1="370" y1="42" x2="560" y2="42" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="562" y="20" width="190" height="44" rx="6"/><text class="b" x="657" y="47" text-anchor="middle">Модель без изменений</text>
+
+      <text class="b" x="10" y="122">RAG</text>
+      <rect class="soft" x="60" y="100" width="120" height="44" rx="6"/><text x="120" y="127" text-anchor="middle">База звонков</text>
+      <line class="ln" x1="180" y1="122" x2="198" y2="122" marker-end="url(#m-fill)"/>
+      <text class="sm mut lbl" x="189" y="96" text-anchor="middle">поиск</text>
+      <rect class="box" x="200" y="100" width="170" height="44" rx="6"/><text x="285" y="127" text-anchor="middle">Промпт + похожие</text>
+      <line class="ln" x1="370" y1="122" x2="560" y2="122" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="562" y="100" width="190" height="44" rx="6"/><text class="b" x="657" y="127" text-anchor="middle">Модель без изменений</text>
+
+      <text class="b" x="10" y="202">Дообучение</text>
+      <rect class="soft" x="110" y="180" width="90" height="44" rx="6"/><text x="155" y="207" text-anchor="middle">Данные</text>
+      <line class="ln" x1="200" y1="202" x2="230" y2="202" marker-end="url(#m-fill)"/>
+      <rect class="rs" x="232" y="180" width="120" height="44" rx="6"/><text x="292" y="200" text-anchor="middle">Обучение</text><text class="sm" x="292" y="215" text-anchor="middle">один раз, часы</text>
+      <line class="ln" x1="352" y1="202" x2="390" y2="202" marker-end="url(#m-fill)"/>
+      <rect class="oks" x="392" y="180" width="130" height="44" rx="6"/><text x="457" y="207" text-anchor="middle">Адаптер</text>
+      <line class="ln" x1="522" y1="202" x2="560" y2="202" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="562" y="180" width="190" height="44" rx="6"/><text class="b" x="657" y="207" text-anchor="middle">Модель + адаптер</text>
+    </svg>
+    <figcaption>Синий - модель, коричневый - шаг обучения, зелёный - его результат. Схема по разделам 02-04 этой лекции.</figcaption>
+  </figure>
+  <div class="read"><h3>Как читать рисунок 1</h3><ol>
+    <li>В первых двух строках модель не меняется: меняется только то, что ей подают на вход.</li>
+    <li>В третьей строке знание один раз переходит в адаптер, и дальше промпт может быть короче.</li>
+    <li>Вывод: первые два способа правятся за минуты, третий - за часы обучения.</li>
+  </ol></div>
+  <h3>Промпт с примерами</h3>
+  <p>Промпт с примерами (few-shot) - это промпт, в который вписаны несколько готовых пар «звонок - правильная оценка». Модель видит образцы и отвечает похоже. Способ дешёвый: правка занимает минуты, обучения нет. Предел - длина входа: звонок занимает 2,7-4,4 тыс. токенов, поэтому в промпт помещаются один-два примера. Каждый пример удлиняет prefill (чтение входа до первого токена ответа) каждого запроса.</p>
+  <h3>RAG</h3>
+  <p>RAG (Retrieval-Augmented Generation, генерация с поиском) - это схема, где перед вызовом модели поиск достаёт из базы нужные куски и вставляет их в промпт. Для звонков это подбор примеров: поиск находит в эталоне 2-3 звонка, похожих на текущий, и они идут в промпт как образцы. Поиск по смыслу работает через эмбеддинги (векторы, которые описывают смысл текста) и векторную базу; это разобрано в теории лабы 1. RAG хорош, когда знание часто меняется или его много: базу пополняют без обучения.</p>
+  <h3>Дообучение</h3>
+  <p>Дообучение - это продолжение обучения готовой модели на твоих примерах. Оно меняет поведение самой модели: модель отвечает нужным образом даже без длинных инструкций. Цена - данные хорошего качества, часы на карте и повтор обучения, когда правила меняются. Подробно - разделы 03-06.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Способ</th><th>Что меняется</th><th>Цена правки</th><th>Когда брать</th></tr></thead>
+    <tbody>
+      <tr><td>Промпт с примерами</td><td>вход модели</td><td>минуты</td><td>первым всегда; правила короткие и меняются</td></tr>
+      <tr><td>RAG, подбор примеров</td><td>вход модели, база</td><td>минуты, нужна база</td><td>много образцов, каждому запросу нужны свои</td></tr>
+      <tr><td>Дообучение, LoRA</td><td>адаптер к весам</td><td>часы на карте, проверка</td><td>промпт и RAG упёрлись, есть сотни проверенных примеров</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 2 - Три способа подстроить модель. Способы складываются: адаптер работает и с промптом, и с подобранными примерами.</p>
+  <div class="mist"><div><b>Дообучение не добавляет фактов надёжно</b>Если нужно, чтобы модель знала прайс или регламент, это задача RAG. Дообучение учит манере ответа: шкале, формату, что считать возражением. Факты из обучения модель путает и не может сослаться на источник.</div></div>
+  <div class="q"><b>Вывод</b>Сначала промпт, потом подбор примеров, потом дообучение. Каждый следующий шаг дороже и нужен, только если замер показал разрыв.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/PVeuQu1j6Y4">Как дообучить LLM с помощью LoRA Fine-tuning</a> - Yandex Cloud, 63 мин, по-русски. С <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=450">7:30</a> когда нужно дообучение, с <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=630">10:30</a> промпт против дообучения, с <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=840">14:00</a> RAG или дообучение, с <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=3360">56:00</a> совет начинать с промпта.</li>
+    <li><a href="https://youtu.be/sbMzUOXcyWw">Fine-tuning, RAG, Llama, prompt-engineering</a> - DeepSchool, 14 мин, по-русски. Обзор трёх способов: с <a href="https://www.youtube.com/watch?v=sbMzUOXcyWw&amp;t=470">7:50</a> промпт, с <a href="https://www.youtube.com/watch?v=sbMzUOXcyWw&amp;t=530">8:50</a> RAG, с <a href="https://www.youtube.com/watch?v=sbMzUOXcyWw&amp;t=595">9:55</a> дообучение.</li>
+    <li><a href="https://habr.com/ru/articles/940868/">Смерть fine-tuning? Почему RAG и промпт-инженерия вытесняют дообучение</a> - Хабр, Cloud.ru: разделы «Где RAG однозначно выгоднее» и «Когда нужен fine-tuning».</li>
+  </ul></div>
+</section>
+
+
+<section id="s-sft">
+  <span class="num">03</span>
+  <h2>Дообучение</h2>
+  <h3>Что это</h3>
+  <p>Дообучение с учителем (SFT, supervised fine-tuning) - это обучение модели на парах «вход - правильный ответ». Проще говоря, ты показываешь модели тысячу решённых задач, и она подстраивается решать так же. Модель читает вход, пытается предсказать ответ по токенам, сравнивает с правильным, и обучение чуть сдвигает веса так, чтобы ошибка стала меньше. Один проход по всем примерам называется эпохой (epoch); обычно делают 2-3 эпохи.</p>
+  <h3>Минимальный пример</h3>
+  <p>Один пример обучения для звонка - это диалог в формате сообщений чата. Ниже синтетика, реальные звонки в лекцию не попадают:</p>
+  <pre>{"messages": [
+  {"role": "system",
+   "content": "Оцени звонок. Возражения: 0 - не отработал, 1 - частично, 2 - отработал, НП - не было."},
+  {"role": "user",
+   "content": "Менеджер: ... Клиент: дорого ... Менеджер: давайте посчитаем окупаемость ..."},
+  {"role": "assistant",
+   "content": "{\"Возражения\": 2, \"Объяснение\": \"Клиент назвал цену, менеджер посчитал окупаемость.\"}"}
+]}</pre>
+  <p>Здесь <code>system</code> - промпт отчёта, <code>user</code> - расшифровка звонка, <code>assistant</code> - правильный ответ.</p>
+  <p>Модель учится только на последнем сообщении. Инструмент обучения маскирует промпт и расшифровку: ошибку на их токенах он не считает. Ошибка считается только по токенам ответа, а промпт и расшифровка служат условием задачи. Если в поле <code>assistant</code> лежит неверная оценка, модель старательно выучит неверную оценку.</p>
+  <h3>Полное дообучение и PEFT</h3>
+  <p>Полное дообучение (full fine-tuning) меняет все веса модели. Градиент - это направление и величина, на которую надо сдвинуть вес, чтобы ошибка уменьшилась. Оптимизатор Adam - алгоритм, который сдвигает веса по градиентам и хранит для каждого веса два своих числа. При обучении со смешанной точностью (веса в 16 битах, копия и состояния Adam в 32) на каждый параметр уходит около 16 байт: веса, градиенты, копия весов и два состояния оптимизатора<a class="ref" href="#r14">14</a>. Для 27 млрд параметров это около 432 ГБ, то есть 6 карт по 80 ГБ. PEFT (Parameter-Efficient Fine-Tuning) - семейство методов, которые учат малую часть параметров и оставляют остальные замороженными. Самый распространённый из них - LoRA (раздел 04).</p>
+  <div class="q"><b>Вывод</b>SFT учит модель повторять ответы из данных. Полное дообучение 27B требует сотен гигабайт, поэтому на одной карте учат LoRA.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/mksE4b9s_Xo">Самый простой путь сделать Fine Tune модели для Ollama</a> - ИИшенка, 13 мин, по-русски. С <a href="https://www.youtube.com/watch?v=mksE4b9s_Xo&amp;t=85">1:25</a> три случая, когда дообучение нужно.</li>
+    <li><a href="https://habr.com/ru/articles/866148/">Обучение и fine-tuning моделей простым языком</a> - Хабр, Raft: полное дообучение и PEFT, требования к данным.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-lora">
+  <span class="num">04</span>
+  <h2>LoRA</h2>
+  <h3>Что это</h3>
+  <p>LoRA (Low-Rank Adaptation, низкоранговая адаптация) - это способ дообучения, при котором веса модели заморожены, а рядом с выбранными матрицами учится маленькая добавка<a class="ref" href="#r1">1</a>. Проще говоря, модель остаётся как есть, а к ней прикрепляется тонкая поправка. Добавка - это две узкие матрицы A и B. Их произведение имеет тот же размер, что и матрица слоя, но параметров в них в сотни раз меньше (рис. 2).</p>
+  <figure>
+    <div class="ttl">Рисунок 2 - Слой с LoRA: большая матрица заморожена, учится обходной путь через ранг r</div>
+    <svg class="d" viewBox="0 0 760 230" role="img" aria-label="Вход x идёт в два пути. Верхний: замороженная матрица W размером 5120 на 17408. Нижний: матрица A сжимает до 16 чисел, матрица B разворачивает обратно до 17408. Выходы складываются.">
+      <rect class="box" x="10" y="90" width="80" height="50" rx="6"/><text class="b" x="50" y="112" text-anchor="middle">Вход x</text><text class="sm mut" x="50" y="128" text-anchor="middle">5120 чисел</text>
+      <line class="ln" x1="90" y1="105" x2="250" y2="52" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="90" y1="125" x2="200" y2="172" marker-end="url(#m-fill)"/>
+      <rect class="soft" x="252" y="22" width="300" height="60" rx="6"/><text class="b" x="402" y="46" text-anchor="middle">W, заморожена</text><text class="sm mut" x="402" y="64" text-anchor="middle">5120 x 17408 = 89 млн параметров</text>
+      <rect class="oks" x="202" y="148" width="150" height="50" rx="6"/><text class="b" x="277" y="170" text-anchor="middle">A: сжать</text><text class="sm" x="277" y="186" text-anchor="middle">5120 в 16</text>
+      <line class="ln" x1="352" y1="173" x2="400" y2="173" marker-end="url(#m-fill)"/>
+      <rect class="oks" x="402" y="148" width="150" height="50" rx="6"/><text class="b" x="477" y="170" text-anchor="middle">B: развернуть</text><text class="sm" x="477" y="186" text-anchor="middle">16 в 17408</text>
+      <line class="ln" x1="552" y1="52" x2="620" y2="104" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="552" y1="173" x2="620" y2="126" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="622" y="90" width="130" height="50" rx="6"/><text class="b" x="687" y="112" text-anchor="middle">Сумма</text><text class="sm" x="687" y="128" text-anchor="middle">Wx + BAx</text>
+      <text class="sm mut" x="377" y="218" text-anchor="middle">учатся только A и B: 16 x (5120 + 17408) = 360 448 параметров, 0,4% от W</text>
+    </svg>
+    <figcaption>Размеры - матрица gate_proj слоя Qwen3.6-27B, ранг 16. Серая рамка заморожена, зелёные учатся. Множитель alpha / r для простоты не показан. 0,4% - доля одной матрицы; весь адаптер - 0,3% модели. Механизм по статье LoRA<a class="ref" href="#r1">1</a>, размеры по config.json<a class="ref" href="#r6">6</a>.</figcaption>
+  </figure>
+  <div class="read"><h3>Как читать рисунок 2</h3><ol>
+    <li>Вход идёт двумя путями. Верхний - обычный слой модели, он не меняется.</li>
+    <li>Нижний путь сжимает вход до 16 чисел и разворачивает обратно. Это и есть адаптер.</li>
+    <li>Выходы складываются. В начале обучения B равна нулю, и модель отвечает как раньше.</li>
+    <li>Вывод: поправка ограничена рангом, поэтому она маленькая и не ломает модель целиком.</li>
+  </ol></div>
+  <h3>Ранг и alpha</h3>
+  <p>Ранг (rank, r) - это ширина узкого места между A и B. Чем больше ранг, тем сложнее поправка, которую может выучить адаптер, и тем он больше. В официальном примере LLaMA-Factory стоит ранг 8<a class="ref" href="#r4">4</a>, в примерах этой лекции - 16. Alpha (<code>lora_alpha</code>) - множитель вклада поправки: выход адаптера умножается на alpha / r. Авторы LoRA ставили alpha равным первому опробованному рангу и больше его не подбирали<a class="ref" href="#r1">1</a>.</p>
+  <h3>Какие слои учить</h3>
+  <p>Target modules - это список матриц, к которым прикрепляют адаптер. Обычно берут матрицы внимания (q, k, v, o) и матрицы MLP-блока (gate, up, down); MLP-блок - небольшая сеть внутри каждого слоя, которая обрабатывает каждый токен отдельно. У Qwen3.6-27B 48 из 64 слоёв - линейное внимание (вариант внимания с состоянием постоянного размера вместо KV-кэша) с другими матрицами, <code>in_proj_qkv</code> и <code>in_proj_z</code>. vLLM до версии 0.29.0 падал, если адаптер трогал одну из этой пары без другой<a class="ref" href="#r12">12</a>. Безопасно учить q, k, v, o и gate, up, down.</p>
+  <h3>Сколько весит адаптер</h3>
+  <p>Посчитаем для Qwen3.6-27B с рангом 16 на q, k, v, o в 16 слоях полного внимания и gate, up, down во всех 64 слоях. MLP даёт 64 x 3 матрицы по 0,36 млн, около 69 млн параметров. Внимание даёт около 9-10 млн. Итого около 80 млн параметров, или около 160 МБ в BF16. Это 0,3% от 54 ГБ модели.</p>
+  <h3>QLoRA</h3>
+  <p>QLoRA - это LoRA поверх модели, квантованной в 4 бита<a class="ref" href="#r2">2</a>. Замороженные веса хранятся в 4 битах, адаптер учится в 16. Так авторы дообучили модель 65B на одной карте 48 ГБ. Для Qwen3.5 и Qwen3.6 Unsloth QLoRA не рекомендует: квантование этой архитектуры даёт большую разницу с исходной моделью<a class="ref" href="#r5">5</a>. На карте 80 ГБ 27B влезает и без него.</p>
+  <div class="xref"><b>Вспомни лекцию 1</b><p>Модель в лекции 1 была файлом весов, и размер считался как параметры на байт. Адаптер - такой же файл, только на 160 МБ вместо 54 ГБ. Поэтому их можно держать десятки и подключать к одной модели (раздел 07).</p></div>
+  <div class="q"><b>Вывод</b>LoRA учит две узкие матрицы на слой и не трогает модель. Адаптер к 27B весит около 160 МБ и подключается к базе при запуске.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/t1caDsMzWBk">LoRA &amp; QLoRA Fine-tuning Explained In-Depth</a> - Mark Hennings, 15 мин, на английском; русского видео про ранг и alpha нет. С <a href="https://www.youtube.com/watch?v=t1caDsMzWBk&amp;t=139">2:19</a> идея LoRA, с <a href="https://www.youtube.com/watch?v=t1caDsMzWBk&amp;t=389">6:29</a> выбор ранга, с <a href="https://www.youtube.com/watch?v=t1caDsMzWBk&amp;t=484">8:04</a> QLoRA, с <a href="https://www.youtube.com/watch?v=t1caDsMzWBk&amp;t=677">11:17</a> alpha.</li>
+    <li><a href="https://habr.com/ru/articles/935286/">Оптимизация LLM: LoRA и QLoRA</a> - Хабр, OTUS: картинка с двумя узкими матрицами и QLoRA.</li>
+    <li><a href="https://habr.com/ru/articles/925886/">От понимания файнтюнинга LLM до мультимодальных моделей</a> - Хабр: раздел 4 «Какие модули дообучать».</li>
+    <li>Видео Yandex Cloud с <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=1020">17:00</a> до <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=1140">19:00</a>: идея разложения матрицы изменений.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-data">
+  <span class="num">05</span>
+  <h2>Данные для обучения</h2>
+  <h3>Почему данные важнее метода</h3>
+  <p>Шум в метках (label noise) - это доля примеров, где ответ в данных неверный. Модель не знает, какие ответы неверные, и учит их наравне с верными. В статье RobustFT модель Llama 3.1 8B без дообучения набирала 65,3 на тесте MMLU (вопросы с вариантами ответа по 57 предметам). После SFT на данных с 30% неверных ответов она набрала 59,5, с 50% - 47,5<a class="ref" href="#r7">7</a>. Из этого видно, что при 30% шума дообучение сделало модель хуже, чем без него.</p>
+  <h3>Чьи метки в выгрузке внешнего оценщика</h3>
+  <p>Оценки в выгрузке поставила LLM внешнего оценщика, а не люди. Модель, обученная на них, станет копией внешнего оценщика вместе с её ошибками. Это дистилляция (distillation): ученик учится на ответах учителя и в лучшем случае догоняет его. Если отчёт оценщика менялся без пересчёта старых записей, в выгрузке могут смешаться разные версии разметки.</p>
+  <h3>Как очистить метки без ручного просмотра всех</h3>
+  <p>Предположим, набор содержит тысячи звонков. Полностью проверить их вручную дорого. Поэтому человек смотрит только те звонки, где есть повод сомневаться (рис. 3). Учитель - модель в примере с актуальным промптом - заново оценивает каждый звонок три раза. Если три прогона учителя и Внешний оценщик совпали, метку берут. Если нет, звонок уходит человеку. Отдельная случайная выборка идёт человеку для эталона (раздел 08); эти звонки в обучение не попадают.</p>
+  <figure>
+    <div class="ttl">Рисунок 3 - Чистка меток: человек видит только спорные звонки и случайную выборку</div>
+    <svg class="d" viewBox="0 0 760 210" role="img" aria-label="Выгрузка очищается от персональных данных, учитель переразмечает звонки трижды, затем проверка: согласен ли учитель с внешним оценщиком. Да - метка идёт в набор. Нет - звонок смотрит человек и исправляет метку. Отдельно случайная выборка идёт человеку для эталона.">
+      <rect class="soft" x="6" y="70" width="100" height="50" rx="6"/><text class="b" x="56" y="92" text-anchor="middle">Выгрузка</text><text class="sm mut" x="56" y="108" text-anchor="middle">3000 звонков</text>
+      <line class="ln" x1="106" y1="95" x2="130" y2="95" marker-end="url(#m-fill)"/>
+      <rect class="box" x="132" y="70" width="110" height="50" rx="6"/><text class="b" x="187" y="92" text-anchor="middle">Очистка ПДн</text><text class="sm mut" x="187" y="108" text-anchor="middle">наш CLI scrub</text>
+      <line class="ln" x1="242" y1="95" x2="266" y2="95" marker-end="url(#m-fill)"/>
+      <rect class="rs" x="268" y="70" width="130" height="50" rx="6"/><text class="b" x="333" y="92" text-anchor="middle">Учитель</text><text class="sm" x="333" y="108" text-anchor="middle">3 прогона</text>
+      <line class="ln" x1="398" y1="95" x2="422" y2="95" marker-end="url(#m-fill)"/>
+      <polygon class="box" points="500,58 580,95 500,132 420,95"/><text class="sm" x="500" y="92" text-anchor="middle">3 прогона</text><text class="sm" x="500" y="105" text-anchor="middle">и Внешний оценщик совпали?</text>
+      <line class="ln" x1="578" y1="95" x2="620" y2="45" marker-end="url(#m-fill)"/><text class="sm lbl" x="575" y="58">да</text>
+      <line class="ln" x1="578" y1="95" x2="620" y2="150" marker-end="url(#m-fill)"/><text class="sm lbl" x="575" y="140">нет</text>
+      <rect class="oks" x="622" y="20" width="132" height="50" rx="6"/><text class="b" x="688" y="42" text-anchor="middle">В набор</text><text class="sm" x="688" y="58" text-anchor="middle">метка принята</text>
+      <rect class="hl" x="622" y="125" width="132" height="50" rx="6"/><text class="b" x="688" y="147" text-anchor="middle">Человек</text><text class="sm" x="688" y="163" text-anchor="middle">исправляет метку</text>
+      <text class="sm mut" x="380" y="196" text-anchor="middle">отдельно: 230-340 случайных звонков человеку для эталона, в обучение не идут (раздел 08)</text>
+    </svg>
+    <figcaption>Схема по разведке проекта звонков, раздел 4 итога разведки. Исправлять метку лучше, чем выбрасывать пример<a class="ref" href="#r9">9</a>.</figcaption>
+  </figure>
+  <div class="read"><h3>Как читать рисунок 3</h3><ol>
+    <li>Начни слева: выгрузку сначала чистят от персональных данных (ПДн): имён, телефонов, адресов.</li>
+    <li>Учитель оценивает каждый звонок трижды по актуальному промпту.</li>
+    <li>Ромб делит звонки: согласные метки идут в набор, спорные - человеку.</li>
+    <li>Вывод: время человека уходит только на спорные звонки и на эталон.</li>
+  </ol></div>
+  <h3>Серия промптов как польза</h3>
+  <p>Смена промптов даёт и пользу. Если обучать на одном тексте промпта, модель привыкает к его словам. В статье PAFT замена одного слова в промпте снизила точность с 86,27% до 66,93%<a class="ref" href="#r8">8</a>. Обучение на разных формулировках промпта делает модель устойчивее к правке. Период - отрезок времени, когда текст отчёта внешнего оценщика не менялся. Тексты промптов разных периодов дают готовые разные формулировки. Учитель размечает звонок по нескольким версиям промпта, и каждая пара «версия промпта + ответ учителя по ней» согласована. Для этого нужны тексты промптов каждого периода.</p>
+  <h3>Сколько примеров нужно</h3>
+  <p>Точного ответа для оценки звонков нет ни в одном источнике. Prometheus, модель-оценщик по рубрикам, учили на 100 тыс. ответов и 1 тыс. рубрик, и она согласуется с людьми не хуже GPT-4<a class="ref" href="#r16">16</a>. Авито обучал LoRA на 7B по автоматической разметке и сверял её с тремя асессорами<a class="ref" href="#r10">10</a>. Для 15-20 параметров отчёта ответ даст своя кривая: качество на 500, 1000 и 3000 примерах.</p>
+  <div class="q"><b>Вывод</b>Обучение повторяет ошибки данных. Метки внешнего оценщика переразмечает учитель, спорные проверяет человек, а смена промптов становится материалом для устойчивости.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/ERQjinUpBkg">Как сделать массовую разметку данных полностью на LLM</a> - Елена Корнилина, Яндекс, 31 мин, по-русски. С <a href="https://www.youtube.com/watch?v=ERQjinUpBkg&amp;t=320">5:20</a> почему SFT-модель наследует ошибки старой разметки, с <a href="https://www.youtube.com/watch?v=ERQjinUpBkg&amp;t=600">10:00</a> из чего собрать эталон.</li>
+    <li>Видео Yandex Cloud: с <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=510">8:30</a> и с <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=930">15:30</a> дистилляция, учитель размечает и ученик учится; с <a href="https://www.youtube.com/watch?v=PVeuQu1j6Y4&amp;t=1290">21:30</a> формат датасета.</li>
+    <li><a href="https://youtu.be/VxAV709I0hg">Дистилляция моделей OpenAI на практике</a> - Академия OpenAI, 54 мин, русский дубляж. С <a href="https://www.youtube.com/watch?v=VxAV709I0hg&amp;t=115">1:55</a> понятия, с <a href="https://www.youtube.com/watch?v=VxAV709I0hg&amp;t=1203">20:03</a> оценка результата, с <a href="https://www.youtube.com/watch?v=VxAV709I0hg&amp;t=2448">40:48</a> когда дистиллировать.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-train">
+  <span class="num">06</span>
+  <h2>Обучение: инструмент, память, время</h2>
+  <h3>Инструменты</h3>
+  <p>Инструмент обучения (trainer) - это программа, которая читает данные, собирает батчи (пачки примеров на один шаг), считает ошибку и обновляет адаптер. Все пять распространённых инструментов открыты под Apache 2.0 и умеют LoRA (табл. 3).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Инструмент</th><th>Версия</th><th>Qwen3.6-27B</th><th>Как запускать</th><th>Когда брать</th></tr></thead>
+    <tbody>
+      <tr><td>LLaMA-Factory</td><td class="n">0.9.5</td><td>в списке, шаблон <code>qwen3_6</code></td><td>YAML, <code>llamafactory-cli train</code></td><td>конфиг в git, веб-интерфейс</td></tr>
+      <tr><td>ms-swift</td><td class="n">4.6.0</td><td>в списке, включая FP8</td><td><code>swift sft</code> с аргументами</td><td>альтернатива LLaMA-Factory</td></tr>
+      <tr><td>Unsloth</td><td class="n">2026.10.5</td><td>гайд по Qwen3.5</td><td>Python</td><td>мало памяти, нужна скорость</td></tr>
+      <tr><td>Axolotl</td><td class="n">0.20.0</td><td>27B не заявлен</td><td>YAML</td><td>пакинг (склейка коротких примеров в одну строку), экономия памяти</td></tr>
+      <tr><td>TRL + PEFT</td><td class="n">1.15.0</td><td>через transformers</td><td>Python</td><td>полный контроль, больше своего кода</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 3 - Инструменты обучения LoRA. Версии и лицензии на 15.10.2026 по PyPI и GitHub, пересказ разведки<a class="ref" href="#r4">4</a><a class="ref" href="#r5">5</a>.</p>
+  <h3>Минимальный конфиг</h3>
+  <p>Конфиг LLaMA-Factory - это YAML-файл: какая модель, какой метод, какие данные, куда сохранить. Ниже пример на основе официального <code>qwen3_lora_sft.yaml</code>, с моделью и шаблоном для Qwen3.6:</p>
+  <pre>### model
+model_name_or_path: Qwen/Qwen3.6-27B   # BF16-оригинал, не FP8
+### method
+stage: sft                             # дообучение с учителем
+do_train: true
+finetuning_type: lora                  # учим адаптер, веса заморожены
+lora_rank: 16                          # ширина узкого места A и B
+lora_alpha: 32                         # по умолчанию в LLaMA-Factory alpha = 2 x ранг
+lora_target: q_proj,k_proj,v_proj,o_proj,gate_proj,up_proj,down_proj
+### dataset
+dataset: calls_clean                   # очищенный набор, описан в dataset_info.json
+template: qwen3_6                      # шаблон чата Qwen3.6
+cutoff_len: 8192                       # звонок до 4,4 тыс. токенов, с промптом и ответом около 5 тыс.
+### output
+output_dir: saves/qwen3.6-27b/lora/calls
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 8         # 8 примеров на один шаг обновления
+learning_rate: 1.0e-4
+num_train_epochs: 3.0
+bf16: true</pre>
+  <p>Из конфига видно, что модель берут в BF16: обучение от FP8-весов не подтверждено ни одним инструментом, кроме списка ms-swift. Запуск - одна команда <code>llamafactory-cli train calls.yaml</code>, результат - папка с адаптером.</p>
+  <h3>Память</h3>
+  <p>Память обучения LoRA - это замороженные веса, адаптер с его градиентами и состоянием оптимизатора и активации. Активации - промежуточные результаты слоёв, которые нужны для подсчёта градиентов. Unsloth даёт для Qwen3.5-27B в BF16 около 56 ГБ на короткой длине<a class="ref" href="#r5">5</a>. На длине 8 тыс. токенов растут логиты - оценки модели для каждого слова словаря на каждой позиции: 8192 позиции на 248 320 слов по 4 байта - около 8 ГБ. Вместе с активациями карта на 80 ГБ (A100 или H100) заполняется впритык. Это расчёт, замера пока нет.</p>
+  <h3>Время</h3>
+  <p>Время обучения считается по числу токенов. 3000 звонков по 5 тыс. токенов вместе с промптом и ответом - 15 млн токенов на эпоху, 45 млн за три эпохи. На токен обучение тратит около 6 операций на параметр: проход вперёд, проход назад и повтор прохода вперёд при экономии памяти. 6 на 27 млрд на 45 млн - около 7,3 на 10<sup>18</sup> операций. H100 даёт около 989 TFLOPS в BF16, A100 - 312 (<a href="local-llm-2-hardware.html#s-dc">лекция 2, раздел 07</a>). При загрузке карты на 30% выходит около 7 часов на H100 и около 22 часов на A100. Это расчёт, загрузку 30% покажет только замер.</p>
+  <div class="mist"><div><b>Обучение в Cloud.ru ML Finetuning не подходит для звонков</b>Услуга берёт модель, данные и отдаёт результат только через Hugging Face, то есть вне РФ<a class="ref" href="#r11">11</a>. Для звонков с ПДн остаются виртуальная машина (ВМ) с GPU в Cloud.ru по заявке или своё железо.</div></div>
+  <div class="q"><b>Вывод</b>LoRA для 27B - это один YAML-файл, одна карта на 80 ГБ и около 7 часов на H100 по расчёту. Учат от BF16-оригинала.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li>Видео ИИшенки: с <a href="https://www.youtube.com/watch?v=mksE4b9s_Xo&amp;t=339">5:39</a> данные, с <a href="https://www.youtube.com/watch?v=mksE4b9s_Xo&amp;t=494">8:14</a> адаптеры LoRA, с <a href="https://www.youtube.com/watch?v=mksE4b9s_Xo&amp;t=599">9:59</a> запуск, с <a href="https://www.youtube.com/watch?v=mksE4b9s_Xo&amp;t=645">10:45</a> ответы до и после. Unsloth в Colab на 500 примерах.</li>
+    <li><a href="https://habr.com/ru/articles/932504/">Finetuning Qwen 3 на RTX4090: полный гайд с Unsloth</a> - Хабр, Raft: подготовка модели, датасета и параметров.</li>
+    <li><a href="https://llamafactory.readthedocs.io/en/latest/getting_started/sft.html">LLaMA-Factory, SFT</a> - документация, на английском: запуск по YAML.</li>
+    <li><a href="https://youtu.be/zHdRN9jblaE">LLM Fine-tuning - No-code workflow using Llama Factory</a> - Noob ML Dude, 19 мин, на английском. С <a href="https://www.youtube.com/watch?v=zHdRN9jblaE&amp;t=236">3:56</a> датасет, с <a href="https://www.youtube.com/watch?v=zHdRN9jblaE&amp;t=397">6:37</a> настройки.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-serve">
+  <span class="num">07</span>
+  <h2>Несколько адаптеров на сервере</h2>
+  <h3>Как это работает</h3>
+  <p>Multi-LoRA - это режим сервера, при котором одна базовая модель в памяти обслуживает запросы к нескольким адаптерам. Сервер загружает базу один раз, а адаптеры держит рядом. Запрос называет адаптер в поле <code>model</code>, как будто это отдельная модель<a class="ref" href="#r3">3</a>. Запросы к разным адаптерам и к базе идут в одном батче (рис. 4).</p>
+  <figure>
+    <div class="ttl">Рисунок 4 - Одна модель в памяти, несколько адаптеров</div>
+    <svg class="d" viewBox="0 0 760 200" role="img" aria-label="Три запроса с полем model: calls, lawyers, базовая модель. Сервер vLLM держит базовую модель 27 ГБ и адаптеры по 160 МБ. Каждый запрос считается базой плюс своим адаптером.">
+      <rect class="box" x="6" y="20" width="180" height="40" rx="6"/><text x="96" y="45" text-anchor="middle">model: "calls"</text>
+      <rect class="box" x="6" y="80" width="180" height="40" rx="6"/><text x="96" y="105" text-anchor="middle">model: "lawyers"</text>
+      <rect class="box" x="6" y="140" width="180" height="40" rx="6"/><text x="96" y="165" text-anchor="middle">model: базовая</text>
+      <line class="ln" x1="186" y1="40" x2="258" y2="90" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="186" y1="100" x2="258" y2="100" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="186" y1="160" x2="258" y2="110" marker-end="url(#m-fill)"/>
+      <rect class="soft" x="260" y="10" width="494" height="180" rx="8"/><text class="b" x="276" y="32">Сервер vLLM, одна карта</text>
+      <rect class="hl" x="280" y="50" width="220" height="120" rx="6"/><text class="b" x="390" y="100" text-anchor="middle">Qwen3.6-27B FP8</text><text class="sm" x="390" y="118" text-anchor="middle">в памяти один раз, 27 ГБ</text>
+      <rect class="oks" x="530" y="50" width="200" height="34" rx="6"/><text x="630" y="72" text-anchor="middle">адаптер calls, 160 МБ</text>
+      <rect class="oks" x="530" y="94" width="200" height="34" rx="6"/><text x="630" y="116" text-anchor="middle">адаптер lawyers, 160 МБ</text>
+      <rect class="box" x="530" y="138" width="200" height="34" rx="6"/><text class="mut" x="630" y="160" text-anchor="middle">ещё до 3 в Model RUN</text>
+    </svg>
+    <figcaption>Механизм по документации vLLM<a class="ref" href="#r3">3</a>; лимит 5 адаптеров - Cloud.ru Model RUN<a class="ref" href="#r11">11</a>. Адаптер lawyers - пример будущего направления, его нет.</figcaption>
+  </figure>
+  <div class="read"><h3>Как читать рисунок 4</h3><ol>
+    <li>Слева запросы: каждый называет свою «модель».</li>
+    <li>Справа сервер: база одна, адаптеры маленькие и лежат рядом.</li>
+    <li>Вывод: новое направление компании - это новый адаптер, а не новая карта.</li>
+  </ol></div>
+  <h3>Запуск в vLLM</h3>
+  <p>Команда ниже поднимает сервер с базой и одним адаптером. Флаги взяты из документации vLLM:</p>
+  <pre># --enable-lora      включить адаптеры
+# --lora-modules     имя=путь к папке адаптера
+# --max-lora-rank    по реальному рангу: запас занимает память
+# --max-loras        сколько адаптеров в одном батче
+vllm serve Qwen/Qwen3.6-27B-FP8 \
+  --enable-lora \
+  --lora-modules calls=/models/lora-calls \
+  --max-lora-rank 16 \
+  --max-loras 2</pre>
+  <p>Запрос к адаптеру отличается от обычного только полем <code>model</code>: <code>"model": "calls"</code>. Без адаптера запрос называет базовую модель и получает её ответ. Список адаптеров отдаёт <code>GET /v1/models</code>.</p>
+  <h3>Cloud.ru Model RUN</h3>
+  <p>В форме Model RUN можно добавить до 5 LoRA-адаптеров к основной модели, источник - Hugging Face или Model Registry; в API это поля <code>loraModules</code>, <code>maxLoras</code>, <code>maxLoraRank</code><a class="ref" href="#r11">11</a>. Для Qwen3.6 нужна версия vLLM не ниже 0.29.0: в ней исправлена ошибка адаптеров на слоях линейного внимания<a class="ref" href="#r12">12</a>.</p>
+  <div class="xref"><b>Вспомни лекцию 3</b><p>Непрерывный батчинг из лекции 3 работает и с адаптерами: запросы к разным адаптерам идут в одном батче. Каждый адаптер добавляет немного вычислений, поэтому <code>--max-lora-rank</code> ставят по реальному рангу, а не с запасом.</p></div>
+  <div class="q"><b>Вывод</b>Одна карта держит базу и несколько адаптеров, запрос выбирает адаптер полем <code>model</code>. Model RUN даёт до 5 адаптеров.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://docs.vllm.ai/en/latest/features/lora/">vLLM, LoRA Adapters</a> - документация, на английском: разделы Serving LoRA Adapters и Dynamically serving. Русских материалов по теме нет.</li>
+    <li><a href="https://youtu.be/ZalNVkpZoUw">Serve Multiple LoRA Adapters on a Single GPU</a> - Trelis Research, 57 мин, на английском. С <a href="https://www.youtube.com/watch?v=ZalNVkpZoUw&amp;t=1680">28:00</a> vLLM с адаптером, с <a href="https://www.youtube.com/watch?v=ZalNVkpZoUw&amp;t=1830">30:30</a> запрос к базе и адаптеру по имени. Видео 2024 года, флаги сверяй с документацией.</li>
+    <li><a href="https://habr.com/ru/articles/935286/">Оптимизация LLM: LoRA и QLoRA</a> - раздел «Динамическое переключение адаптеров»: одна модель и несколько пар матриц.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-eval">
+  <span class="num">08</span>
+  <h2>Оценка до и после</h2>
+  <h3>Эталон</h3>
+  <p>Эталон (gold set) - это звонки, оценки которых проверил человек, и которые не участвуют в обучении. Проще говоря, это экзамен, вопросы которого модель не видела. На нём сравнивают все варианты: промпт, промпт с подобранными примерами, адаптер. Эталон делают до обучения: без него нельзя сказать, помогло ли дообучение.</p>
+  <h3>Сколько звонков</h3>
+  <p>Точность модели по параметру - это доля звонков, где её оценка совпала с оценкой человека. Поэтому размер выборки считают как для доли, по формуле n = z<sup>2</sup> p (1 - p) / e<sup>2</sup>. Здесь z = 1,96 для уровня доверия 95%, p - ожидаемая точность, e - допустимая погрешность. Для конечного числа звонков N результат делят на 1 + (n - 1) / N. Для точности около 80% и погрешности 5 пунктов: 1,96<sup>2</sup> на 0,8 на 0,2 / 0,05<sup>2</sup> = 246, с поправкой на 3000 звонков - 227. Для погрешности 3 пункта нужно 556 звонков. Один звонок даёт оценку всех 15-20 параметров отчёта.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Ожидаемая точность</th><th>Погрешность</th><th>Звонков из 3000</th></tr></thead>
+    <tbody>
+      <tr><td class="n">50%</td><td class="n">5 пунктов</td><td class="n">341</td></tr>
+      <tr><td class="n">80%</td><td class="n">5 пунктов</td><td class="n">227</td></tr>
+      <tr><td class="n">80%</td><td class="n">3 пункта</td><td class="n">556</td></tr>
+      <tr><td class="n">80%</td><td class="n">10 пунктов</td><td class="n">60</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 4 - Размер случайной выборки для эталона, уровень доверия 95%. Расчёт по формуле выше.</p>
+  <h3>Метрика</h3>
+  <p>Для шкалы 0-2 берут взвешенную каппу Коэна: она штрафует ошибку 0 вместо 2 сильнее, чем 1 вместо 2. Каппу считают по каждому параметру, рядом показывают матрицу ошибок - таблицу, где строка - оценка человека, столбец - оценка модели, в ячейке - число звонков. Каппу считают на той же выборке, что и точность. «Не применимо» считают отдельно: сначала совпадает ли решение «применимо или нет», потом каппа на применимых звонках.</p>
+  <h3>Что сравнивать</h3>
+  <p>На эталоне сравнивают по порядку: промпт как есть, промпт с подобранными примерами, промпт после автоматической оптимизации, адаптер. DSPy - библиотека, которая подбирает промпт сама по размеченным примерам. Отдельно сравнивают адаптер на BF16-базе и на FP8-базе: обучали на BF16, а работать он будет с FP8.</p>
+  <div class="q"><b>Вывод</b>Эталон из 230-340 проверенных звонков отвечает на вопрос «стало ли лучше». Его делают первым, и он нужен даже без обучения.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/fW2AG7puIXo">Человек и LLM. Как оценивать качество моделей</a> - Ирина Барская, Яндекс, 39 мин, по-русски. С <a href="https://www.youtube.com/watch?v=fW2AG7puIXo&amp;t=840">14:00</a> постоянный набор задач, с <a href="https://www.youtube.com/watch?v=fW2AG7puIXo&amp;t=930">15:30</a> согласие судьи с людьми, с <a href="https://www.youtube.com/watch?v=fW2AG7puIXo&amp;t=990">16:30</a> смещения судьи, с <a href="https://www.youtube.com/watch?v=fW2AG7puIXo&amp;t=2040">34:00</a> сколько примеров нужно.</li>
+    <li><a href="https://youtu.be/sNWmI28FKTw">Как оценивать и улучшать ответы генеративных моделей</a> - Yandex Cloud, 53 мин, по-русски. С <a href="https://www.youtube.com/watch?v=sNWmI28FKTw&amp;t=1305">21:45</a> человек и LLM-судья, с <a href="https://www.youtube.com/watch?v=sNWmI28FKTw&amp;t=2015">33:35</a> смещения и каппа Коэна.</li>
+    <li><a href="https://habr.com/ru/articles/956374/">LLM в роли «судьи» vs. человеческая оценка</a> - Хабр: разделы «Проблемы подхода» и «Вместе лучше».</li>
+  </ul></div>
+</section>
+
+
+
+
+
+<section id="s-words">
+  <span class="num">10</span>
+  <h2>Словарь</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Термин</th><th>Что значит</th><th>Раздел</th></tr></thead>
+    <tbody>
+      <tr><td>few-shot, промпт с примерами</td><td>несколько готовых пар «вход - ответ» прямо в промпте</td><td>02</td></tr>
+      <tr><td>RAG</td><td>поиск достаёт нужные куски из базы и вставляет их в промпт</td><td>02</td></tr>
+      <tr><td>SFT</td><td>дообучение на парах «вход - правильный ответ»</td><td>03</td></tr>
+      <tr><td>эпоха</td><td>один проход обучения по всем примерам</td><td>03</td></tr>
+      <tr><td>PEFT</td><td>методы, которые учат малую часть параметров</td><td>03</td></tr>
+      <tr><td>LoRA, адаптер</td><td>две узкие матрицы рядом с замороженным слоем; файл с ними</td><td>04</td></tr>
+      <tr><td>ранг, alpha</td><td>ширина узкого места адаптера; множитель его вклада</td><td>04</td></tr>
+      <tr><td>target modules</td><td>матрицы слоя, к которым прикрепляют адаптер</td><td>04</td></tr>
+      <tr><td>QLoRA</td><td>LoRA поверх модели в 4 битах</td><td>04</td></tr>
+      <tr><td>шум в метках</td><td>доля примеров с неверным ответом</td><td>05</td></tr>
+      <tr><td>дистилляция, учитель</td><td>обучение модели на ответах другой модели</td><td>05</td></tr>
+      <tr><td>multi-LoRA</td><td>одна база в памяти и несколько адаптеров на сервере</td><td>07</td></tr>
+      <tr><td>эталон</td><td>проверенные человеком примеры, которые не идут в обучение</td><td>08</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 6 - Термины лекции. Термины лекций 1-3 - в их словарях.</p>
+</section>
+
+
+<section id="s-watch">
+  <span class="num">11</span>
+  <h2>Что смотреть и читать</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Материал</th><th>Автор</th><th>Длит.</th><th>Язык</th><th>Зачем</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td><a href="https://youtu.be/PVeuQu1j6Y4">Как дообучить LLM с помощью LoRA</a></td><td>Yandex Cloud</td><td class="n">63:06</td><td>ru</td><td>когда дообучать, дистилляция, идея LoRA; с 7:30 до 19:00</td></tr>
+      <tr><td class="n">2</td><td><a href="https://habr.com/ru/articles/866148/">Обучение и fine-tuning моделей простым языком</a></td><td>Хабр, Raft</td><td class="n">статья</td><td>ru</td><td>данные, объём, форматы</td></tr>
+      <tr><td class="n">3</td><td><a href="https://youtu.be/mksE4b9s_Xo">Самый простой путь сделать Fine Tune</a></td><td>ИИшенка</td><td class="n">12:44</td><td>ru</td><td>Unsloth, результат до и после</td></tr>
+      <tr><td class="n">4</td><td><a href="https://youtu.be/ERQjinUpBkg">Как сделать массовую разметку данных на LLM</a></td><td>Елена Корнилина, Яндекс</td><td class="n">31:28</td><td>ru</td><td>шум в метках, эталон; с 5:20 до 12:00</td></tr>
+      <tr><td class="n">5</td><td><a href="https://youtu.be/fW2AG7puIXo">Человек и LLM</a></td><td>Ирина Барская, Яндекс</td><td class="n">38:49</td><td>ru</td><td>оценка и согласие с людьми; с 14:00 до 18:20</td></tr>
+      <tr><td class="n">6</td><td><a href="https://youtu.be/t1caDsMzWBk">LoRA &amp; QLoRA Fine-tuning Explained In-Depth</a></td><td>Mark Hennings</td><td class="n">14:39</td><td>en</td><td>ранг, alpha, QLoRA</td></tr>
+      <tr><td class="n">7</td><td><a href="https://docs.vllm.ai/en/latest/features/lora/">vLLM, LoRA Adapters</a></td><td>vLLM</td><td class="n">документация</td><td>en</td><td>несколько адаптеров на сервере</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 7 - Основной маршрут: первые пять по порядку, отрывки и статья - около часа. Ссылки открыты 15.10.2026, названия сверены через YouTube; таймкоды сверены с субтитрами или главами видео.</p>
+  <p>Пробелы: русских видео про ранг и alpha, про несколько адаптеров в vLLM и про LLaMA-Factory разведка не нашла. Их заменяют разделы 04, 06, 07, статьи на Хабре и документация.</p>
+</section>
+
+
+<section id="s-check">
+  <span class="num">12</span>
+  <h2>Контрольные вопросы</h2>
+  <h3>По этой лекции</h3>
+  <ol class="plain">
+    <li>Чем промпт с примерами отличается от RAG? Когда подбор примеров лучше фиксированных?</li>
+    <li>Почему дообучение плохо подходит, чтобы научить модель прайсу компании?</li>
+    <li>Почему SFT считает ошибку только по токенам ответа?</li>
+    <li>Посчитай число параметров LoRA ранга 8 для матрицы 5120 на 17408. Какая это доля матрицы?</li>
+    <li>Почему в начале обучения адаптер не меняет ответов модели?</li>
+    <li>Почему модель, обученная на метках внешнего оценщика, не станет лучше внешнего оценщика?</li>
+    <li>Что даёт смесь версий промпта в данных и как её превратить в пользу?</li>
+    <li>Что занимает память при обучении LoRA 27B сверх весов модели и почему на длине 8 тыс. токенов карта 80 ГБ заполняется впритык?</li>
+    <li>Сколько звонков нужно в эталон для точности 80% и погрешности 5 пунктов? Откуда 227, а не 246?</li>
+    <li>Как запрос выбирает адаптер в vLLM? Что вернёт сервер, если адаптер не указан?</li>
+  </ol>
+  <h3>Повторение лекций 1-3</h3>
+  <ol class="plain" start="11">
+    <li>Почему полное дообучение 27B не влезает в одну карту на 80 ГБ, а LoRA влезает?</li>
+    <li>Почему адаптер, обученный на BF16, надо отдельно проверить на FP8-базе?</li>
+    <li>Почему JSON-схема на сервере делает ненужным обучение формату ответа?</li>
+  </ol>
+  <p>Ответы присылай агенту: он проверит их и допишет в лекцию то, что осталось непонятным.</p>
+</section>
+
+
+<section id="sources">
+  <span class="num">13</span>
+  <h2>Источники</h2>
+  <ol class="srclist">
+    <li id="r1"><span class="i">1</span><span><a href="https://arxiv.org/abs/2106.09685">LoRA: Low-Rank Adaptation of Large Language Models</a>, arXiv 2106.09685, 2021. <span class="w">Первоисточник: веса заморожены, учатся матрицы ранга r; для GPT-3 в 10 000 раз меньше обучаемых параметров.</span></span></li>
+    <li id="r2"><span class="i">2</span><span><a href="https://arxiv.org/abs/2305.14314">QLoRA: Efficient Finetuning of Quantized LLMs</a>, arXiv 2305.14314, 2023. <span class="w">Первоисточник: 65B на одной карте 48 ГБ.</span></span></li>
+    <li id="r3"><span class="i">3</span><span><a href="https://docs.vllm.ai/en/latest/features/lora.html">vLLM, LoRA Adapters</a>. <span class="w">Первоисточник, 15.10.2026: <code>--enable-lora</code>, <code>--lora-modules</code>, выбор адаптера полем <code>model</code>.</span></span></li>
+    <li id="r4"><span class="i">4</span><span><a href="https://github.com/hiyouga/LLaMA-Factory">LLaMA-Factory</a>: README, <code>examples/train_lora/qwen3_lora_sft.yaml</code>, шаблон <code>qwen3_6</code> в <code>template.py</code>. <span class="w">Первоисточник, 15.10.2026.</span></span></li>
+    <li id="r5"><span class="i">5</span><span><a href="https://unsloth.ai/docs/models/qwen3.5/fine-tune">Unsloth, Qwen3.5 fine-tune</a>. <span class="w">Пересказ разведки 15.10.2026: BF16 LoRA 27B около 56 ГБ, QLoRA не рекомендуется.</span></span></li>
+    <li id="r6"><span class="i">6</span><span><a href="https://huggingface.co/Qwen/Qwen3.6-27B/resolve/main/config.json">Qwen3.6-27B, config.json</a>. <span class="w">Первоисточник, 15.10.2026: hidden 5120, intermediate 17408, 64 слоя, полное внимание каждый 4-й.</span></span></li>
+    <li id="r7"><span class="i">7</span><span><a href="https://arxiv.org/abs/2412.14922">RobustFT: Robust Supervised Fine-tuning under Noisy Response</a>, arXiv 2412.14922. <span class="w">Первоисточник, таблица результатов: MMLU 65,3 без обучения, SFT 59,5 / 47,5 / 37,3 при 30 / 50 / 70% шума.</span></span></li>
+    <li id="r8"><span class="i">8</span><span><a href="https://arxiv.org/abs/2502.12859">PAFT: Prompt-Agnostic Fine-Tuning</a>, arXiv 2502.12859. <span class="w">Первоисточник, рис. 1: 86,27% против 66,93%.</span></span></li>
+    <li id="r9"><span class="i">9</span><span><a href="https://arxiv.org/abs/2410.18889">Are LLMs Better than Reported? Detecting Label Errors</a>, arXiv 2410.18889. <span class="w">Пересказ разведки: исправление метки лучше выбрасывания примера.</span></span></li>
+    <li id="r10"><span class="i">10</span><span><a href="https://habr.com/ru/articles/1020006">AvitoTech: анализ звонков</a>, Хабр, 2026. <span class="w">Пересказ разведки: LoRA на 7B по автоматической разметке, 3 асессора, F1 0,70 против асессоров.</span></span></li>
+    <li id="r11"><span class="i">11</span><span>Cloud.ru: Model RUN, создание инференса - до 5 LoRA-адаптеров; <a href="https://cloud.ru/docs/finetuning/ug/topics/quickstart">ML Finetuning</a> - данные через Hugging Face, тариф 700 р/ч без НДС за H100. <span class="w">Первоисточник, страницы сохранены 14-15.10.2026.</span></span></li>
+    <li id="r12"><span class="i">12</span><span><a href="https://github.com/vllm-project/vllm/pull/47640">vLLM PR 47640</a>: исправление ошибки 47639, вошло в 0.29.0. <span class="w">Первоисточник, пересказ разведки.</span></span></li>
+    <li id="r14"><span class="i">14</span><span><a href="https://arxiv.org/abs/1910.02054">ZeRO: Memory Optimizations Toward Training Trillion Parameter Models</a>, arXiv 1910.02054. <span class="w">Первоисточник: 16 байт на параметр при смешанной точности и Adam.</span></span></li>
+    <li id="r16"><span class="i">16</span><span><a href="https://arxiv.org/abs/2310.08491">Prometheus: Inducing Fine-grained Evaluation Capability</a>, arXiv 2310.08491. <span class="w">Первоисточник: 13B-оценщик, 1 тыс. рубрик, 100 тыс. ответов, корреляция с людьми 0,897.</span></span></li>
+  </ol>
+</section>
+</main>
+</div>
+
+</body>

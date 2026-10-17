@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Локальные LLM: железо</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1f9e6e;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+    --s1:#3987e5; --s2:#d95926; --s3:#3fbf8a;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  --s1:#3987e5; --s2:#d95926; --s3:#3fbf8a;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px;max-height:calc(100vh - 48px);overflow-y:auto}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:7px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t,decimal-leading-zero);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:20px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+ul.plain,ol.plain{margin:0 0 14px;padding-left:22px;max-width:70ch}
+ul.plain li,ol.plain li{margin-bottom:6px}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+pre{font:13.5px/1.55 var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;overflow-x:auto;margin:12px 0 16px}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static;max-height:none}}
+
+/* callout */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+.watch{font-size:14.5px;background:var(--res-soft);border-radius:8px;padding:10px 14px;margin:14px 0;max-width:72ch}
+.watch b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--res);display:block;margin-bottom:6px}
+.watch ul{margin:0;padding-left:18px}
+.watch li{margin-bottom:4px}
+.xref{font-size:14.5px;background:var(--proc-soft);border-radius:8px;padding:10px 14px;margin:14px 0;max-width:72ch}
+.xref b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--proc);display:block;margin-bottom:6px}
+.xref p{margin:0 0 6px}
+
+details.recall{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:10px 0;max-width:72ch;font-size:15px}
+details.recall summary{cursor:pointer;font-weight:600}
+details.recall p{margin:8px 0 2px;color:var(--muted)}
+
+/* series navigation */
+nav.series{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:22px;font-size:14px}
+nav.series span{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+nav.series a{padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);text-decoration:none}
+nav.series a.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+nav.series a:hover,nav.series a:focus-visible{border-color:var(--accent)}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cap{font-size:13px;color:var(--muted);margin:-8px 0 16px}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+
+/* intro: advance organizer */
+.intro{background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:16px 20px 8px;margin:24px 0 0;max-width:78ch}
+.intro>b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:10px}
+.intro p{font-size:15px;color:var(--muted)}
+.intro ol{margin:0 0 10px;padding-left:22px}
+.intro li{margin-bottom:8px}
+.intro li a{font:600 11px/1 var(--mono);text-decoration:none;margin-left:4px}
+
+/* figure with inline svg */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px;position:relative}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .rs{fill:var(--res-soft);stroke:var(--res);stroke-width:1.5}
+svg .oks{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+svg .ws{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .sm{font-size:11px}
+svg .pt1{fill:var(--s1);stroke:var(--paper);stroke-width:2}
+svg .pt2{fill:var(--s2);stroke:var(--paper);stroke-width:2}
+svg .pt3{fill:var(--s3);stroke:var(--paper);stroke-width:2}
+svg .pt1:hover,svg .pt2:hover,svg .pt3:hover,svg .pt1:focus,svg .pt2:focus,svg .pt3:focus{stroke:var(--ink);outline:none}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.tip{position:absolute;pointer-events:none;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:13px;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;max-width:260px;z-index:2}
+
+/* walkthrough */
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+
+/* cards */
+.mist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:14px 0}
+.mist div{background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:14px}
+.mist b{display:block;color:var(--warn);font-size:13px;margin-bottom:3px}
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px 1fr;gap:6px}
+.ex div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.tier{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 4px;margin:14px 0}
+.tier h3{margin:0 0 8px}
+.tier .meta{font:600 12px/1.5 var(--mono);color:var(--muted);margin-bottom:8px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+@media print{body{background:#fff}nav.toc{display:none}.wrap{display:block}section{break-inside:avoid-page}}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Оглавление</p>
+  <ol>
+    <li><a href="#s-known">Что уже знаешь</a></li>
+    <li><a href="#s-axes">Два числа</a></li>
+    <li><a href="#s-more">Что ещё отличает карты</a></li>
+    <li><a href="#s-gen">Поколения NVIDIA</a></li>
+    <li><a href="#s-home">Домашние карты</a></li>
+    <li><a href="#s-ws">Карты рабочих станций</a></li>
+    <li><a href="#s-dc">Серверные карты</a></li>
+    <li><a href="#s-mini">Мини-станции</a></li>
+    <li><a href="#s-multi">Несколько карт</a></li>
+    <li><a href="#s-task">Карты в учебном расчёте</a></li>
+    <li><a href="#s-pick">Как подобрать железо</a></li>
+
+
+    <li><a href="#s-words">Словарь</a></li>
+    <li><a href="#s-watch">Что смотреть и читать</a></li>
+    <li><a href="#s-check">Контрольные вопросы</a></li>
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <nav class="series" aria-label="Серия лекций"><span>Серия «Локальные LLM»</span><a href="local-llm-1-start.html">1. Старт</a><a class="on" href="local-llm-2-hardware.html" aria-current="page">2. Железо</a><a href="local-llm-3-serving.html">3. Сервер и работа с моделью</a><a href="local-llm-4-finetuning.html">4. Дообучение и LoRA</a></nav>
+  <span class="eyebrow">Лекция 2 из 4 · 14.10.2026 · железо</span>
+  <h1>Железо для локальных LLM: карты, мини-станции, расчёт</h1>
+  <p class="lead">Лекция разбирает всё актуальное железо под LLM: домашние видеокарты, карты рабочих станций, серверные карты NVIDIA и AMD, мини-станции вроде DGX Spark и Mac Studio. В конце ты по шагам подбираешь железо под проект оценки звонков. К каждому разделу приложены обзоры с таймкодами.</p>
+  <div class="intro">
+    <b>Коротко: вся лекция за две минуты</b>
+    <p>Прочитай эти восемь мыслей до основного текста. Первые три ты уже видел в лекции 1, здесь они становятся инструментом выбора.</p>
+    <ol>
+      <li>Любое железо ставится на график из двух чисел: объём памяти и её пропускная способность. Объём решает «влезет ли», скорость памяти решает «как быстро печатает». <a href="#s-axes">02</a></li>
+      <li>Третье число - вычислительная мощность. Она решает, как быстро модель читает длинный промпт (prefill). <a href="#s-more">03</a></li>
+      <li>Поколение карты решает, какие форматы она считает аппаратно: FP8 с Ada и Hopper, FP4 с Blackwell. A100 из поколения Ampere FP8 не считает. <a href="#s-gen">04</a></li>
+      <li>Домашние карты дают самую дешёвую быструю память, но её мало: 24-32 ГБ. Лицензия драйвера GeForce запрещает ставить их в ЦОД (центр обработки данных). <a href="#s-home">05</a></li>
+      <li>RTX PRO 6000 Blackwell - 96 ГБ со скоростью памяти RTX 5090. Это главный кандидат для одной модели 27-32B с запасом на параллельные запросы. <a href="#s-ws">06</a></li>
+      <li>Серверные карты H100 и H200 быстрее в 2-3 раза по памяти благодаря HBM. Их выгода видна на больших моделях и на нескольких картах с NVLink. <a href="#s-dc">07</a></li>
+      <li>Мини-станции со 128 ГБ единой памяти медленно печатают плотные модели. Их задача - большие MoE-модели (модели из экспертов, лекция 1). <a href="#s-mini">08</a></li>
+      <li>Железо подбирают от задачи: нагрузка, модель, веса, KV-кэш на параллельные запросы, класс памяти, карта. <a href="#s-pick">11</a></li>
+    </ol>
+  </div>
+<p class="library-edition">Учебная версия для публичной библиотеки. Рабочие сведения исключены, примеры обобщены. Версии и измерения сохранены на дату исходной лекции.</p></header>
+
+
+<section id="s-known">
+  <span class="num">01</span>
+  <h2>Что уже знаешь</h2>
+  <p>Лекция 2 опирается на пять формул из <a href="local-llm-1-start.html">лекции 1</a>. Перечитай их перед началом: дальше они применяются к каждой карте (табл. 1).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Что</th><th>Формула или правило</th><th>Где в лекции 1</th></tr></thead>
+    <tbody>
+      <tr><td>Размер модели</td><td>ГБ = миллиарды параметров * бит на параметр / 8</td><td><a href="local-llm-1-start.html#s-file">раздел 03</a></td></tr>
+      <tr><td>Память</td><td>веса + KV-кэш + запас 1-3 ГБ</td><td><a href="local-llm-1-start.html#s-fit">раздел 05</a></td></tr>
+      <tr><td>Скорость генерации</td><td>ток/с не больше чем ГБ/с памяти / ГБ весов</td><td><a href="local-llm-1-start.html#s-speed">раздел 06</a></td></tr>
+      <tr><td>Два этапа ответа</td><td>prefill упирается в вычисления, генерация упирается в память</td><td><a href="local-llm-1-start.html#s-speed">раздел 06</a></td></tr>
+      <tr><td>MoE</td><td>память по всем параметрам, скорость по активным</td><td><a href="local-llm-1-start.html#s-moe">раздел 07</a></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 1 - Опорные формулы серии.</p>
+  <details class="recall"><summary>Проверь себя: сколько весит Qwen3.6-27B в FP8 и какой потолок генерации у неё на RTX 3090?</summary><p>27,8 млрд параметров * 8 бит / 8 = 27,8 ГБ. В 24 ГБ карты RTX 3090 она не влезает, поэтому скорость не важна. В Q4_K_M файл около 17 ГБ, потолок 936 / 17 = 55 ток/с.</p></details>
+  <details class="recall"><summary>Проверь себя: почему gpt-oss-120b на DGX Spark печатает быстрее плотной 32B?</summary><p>У gpt-oss-120b активны около 5 млрд параметров из 117. На каждый токен Spark читает из памяти только их, а у плотной 32B читает все 32 млрд.</p></details>
+  <h3>Как проходить лекцию</h3>
+  <div class="ex">
+    <div><span><b>Вечер 1: оси и поколения.</b> Разделы 01-04 и видео про prefill и генерацию.<small><a href="https://www.youtube.com/watch?v=2AZJP_vjPEs">LLM Decode Is Memory-Bound, Prefill Is Compute-Bound. But Why?</a> - DevOps 2 AI, 14 мин, на английском.</small></span></div>
+    <div><span><b>Вечер 2: карты и мини-станции.</b> Разделы 05-09, к каждому смотри по одному видео из блока «Смотреть».<small>Начни с <a href="https://youtu.be/L9sI7sUKLIM">«Какое железо нужно для локальных нейросетей?»</a> («Этот Компьютер»), если не смотрел его к лекции 1.</small></span></div>
+    <div><span><b>Вечер 3: расчёт под задачу.</b> Разделы 10-13 и контрольные вопросы.<small>Расчёт проверяй калькулятором: все числа в таблицах, кроме KV-кэша, можно повторить по формулам из таблицы 1. Формула KV-кэша - в лекции 3.</small></span></div>
+  </div>
+  <div class="q"><b>Вывод</b>Пять формул лекции 1 - это весь математический аппарат для чтения обзоров железа.</div>
+</section>
+
+
+<section id="s-axes">
+  <span class="num">02</span>
+  <h2>Два числа</h2>
+  <h3>Объём и скорость памяти</h3>
+  <p>Пропускная способность памяти (memory bandwidth) - это сколько гигабайт в секунду чип читает из своей памяти. Проще говоря, это ширина трубы между памятью и вычислителем. На каждый токен модель прокачивает через эту трубу все активные веса, поэтому от неё зависит скорость печати. Объём памяти решает другое: поместится ли модель с контекстом вообще.</p>
+  <p>На рисунке 1 всё актуальное железо стоит на этих двух осях. Обе шкалы логарифмические: каждое деление по горизонтали удваивает память, два деления по вертикали увеличивают скорость в 10 раз. Наведи курсор на точку, чтобы увидеть характеристики.</p>
+  <figure id="fig-hw">
+    <div class="ttl">Рисунок 1 - Память и её скорость у актуального железа</div>
+    <div class="legend"><span><i style="background:var(--s1)"></i>домашние карты</span><span><i style="background:var(--s3)"></i>карты рабочих станций и серверов</span><span><i style="background:var(--s2)"></i>единая память: Mac, Spark, Strix Halo</span></div>
+    <svg class="d" viewBox="0 0 680 360" role="img" aria-label="Точечный график: по горизонтали память от 16 до 512 ГБ, по вертикали пропускная способность от 100 до 10000 ГБ/с в логарифмической шкале. Серверные карты вверху в середине, домашние карты слева посередине, мини-станции справа внизу, Mac Studio Ultra справа посередине.">
+      <line class="grid" x1="70" y1="310.0" x2="650" y2="310.0"/><text class="mut sm" x="62" y="314.0" text-anchor="end">100</text>
+      <line class="grid" x1="70" y1="245.6" x2="650" y2="245.6"/><text class="mut sm" x="62" y="249.6" text-anchor="end">300</text>
+      <line class="grid" x1="70" y1="175.0" x2="650" y2="175.0"/><text class="mut sm" x="62" y="179.0" text-anchor="end">1000</text>
+      <line class="grid" x1="70" y1="110.6" x2="650" y2="110.6"/><text class="mut sm" x="62" y="114.6" text-anchor="end">3000</text>
+      <line class="grid" x1="70" y1="40.0" x2="650" y2="40.0"/><text class="mut sm" x="62" y="44.0" text-anchor="end">10000</text>
+      <text class="mut sm" x="70.0" y="326" text-anchor="middle">16</text>
+      <text class="mut sm" x="186.0" y="326" text-anchor="middle">32</text>
+      <text class="mut sm" x="302.0" y="326" text-anchor="middle">64</text>
+      <text class="mut sm" x="418.0" y="326" text-anchor="middle">128</text>
+      <text class="mut sm" x="534.0" y="326" text-anchor="middle">256</text>
+      <text class="mut sm" x="650.0" y="326" text-anchor="middle">512</text>
+      <text class="mut sm" x="360.0" y="344" text-anchor="middle">память для модели, ГБ (шкала удваивается)</text>
+      <text class="mut sm" x="10" y="22">пропускная способность, ГБ/с (шкала в 10 раз на два деления)</text>
+      <g class="pts">
+      <circle class="pt2" cx="70.0" cy="299.3" r="7" tabindex="0" data-tip="MacBook Air M4|16 ГБ единой памяти, 120 ГБ/с"/><text class="sm lbl" x="80.0" y="291.3" text-anchor="start">твой Air M4</text>
+      <circle class="pt1" cx="137.9" cy="178.9" r="7" tabindex="0" data-tip="RTX 3090|24 ГБ GDDR6X, 936 ГБ/с, 350 Вт|б/у около 60 тыс. руб. (апрель 2026)"/><text class="sm lbl" x="127.9" y="192.9" text-anchor="end">3090</text>
+      <circle class="pt1" cx="137.9" cy="174.5" r="7" tabindex="0" data-tip="RTX 4090|24 ГБ GDDR6X, 1008 ГБ/с, 450 Вт"/><text class="sm lbl" x="127.9" y="170.5" text-anchor="end">4090</text>
+      <circle class="pt1" cx="137.9" cy="221.0" r="7" tabindex="0" data-tip="Intel Arc Pro B60|24 ГБ GDDR6, 456 ГБ/с, 200 Вт"/><text class="sm lbl" x="127.9" y="225.0" text-anchor="end">Arc Pro B60</text>
+      <circle class="pt3" cx="137.9" cy="245.6" r="7" tabindex="0" data-tip="NVIDIA L4|24 ГБ GDDR6, 300 ГБ/с, 72 Вт"/><text class="sm lbl" x="127.9" y="249.6" text-anchor="end">L4</text>
+      <circle class="pt1" cx="186.0" cy="140.8" r="7" tabindex="0" data-tip="RTX 5090|32 ГБ GDDR7, 1792 ГБ/с, 575 Вт"/><text class="sm lbl" x="176.0" y="134.8" text-anchor="end">5090</text>
+      <circle class="pt1" cx="186.0" cy="201.2" r="7" tabindex="0" data-tip="AMD Radeon AI PRO R9700|32 ГБ GDDR6, 640 ГБ/с, 300 Вт"/><text class="sm lbl" x="196.0" y="205.2" text-anchor="start">R9700</text>
+      <circle class="pt3" cx="253.9" cy="183.6" r="7" tabindex="0" data-tip="NVIDIA L40S|48 ГБ GDDR6, 864 ГБ/с, 350 Вт"/><text class="sm lbl" x="263.9" y="187.6" text-anchor="start">L40S</text>
+      <circle class="pt3" cx="339.3" cy="133.2" r="7" tabindex="0" data-tip="NVIDIA A100 80 ГБ SXM|HBM2e, 2039 ГБ/с (PCIe 1935), 400 Вт"/><text class="sm lbl" x="329.3" y="137.2" text-anchor="end">A100</text>
+      <circle class="pt3" cx="339.3" cy="104.1" r="7" tabindex="0" data-tip="NVIDIA H100 SXM|80 ГБ HBM3, 3350 ГБ/с, до 700 Вт"/><text class="sm lbl" x="329.3" y="108.1" text-anchor="end">H100 SXM</text>
+      <circle class="pt3" cx="369.9" cy="140.8" r="7" tabindex="0" data-tip="RTX PRO 6000 Blackwell|96 ГБ GDDR7, 1792 ГБ/с (Server 1597)|600 Вт, Max-Q 300 Вт"/><text class="sm lbl" x="379.9" y="156.8" text-anchor="start">RTX PRO 6000</text>
+      <circle class="pt3" cx="434.2" cy="83.0" r="7" tabindex="0" data-tip="NVIDIA H200|141 ГБ HBM3e, 4800 ГБ/с, до 700 Вт"/><text class="sm lbl" x="424.2" y="87.0" text-anchor="end">H200</text>
+      <circle class="pt3" cx="475.1" cy="55.3" r="7" tabindex="0" data-tip="NVIDIA B200|180 ГБ HBM3e, 7700 ГБ/с, до 1000 Вт"/><text class="sm lbl" x="465.1" y="59.3" text-anchor="end">B200</text>
+      <circle class="pt3" cx="485.9" cy="77.2" r="7" tabindex="0" data-tip="AMD Instinct MI300X|192 ГБ HBM3, 5300 ГБ/с, 750 Вт"/><text class="sm lbl" x="495.9" y="81.2" text-anchor="start">MI300X</text>
+      <circle class="pt2" cx="369.9" cy="254.9" r="7" tabindex="0" data-tip="AMD Strix Halo (Ryzen AI Max+ 395)|128 ГБ, до 96 ГБ под графику, 256 ГБ/с"/><text class="sm lbl" x="359.9" y="268.9" text-anchor="end">Strix Halo</text>
+      <circle class="pt2" cx="418.0" cy="251.1" r="7" tabindex="0" data-tip="NVIDIA DGX Spark (GB10)|128 ГБ LPDDR5x, 273 ГБ/с"/><text class="sm lbl" x="428.0" y="265.1" text-anchor="start">DGX Spark</text>
+      <circle class="pt2" cx="418.0" cy="220.5" r="7" tabindex="0" data-tip="Mac Studio M5 Max|до 128 ГБ, 460 ГБ/с (614 у версии с 40 ядрами GPU)"/><text class="sm lbl" x="428.0" y="224.5" text-anchor="start">Mac Studio M5 Max</text>
+      <circle class="pt2" cx="650.0" cy="186.7" r="7" tabindex="0" data-tip="Mac Studio M3 Ultra|до 512 ГБ, около 819 ГБ/с"/><text class="sm lbl" x="640.0" y="202.7" text-anchor="end">M3 Ultra</text>
+      <circle class="pt2" cx="650.0" cy="164.3" r="7" tabindex="0" data-tip="Mac Studio M5 Ultra|до 512 ГБ, 1200 ГБ/с"/><text class="sm lbl" x="640.0" y="158.3" text-anchor="end">M5 Ultra</text>
+      </g>
+    </svg>
+    <div class="tip" role="status"></div>
+    <figcaption>Характеристики из таблиц разделов 05-08, у каждой строки там есть первоисточник. Strix Halo стоит на 96 ГБ: столько памяти отдаётся графике по умолчанию.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Чем выше точка, тем быстрее генерация. Чем правее, тем большую модель можно загрузить.</li>
+      <li>Зелёные точки - карты рабочих станций и серверов. Выше всех стоят карты с памятью HBM: 2-8 ТБ/с.</li>
+      <li>Домашние карты (синие) стоят слева: быстрая память GDDR, но только 24-32 ГБ.</li>
+      <li>Spark и Strix Halo (оранжевые) стоят справа внизу: много памяти, но скорость в 3,4-3,7 раза ниже, чем у RTX 3090. Mac Studio Ultra стоит выше: 819-1200 ГБ/с.</li>
+      <li>RTX PRO 6000 - единственная точка с 96 ГБ на уровне скорости RTX 5090. Поэтому её чаще всего сравнивают с H100.</li>
+    </ol>
+  </div>
+  <h3>Потолок генерации по графику</h3>
+  <p>По двум числам ты за минуту оцениваешь любую карту. Возьми модель проекта Qwen3.6-27B в FP8, её веса весят 27,8 ГБ. Раздели пропускную способность на этот размер:</p>
+  <pre>RTX PRO 6000:  1792 / 27,8 = 64 ток/с на один запрос, не больше
+H100 SXM:      3350 / 27,8 = 120 ток/с
+DGX Spark:      273 / 27,8 = 10 ток/с</pre>
+  <p>В этой грубой оценке Spark вмещает веса модели, а расчётная скорость примерно в 6 раз ниже RTX PRO 6000. Это ориентир для последовательной генерации плотной модели, а не универсальный предел. Реальная скорость зависит от контекста, реализации, батчинга и спекулятивного декодирования. Фиксированную скидку на треть нельзя применять без замера.</p>
+  <div class="xref"><b>Вспомни лекцию 1</b><p>Это та же формула, что на твоём MacBook Air: потолок 120 ГБ/с / 6,6 ГБ = 18 ток/с, замер дал 16. Меняется только масштаб чисел.</p></div>
+  <div class="q"><b>Вывод</b>Первая проверка любой карты: влезет ли модель с контекстом и сколько даёт деление ГБ/с на ГБ весов.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=2AZJP_vjPEs&amp;t=132">Compute-bound против bandwidth-bound</a> - DevOps 2 AI, с 2:12; с <a href="https://www.youtube.com/watch?v=2AZJP_vjPEs&amp;t=200">3:20</a> генерация одного запроса, на английском.</li>
+    <li><a href="https://www.youtube.com/watch?v=MW_6hbw4q9o&amp;t=464">Пропускная способность памяти</a> - Виталий Кулиев, «Топ советов по выбору видеокарты для ML», 2024, с 7:44, по-русски.</li>
+    <li>Статья: <a href="https://www.ssdnodes.com/learn/lang/ru/prefill-vs-decode-llm-inference">Разница между prefill и decode</a> - SSD Nodes, 11.10.2026, по-русски<a class="ref" href="#r57">57</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-more">
+  <span class="num">03</span>
+  <h2>Что ещё отличает карты</h2>
+  <p>Два числа отвечают на главные вопросы, но в обзорах карт есть ещё восемь характеристик. Каждая влияет на что-то своё (табл. 2).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Характеристика</th><th>Что это</th><th>На что влияет</th></tr></thead>
+    <tbody>
+      <tr><td>Вычисления, TFLOPS</td><td>сколько триллионов операций в секунду делают тензорные ядра</td><td>скорость prefill и суммарная скорость при многих запросах</td></tr>
+      <tr><td>Форматы чисел</td><td>какие форматы ядра считают аппаратно: FP16, FP8, FP4</td><td>можно ли ускорить модель квантованием (раздел 04)</td></tr>
+      <tr><td>Тип памяти</td><td>HBM, GDDR или LPDDR</td><td>пропускная способность и цена за гигабайт</td></tr>
+      <tr><td>Связь между картами</td><td>PCIe или NVLink</td><td>работают ли несколько карт как одна (раздел 09)</td></tr>
+      <tr><td>Форм-фактор</td><td>PCIe-карта, модуль SXM или OAM</td><td>в какой сервер ставится карта</td></tr>
+      <tr><td>Охлаждение и питание</td><td>активное или пассивное; TDP в ваттах</td><td>корпус, блок питания, шум</td></tr>
+      <tr><td>MIG</td><td>деление одной карты на изолированные части</td><td>несколько маленьких моделей на одной карте</td></tr>
+      <tr><td>Платформа и лицензия</td><td>CUDA, ROCm, MLX; лицензия драйвера</td><td>какие программы работают и где карту можно ставить</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 2 - Характеристики карты помимо памяти. TDP (thermal design power) - предельная мощность карты в ваттах, например 350 Вт у RTX 3090. PCIe-карта ставится в слот, SXM и OAM - модули на плату сервера NVIDIA и AMD (раздел 07). NVLink - прямая связь карт NVIDIA, 900 ГБ/с у H100 SXM (раздел 07). MIG (Multi-Instance GPU) делит карту на изолированные части: RTX PRO 6000 - до 4 частей по 24 ГБ.</p>
+  <h3>Вычисления</h3>
+  <p>TFLOPS (триллионы операций с плавающей точкой в секунду) - это мера вычислительной мощности чипа. Проще говоря, это число показывает, сколько умножений карта делает за секунду. Prefill обрабатывает тысячи токенов промпта за одно чтение весов, поэтому он упирается именно в вычисления. NVIDIA часто публикует TFLOPS «со sparsity» (разреженностью): это режим, в котором часть весов равна нулю и пропускается, обычные модели его не используют. Поэтому такая цифра вдвое больше, чем модель реально получает, сноски в даташитах так и говорят<a class="ref" href="#r1">1</a>. Сравнивай карты по dense-цифрам (без пропуска) или дели sparse на два.</p>
+  <h3>Тип памяти</h3>
+  <p>HBM (High Bandwidth Memory) - это память, собранная стопкой прямо рядом с чипом. Она даёт 2-8 ТБ/с и стоит дорого, поэтому есть только на серверных картах. GDDR - это память обычных видеокарт: 0,3-1,8 ТБ/с. LPDDR - память ноутбуков и мини-станций: её можно поставить много и дёшево. У Spark и Strix Halo она даёт 0,26-0,27 ТБ/с, у Mac Studio с широкой шиной - до 1,2 ТБ/с.</p>
+  <h3>Платформа</h3>
+  <p>CUDA - это программная платформа NVIDIA, на ней сначала появляются все новые приёмы ускорения. ROCm - аналог от AMD, Vulkan - общий интерфейс к любым видеокартам, MLX и Metal - платформа Apple. Чем дальше платформа от CUDA, тем больше ручной настройки: например, в Ollama нет ядер ROCm для части новых карт AMD, и их запускают через Vulkan<a class="ref" href="#r38">38</a>.</p>
+  <div class="mist">
+    <div><b>Ловушка: TFLOPS со sparsity</b>Цифра 3958 TFLOPS FP8 у H100 SXM - со sparsity. Модель получает около 1979.</div>
+    <div><b>Ловушка: AI TOPS</b>У карт RTX PRO NVIDIA публикует только AI TOPS в FP4 со sparsity, без dense FP16 и FP8. Сравнивать их с серверными по этой цифре нельзя.</div>
+  </div>
+  <div class="q"><b>Вывод</b>Память решает генерацию, вычисления решают prefill, а форм-фактор, охлаждение и лицензия решают, куда карту можно поставить.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=lk-urUlDafg&amp;t=915">HBM против GDDR</a> - Виталий Кулиев, «Обзор серверного железа для нейросетей в 2025», с 15:15, по-русски.</li>
+    <li><a href="https://www.youtube.com/watch?v=cbEhkd4ZeKs&amp;t=692">Memory wall</a> - PY, «Inside the GPU», с 11:32; с <a href="https://www.youtube.com/watch?v=cbEhkd4ZeKs&amp;t=799">13:19</a> модель roofline, на английском.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-gen">
+  <span class="num">04</span>
+  <h2>Поколения NVIDIA</h2>
+  <p>Поколение (архитектура) карты - это устройство её чипа. Внутри одного поколения выходят и домашние, и серверные карты: RTX 3090 и A100 обе из поколения Ampere. Для LLM главное в поколении - какие форматы чисел тензорные ядра считают аппаратно (рис. 2). BF16 (bfloat16) - числа с плавающей точкой (floating point) в 16 бит, исходный формат моделей; FP8 и FP4 - такие же числа в 8 и 4 бита.</p>
+  <figure>
+    <div class="ttl">Рисунок 2 - Поколения NVIDIA и форматы чисел</div>
+    <svg class="d" viewBox="0 0 760 210" role="img" aria-label="Шкала поколений: Ampere 2020 с BF16, Ada 2022 и Hopper 2022 с FP8, Blackwell 2024-2025 с FP4, Rubin 2026 предварительно">
+      <line class="ln" x1="20" y1="60" x2="740" y2="60"/>
+      <rect class="soft" x="20" y="30" width="140" height="60" rx="6"/>
+      <text class="b" x="90" y="54" text-anchor="middle">Ampere, 2020</text>
+      <text class="sm" x="90" y="72" text-anchor="middle">BF16, MIG</text>
+      <rect class="hl" x="170" y="30" width="140" height="60" rx="6"/>
+      <text class="b" x="240" y="54" text-anchor="middle">Ada, 2022</text>
+      <text class="sm" x="240" y="72" text-anchor="middle">FP8, без HBM</text>
+      <rect class="hl" x="320" y="30" width="140" height="60" rx="6"/>
+      <text class="b" x="390" y="54" text-anchor="middle">Hopper, 2022</text>
+      <text class="sm" x="390" y="72" text-anchor="middle">FP8, HBM3, NVLink 4</text>
+      <rect class="oks" x="470" y="30" width="140" height="60" rx="6"/>
+      <text class="b" x="540" y="54" text-anchor="middle">Blackwell, 2024-25</text>
+      <text class="sm" x="540" y="72" text-anchor="middle">FP4, NVLink 5</text>
+      <rect class="soft" x="620" y="30" width="120" height="60" rx="6"/>
+      <text class="b" x="680" y="54" text-anchor="middle">Rubin, 2026</text>
+      <text class="sm" x="680" y="72" text-anchor="middle">HBM4, анонс</text>
+      <text class="sm mut" x="90" y="112" text-anchor="middle">A100, RTX 3090</text>
+      <text class="sm mut" x="240" y="112" text-anchor="middle">L4, L40S, RTX 4090,</text>
+      <text class="sm mut" x="240" y="128" text-anchor="middle">RTX 6000 Ada</text>
+      <text class="sm mut" x="390" y="112" text-anchor="middle">H100, H200</text>
+      <text class="sm mut" x="540" y="112" text-anchor="middle">B200, B300, RTX 5090,</text>
+      <text class="sm mut" x="540" y="128" text-anchor="middle">RTX PRO 6000, GB10</text>
+      <text class="sm mut" x="680" y="112" text-anchor="middle">серверы, позже</text>
+      <text class="mut sm" x="380" y="170" text-anchor="middle">синие поколения добавили FP8, зелёное - FP4; серый Ampere не считает ни то, ни другое, Rubin пока только анонсирован</text>
+    </svg>
+    <figcaption>Форматы по даташитам NVIDIA<a class="ref" href="#r3">3</a><a class="ref" href="#r5">5</a><a class="ref" href="#r7">7</a><a class="ref" href="#r8">8</a>; годы выхода - общеизвестные даты анонсов.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Под каждым поколением подписаны карты из этой лекции.</li>
+      <li>Ada и Hopper вышли в один год: Ada - для домашних, рабочих и младших серверных карт (L4, L40S), Hopper - только серверный.</li>
+      <li>Карта новее понимает все форматы старых поколений.</li>
+    </ol>
+  </div>
+  <h3>Что дал каждый шаг</h3>
+  <ol class="plain">
+    <li>Ampere принёс BF16 и MIG: исходные модели в 16 битах и деление карты на изолированные части<a class="ref" href="#r5">5</a>.</li>
+    <li>Ada и Hopper принесли аппаратный FP8. В Hopper он работает через Transformer Engine - блок, который сам выбирает точность по слоям<a class="ref" href="#r1">1</a>.</li>
+    <li>Blackwell принёс FP4 в двух вариантах: NVFP4 от NVIDIA и открытый MXFP4. Модель в FP4 весит вчетверо меньше BF16: Qwen3.6-27B - около 14 ГБ против 55,6<a class="ref" href="#r7">7</a>.</li>
+    <li>Rubin в 2026 году анонсирован с памятью HBM4 до 22 ТБ/с на карту, цифры предварительные<a class="ref" href="#r8">8</a>.</li>
+  </ol>
+  <h3>Что FP8 даёт карте A100</h3>
+  <p>A100 запускает FP8-модель, но иначе, чем H100. vLLM (сервер моделей, лекция 3) хранит веса в 8 битах и перед счётом разворачивает их в 16 бит ядром Marlin - программой для карты, которая делает это на лету<a class="ref" href="#r20">20</a>. Веса занимают вдвое меньше памяти и читаются вдвое быстрее, поэтому генерация ускоряется. Prefill при этом считается в 16 битах, и на длинных промптах A100 проигрывает картам с аппаратным FP8.</p>
+  <div class="xref"><b>Вспомни лекцию 1</b><p>В таблице форматов лекции 1 FP8 и FP4 стояли в строках «сервер на NVIDIA» и «карты Blackwell». Теперь видно почему: формат полезен только там, где ядра считают его аппаратно.</p></div>
+  <div class="q"><b>Вывод</b>Для сервера под FP8-модель бери поколение Ada, Hopper или Blackwell. Blackwell добавляет FP4 и вчетверо меньшие веса.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://youtu.be/uTLHK4Qkokg">NVIDIA Tensor Cores Explained: 6 Generations from FP16 to FP4</a> - ErrorFixer, 14 мин, 04.09.2026, на английском. С <a href="https://www.youtube.com/watch?v=uTLHK4Qkokg&amp;t=196">3:16</a> Ampere, с <a href="https://www.youtube.com/watch?v=uTLHK4Qkokg&amp;t=244">4:04</a> Hopper, с <a href="https://www.youtube.com/watch?v=uTLHK4Qkokg&amp;t=408">6:48</a> FP8, с <a href="https://www.youtube.com/watch?v=uTLHK4Qkokg&amp;t=431">7:11</a> NVFP4 и MXFP4. Канал малоизвестен, цифры сверяй с таблицами лекции.</li>
+    <li><a href="https://www.youtube.com/watch?v=1JWnEze9V5g&amp;t=138">Лестница форматов от FP32 до FP4</a> - PY, с 2:18; с <a href="https://www.youtube.com/watch?v=1JWnEze9V5g&amp;t=911">15:11</a> MXFP4 против NVFP4, на английском.</li>
+    <li><a href="https://www.youtube.com/watch?v=MW_6hbw4q9o&amp;t=850">Поддержка FP8 и FP4</a> - Виталий Кулиев, с 14:10, коротко по-русски. Отдельного русского разбора поколений разведка не нашла.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-home">
+  <span class="num">05</span>
+  <h2>Домашние карты</h2>
+  <p>Домашние карты - это игровые видеокарты NVIDIA GeForce, AMD Radeon и Intel Arc. Они дают самый дешёвый гигабайт быстрой памяти, поэтому с них начинают почти все энтузиасты (табл. 3).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Карта</th><th>Память</th><th>ГБ/с</th><th>TDP</th><th>Цена (дата)</th></tr></thead>
+    <tbody>
+      <tr><td>RTX 3090</td><td class="n">24 ГБ GDDR6X</td><td class="n">936</td><td class="n">350 Вт</td><td>б/у около 60 тыс. руб. (апрель 2026)<a class="ref" href="#r51">51</a></td></tr>
+      <tr><td>RTX 4090</td><td class="n">24 ГБ GDDR6X</td><td class="n">1008</td><td class="n">450 Вт</td><td>старт $1599 (2022)<a class="ref" href="#r35">35</a></td></tr>
+      <tr><td>RTX 4090 48 ГБ, переделка</td><td class="n">48 ГБ</td><td>не нашли</td><td>не нашли</td><td>около 2800-3200 евро, пересказ</td></tr>
+      <tr><td>RTX 5080</td><td class="n">16 ГБ GDDR7</td><td class="n">960</td><td class="n">360 Вт</td><td>старт $999<a class="ref" href="#r34">34</a></td></tr>
+      <tr><td>RTX 5090</td><td class="n">32 ГБ GDDR7</td><td class="n">1792</td><td class="n">575 Вт</td><td>500-565 тыс. руб. (август 2026)<a class="ref" href="#r32">32</a></td></tr>
+      <tr><td>AMD RX 7900 XTX</td><td class="n">24 ГБ GDDR6</td><td class="n">960</td><td class="n">355 Вт</td><td>старт $999 (2022)<a class="ref" href="#r36">36</a></td></tr>
+      <tr><td>AMD Radeon AI PRO R9700</td><td class="n">32 ГБ GDDR6</td><td class="n">640</td><td class="n">300 Вт</td><td>старт $1299<a class="ref" href="#r38">38</a></td></tr>
+      <tr><td>Intel Arc Pro B60</td><td class="n">24 ГБ GDDR6</td><td class="n">456</td><td class="n">200 Вт</td><td>от $599, разброс большой, пересказ</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 3 - Домашние и полупрофессиональные карты. Рублёвых цен на октябрь 2026 разведка не получила: DNS, Ситилинк и Яндекс Маркет закрыты для автоматического поиска. RTX 50 Super к 14.10.2026 не вышли.</p>
+  <h3>Одна модель на всех картах</h3>
+  <p>Лучший способ сравнить карты - общий замер на одной модели. Сообщество llama.cpp ведёт такие таблицы: модель Llama 2 7B в Q4_0, prefill на 512 токенах (pp512) и генерация 128 токенов (tg128)<a class="ref" href="#r21">21</a><a class="ref" href="#r22">22</a><a class="ref" href="#r23">23</a><a class="ref" href="#r24">24</a>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Железо</th><th>Платформа</th><th>Prefill pp512, ток/с</th><th>Генерация tg128, ток/с</th><th>ГБ/с</th></tr></thead>
+    <tbody>
+      <tr><td>RTX 3090</td><td>CUDA</td><td class="n">5175</td><td class="n">158</td><td class="n">936</td></tr>
+      <tr><td>RTX 4090</td><td>CUDA</td><td class="n">11993</td><td class="n">186</td><td class="n">1008</td></tr>
+      <tr><td>RTX 5090</td><td>CUDA</td><td class="n">14073</td><td class="n">290</td><td class="n">1792</td></tr>
+      <tr><td>RX 7900 XTX</td><td>ROCm</td><td class="n">3553</td><td class="n">167</td><td class="n">960</td></tr>
+      <tr><td>Radeon AI PRO R9700</td><td>ROCm</td><td class="n">4444</td><td class="n">94</td><td class="n">640</td></tr>
+      <tr><td>Strix Halo</td><td>Vulkan</td><td class="n">1487</td><td class="n">52</td><td class="n">256</td></tr>
+      <tr><td>Mac Studio M5 Max</td><td>Metal</td><td class="n">3220</td><td class="n">120</td><td class="n">460-614</td></tr>
+      <tr><td>Mac Studio M5 Ultra</td><td>Metal</td><td class="n">4945</td><td class="n">179</td><td class="n">1200</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 4 - Llama 2 7B Q4_0 в llama.cpp, без flash attention. Источники - обсуждения llama.cpp для CUDA, ROCm, Vulkan и Apple; сборки разные, сравнивай порядок величин.</p>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Сравни RTX 3090 и 4090. Память у них почти одинаковая (936 и 1008 ГБ/с), и генерация отличается на 18%. Вычислений у 4090 больше, и prefill у неё в 2,3 раза быстрее.</li>
+      <li>Сравни RX 7900 XTX и RTX 3090. Память и генерация почти равны, а prefill у карты AMD на ROCm в 1,5 раза ниже.</li>
+      <li>Генерация везде идёт за колонкой ГБ/с. Это формула потолка из раздела 02 в живых цифрах.</li>
+    </ol>
+  </div>
+  <h3>RTX 3090</h3>
+  <p>RTX 3090 - самая популярная карта энтузиастов: дешёвые 24 ГБ быстрой памяти. Она вмещает модели 27-32B в Q4 и последняя из домашних карт поддерживает мост NVLink<a class="ref" href="#r53">53</a>. Подвох - возраст: карты прошли майнинг, нужен блок питания с запасом и проверка при покупке.</p>
+  <h3>RTX 4090 и переделка на 48 ГБ</h3>
+  <p>RTX 4090 по генерации близка к 3090, но поддерживает FP8 и в 2,3 раза быстрее читает промпт. Китайские мастерские перепаивают её на 48 ГБ: память ставят с двух сторон платы, а турбина шумит до 65 дБ. Такую карту продают в облаке Selectel<a class="ref" href="#r43">43</a>, но надёжность переделки никто не гарантирует.</p>
+  <h3>RTX 5090</h3>
+  <p>RTX 5090 - быстрейшая домашняя карта: 1792 ГБ/с, почти как у RTX PRO 6000, и FP4 из поколения Blackwell. 32 ГБ хватает на модели 27-32B в Q4 с длинным контекстом, а FP8-версия 27B (27,8 ГБ) влезает только впритык без места под KV-кэш. Ей нужен блок питания от 850 Вт<a class="ref" href="#r34">34</a>.</p>
+  <h3>AMD и Intel</h3>
+  <p>Карты AMD и Intel дают 24-32 ГБ дешевле NVIDIA, но работают через ROCm, Vulkan или oneAPI (платформа Intel). Radeon AI PRO R9700 даёт 32 ГБ при 300 Вт, но память у неё медленнее (640 ГБ/с), и генерация на 7B почти вдвое ниже, чем у 3090. Intel Arc Pro B60 потребляет 200 Вт и есть в двойной версии с двумя чипами на одной плате: система видит её как две карты по 24 ГБ.</p>
+  <div class="mist">
+    <div><b>Лицензия GeForce</b>Пункт 2.8 лицензии драйвера GeForce: драйвер «not licensed for datacenter deployment»<a class="ref" href="#r18">18</a>. RTX 4090 и 5090 в серверной компании - только после ответа юриста.</div>
+    <div><b>Блок питания</b>Три RTX 3090 потребляют около 800 Вт под нагрузкой. Нужен блок на 1050-1200 Вт<a class="ref" href="#r51">51</a>.</div>
+  </div>
+  <div class="q"><b>Вывод</b>Домашние карты - лучший гигабайт быстрой памяти на деньги, но 24-32 ГБ и запрет на ЦОД оставляют их для дома и прототипов.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/YtheC1qr6VI">Какую видеокарту взять для нейросетей в 2026</a> - Run Bot Run, 29 мин, 09.10.2026, цены Avito. С <a href="https://www.youtube.com/watch?v=YtheC1qr6VI&amp;t=419">6:59</a> про 3090 и 4090, с <a href="https://www.youtube.com/watch?v=YtheC1qr6VI&amp;t=1408">23:28</a> итог по бюджету.</li>
+    <li><a href="https://youtu.be/QPrLcHbXx1o">Распаковка RTX 5090 и тесты LLM</a> - Виталий Кулиев, 23 мин, 2025. С <a href="https://www.youtube.com/watch?v=QPrLcHbXx1o&amp;t=258">4:18</a> тесты в LM Studio, с <a href="https://www.youtube.com/watch?v=QPrLcHbXx1o&amp;t=980">16:20</a> ограничение мощности.</li>
+    <li><a href="https://youtu.be/Oa3MUGsFays">The Only Local AI GPUs Worth Buying Right Now</a> - Digital Spaceport, 20 мин, 16.09.2026, на английском. С <a href="https://www.youtube.com/watch?v=Oa3MUGsFays&amp;t=258">4:18</a> цена против пропускной способности.</li>
+    <li><a href="https://youtu.be/BnZASJstqYM">AMD Radeon R9700 AI PRO 32GB для нейросетей</a> - ServerFlow, 2026, по-русски. С <a href="https://www.youtube.com/watch?v=BnZASJstqYM&amp;t=412">6:52</a> тесты LLM.</li>
+    <li><a href="https://youtu.be/fhp-s4alsS4">AMD vs NVIDIA for LLMs</a> - Alex Ziskind, 2025, на английском. С <a href="https://www.youtube.com/watch?v=fhp-s4alsS4&amp;t=113">1:53</a> сравнение.</li>
+    <li>Статья: <a href="https://habr.com/ru/articles/919394">Две RTX 5060 Ti 16 ГБ или одна RTX 3090</a> - Хабр, 2025.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-ws">
+  <span class="num">06</span>
+  <h2>Карты рабочих станций</h2>
+  <p>Карта рабочей станции - это профессиональная карта NVIDIA RTX PRO с большой памятью и драйвером без запрета на ЦОД. Чип у неё тот же, что у домашней карты своего поколения, но памяти в 2-3 раза больше (табл. 5).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Карта</th><th>Поколение</th><th>Память</th><th>ГБ/с</th><th>TDP</th><th>MIG</th></tr></thead>
+    <tbody>
+      <tr><td>RTX PRO 6000 Workstation</td><td>Blackwell</td><td class="n">96 ГБ GDDR7</td><td class="n">1792</td><td class="n">600 Вт</td><td class="n">до 4</td></tr>
+      <tr><td>RTX PRO 6000 Max-Q</td><td>Blackwell</td><td class="n">96 ГБ GDDR7</td><td class="n">1792</td><td class="n">300 Вт</td><td class="n">до 4</td></tr>
+      <tr><td>RTX PRO 6000 Server Edition</td><td>Blackwell</td><td class="n">96 ГБ GDDR7</td><td class="n">1597</td><td class="n">до 600 Вт</td><td class="n">до 4</td></tr>
+      <tr><td>RTX PRO 5000</td><td>Blackwell</td><td class="n">48 или 72 ГБ GDDR7</td><td class="n">1344</td><td class="n">300 Вт</td><td class="n">до 2</td></tr>
+      <tr><td>RTX PRO 4500</td><td>Blackwell</td><td class="n">32 ГБ GDDR7</td><td class="n">896</td><td class="n">200 Вт</td><td>не указано</td></tr>
+      <tr><td>RTX 6000 Ada</td><td>Ada</td><td class="n">48 ГБ GDDR6</td><td>около 960, не перепроверено</td><td class="n">300 Вт</td><td>не указано</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 5 - Карты рабочих станций. Источники: страницы NVIDIA<a class="ref" href="#r9">9</a><a class="ref" href="#r10">10</a><a class="ref" href="#r12">12</a><a class="ref" href="#r13">13</a><a class="ref" href="#r14">14</a> и даташит Max-Q.</p>
+  <h3>Три версии RTX PRO 6000</h3>
+  <p>RTX PRO 6000 Blackwell выпускается в трёх версиях с одинаковыми 96 ГБ, но разным охлаждением<a class="ref" href="#r11">11</a>. Охлаждение решает, в какой корпус карту можно поставить:</p>
+  <ol class="plain">
+    <li>Workstation, 600 Вт: двойной сквозной поток воздуха, рабочая станция на одну карту.</li>
+    <li>Max-Q, 300 Вт: турбина выдувает воздух назад из корпуса, в станцию ставят до четырёх карт.</li>
+    <li>Server Edition: пассивный радиатор, воздух гонят вентиляторы стоечного сервера. Память у неё медленнее, 1597 ГБ/с<a class="ref" href="#r9">9</a>.</li>
+  </ol>
+  <p>Замера разницы Workstation и Max-Q на инференсе разведка не нашла. Для генерации важна память, а она у них одинаковая, поэтому ожидай близкие цифры на одном запросе.</p>
+  <h3>Почему её сравнивают с H100</h3>
+  <p>RTX PRO 6000 даёт больше памяти, чем H100 (96 против 80 ГБ), но вдвое медленнее её по пропускной способности. На малых MoE-моделях при сотнях параллельных запросов одна RTX PRO 6000 выдала 3140 ток/с против 2987 у H100 SXM и обошлась на 28% дешевле за токен в аренде<a class="ref" href="#r39">39</a>. На восьми картах картина обратная: H100 и H200 связаны NVLink и выигрывают в 1,7-3,4 раза<a class="ref" href="#r40">40</a>.</p>
+  <div class="q"><b>Вывод</b>RTX PRO 6000 - 96 ГБ со скоростью 5090 без запрета на ЦОД. Версию выбирают по корпусу: Server в стойку, Max-Q в станцию на несколько карт.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://youtu.be/ZCvjw8B6rcg">RTX PRO 6000 Blackwell Benchmarks &amp; Tear-Down</a> - Gamers Nexus, 40 мин, 2025, на английском. С <a href="https://www.youtube.com/watch?v=ZCvjw8B6rcg&amp;t=163">2:43</a> характеристики против 5090, с <a href="https://www.youtube.com/watch?v=ZCvjw8B6rcg&amp;t=2124">35:24</a> тесты LLM.</li>
+    <li><a href="https://youtu.be/bAao58hXo9w">Skip M3 Ultra &amp; RTX 5090 for LLMs: new 96GB king</a> - Alex Ziskind, 22 мин, 2025. С <a href="https://www.youtube.com/watch?v=bAao58hXo9w&amp;t=586">9:46</a> сравнение с Apple, с <a href="https://www.youtube.com/watch?v=bAao58hXo9w&amp;t=645">10:45</a> длинный контекст.</li>
+    <li><a href="https://youtu.be/dNk3EJ-szwk">RTX PRO 6000 Blackwell 96 ГБ, карта которую ты себе никогда не купишь</a> - VIK-off, 16 мин, по-русски: знакомство с картой.</li>
+    <li><a href="https://youtu.be/vN7iwFNJBV4">Сборка на Threadripper и 2x RTX Pro 6000</a> - ServerFlow, 11 мин, 2026, по-русски. С <a href="https://www.youtube.com/watch?v=vN7iwFNJBV4&amp;t=548">9:08</a> шум и мощность; тестов LLM нет.</li>
+    <li>Статья: <a href="https://www.cloudrift.ai/blog/benchmarking-rtx6000-vs-datacenter-gpus">RTX 6000 против серверных карт</a> - CloudRift, 2025, на английском<a class="ref" href="#r39">39</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-dc">
+  <span class="num">07</span>
+  <h2>Серверные карты</h2>
+  <p>Серверная карта - это карта для ЦОД с пассивным охлаждением и обычно без видеовыхода. Старшие модели несут память HBM, младшие L4 и L40S - GDDR. Её арендуют в облаке или ставят в стоечный сервер (табл. 6).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Карта</th><th>Поколение</th><th>Память</th><th>ГБ/с</th><th>FP8 dense, TFLOPS</th><th>TDP</th><th>Форма</th></tr></thead>
+    <tbody>
+      <tr><td>L4</td><td>Ada</td><td class="n">24 ГБ GDDR6</td><td class="n">300</td><td class="n">около 242</td><td class="n">72 Вт</td><td>PCIe, низкопрофильная</td></tr>
+      <tr><td>L40S</td><td>Ada</td><td class="n">48 ГБ GDDR6</td><td class="n">864</td><td class="n">733</td><td class="n">350 Вт</td><td>PCIe</td></tr>
+      <tr><td>A100 80 ГБ</td><td>Ampere</td><td class="n">80 ГБ HBM2e</td><td class="n">1935-2039</td><td>нет аппаратного FP8</td><td class="n">300-400 Вт</td><td>PCIe или SXM</td></tr>
+      <tr><td>H100 PCIe</td><td>Hopper</td><td class="n">80 ГБ HBM2e</td><td class="n">2000</td><td class="n">около 1600</td><td class="n">350 Вт</td><td>PCIe</td></tr>
+      <tr><td>H100 SXM</td><td>Hopper</td><td class="n">80 ГБ HBM3</td><td class="n">3350</td><td class="n">около 1979</td><td class="n">до 700 Вт</td><td>SXM</td></tr>
+      <tr><td>H100 NVL</td><td>Hopper</td><td class="n">94 ГБ HBM3</td><td class="n">3900</td><td class="n">около 1671</td><td class="n">350-400 Вт</td><td>PCIe</td></tr>
+      <tr><td>H200</td><td>Hopper</td><td class="n">141 ГБ HBM3e</td><td class="n">4800</td><td class="n">около 1979</td><td class="n">600-700 Вт</td><td>SXM или PCIe (NVL)</td></tr>
+      <tr><td>B200</td><td>Blackwell</td><td class="n">180 ГБ HBM3e</td><td class="n">7700</td><td class="n">около 4500</td><td class="n">до 1000 Вт</td><td>SXM</td></tr>
+      <tr><td>AMD MI300X</td><td>CDNA3</td><td class="n">192 ГБ HBM3</td><td class="n">5300</td><td class="n">2610</td><td class="n">750 Вт</td><td>OAM</td></tr>
+      <tr><td>AMD MI325X</td><td>CDNA3</td><td class="n">256 ГБ HBM3e</td><td class="n">6000</td><td class="n">2610</td><td class="n">1000 Вт</td><td>OAM</td></tr>
+      <tr><td>AMD MI355X</td><td>CDNA4</td><td class="n">288 ГБ HBM3e</td><td class="n">8000</td><td class="n">5000</td><td class="n">1400 Вт</td><td>OAM</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 6 - Серверные карты. Источники: страницы и даташиты NVIDIA<a class="ref" href="#r1">1</a><a class="ref" href="#r2">2</a><a class="ref" href="#r3">3</a><a class="ref" href="#r4">4</a><a class="ref" href="#r5">5</a><a class="ref" href="#r6">6</a><a class="ref" href="#r7">7</a> и AMD<a class="ref" href="#r15">15</a><a class="ref" href="#r16">16</a><a class="ref" href="#r17">17</a>. NVIDIA даёт TFLOPS со sparsity; «около» значит, что цифра поделена на два по сноске даташита.</p>
+  <h3>PCIe, SXM и NVLink</h3>
+  <p>SXM - это модуль, который ставится прямо на системную плату HGX - плату NVIDIA на 4 или 8 таких модулей, - а не в слот. Он получает больше питания (до 700 Вт у H100) и связан с соседними картами через NVLink. NVLink - это прямая связь между картами, в разы быстрее PCIe: у H100 SXM 900 ГБ/с. Версия PCIe ставится в обычный сервер, у неё ниже питание и медленнее память: H100 PCIe получает 2000 ГБ/с против 3350 у SXM<a class="ref" href="#r1">1</a>. Для генерации это минус 40% скорости.</p>
+  <h3>Как выбирать между ними</h3>
+  <ol class="plain">
+    <li>L4: дешёвая и холодная карта на 24 ГБ. Модель 27-32B в FP8 в неё не влезает, она годится для распознавания речи (ASR) и малых моделей.</li>
+    <li>L40S: 48 ГБ и аппаратный FP8. Одна модель 27B в FP8 влезает, но на параллельные запросы памяти остаётся мало.</li>
+    <li>A100 80 ГБ: много быстрой памяти и низкая цена аренды, но без аппаратного FP8 (раздел 04).</li>
+    <li>H100: FP8 и HBM. Версия SXM быстрее PCIe на 67% по памяти, NVL даёт 94 ГБ в обычном сервере.</li>
+    <li>H200: та же Hopper со 141 ГБ на 4800 ГБ/с. Для одной модели 27-32B это избыток, она нужна для больших моделей и длинного контекста.</li>
+    <li>B200 и AMD MI300X-MI355X: серверы на 8 карт для больших моделей. У российских провайдеров карт AMD разведка не нашла.</li>
+  </ol>
+  <h3>Что есть в России</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Провайдер</th><th>Карты на странице провайдера, 14.10.2026</th></tr></thead>
+    <tbody>
+      <tr><td>Selectel</td><td>A100, H100, H200, L4, RTX 6000 Ada, RTX PRO 6000, RTX 4090 48 ГБ<a class="ref" href="#r43">43</a></td></tr>
+      <tr><td>Cloud.ru</td><td>V100, A100, H100 PCIe и HGX с NVLink<a class="ref" href="#r44">44</a></td></tr>
+      <tr><td>VK Cloud</td><td>A100, L4, L40S, V100, A30, H200<a class="ref" href="#r45">45</a></td></tr>
+      <tr><td>Yandex Cloud</td><td>V100, A100 80, T4<a class="ref" href="#r46">46</a></td></tr>
+      <tr><td>Immers.cloud</td><td>H200, H100 NVL, H100, A100, RTX 5090, RTX 4090<a class="ref" href="#r47">47</a></td></tr>
+      <tr><td>HOSTKEY</td><td>RTX PRO 6000, RTX PRO 5000 72 ГБ, A100, H100, H200<a class="ref" href="#r48">48</a></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 7 - Наличие карт у российских провайдеров. Cloud4U модели карт на странице не называет. Цены и 152-ФЗ разбирает задача 12, не эта лекция.</p>
+  <h3>Лицензии</h3>
+  <p>Для серверных карт и RTX PRO запрета драйвера на ЦОД нет. NVIDIA AI Enterprise - это платная подписка на программы NVIDIA, например готовые контейнеры с моделями NIM, и она нужна, только если ты запускаешь эти программы<a class="ref" href="#r19">19</a>. Для серверов моделей vLLM и SGLang (лекция 3) с открытым кодом подписка не требуется: это вывод из того, что страница лицензий их не упоминает. H100 NVL и H200 NVL продаются сразу с подпиской на 5 лет.</p>
+  <div class="q"><b>Вывод</b>Для одной модели 27-32B хватает H100 или A100 на 80 ГБ. H200, B200 и AMD нужны большим моделям и серверам на 8 карт.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/lk-urUlDafg">Обзор серверного железа для нейросетей в 2025: H100, H200 и RTX 5090 в России</a> - Виталий Кулиев, 46 мин, 18.11.2025, по-русски. С <a href="https://www.youtube.com/watch?v=lk-urUlDafg&amp;t=25">0:25</a> обзор карт, с <a href="https://www.youtube.com/watch?v=lk-urUlDafg&amp;t=1200">20:00</a> NVLink против PCIe.</li>
+    <li><a href="https://youtu.be/lNumJwHpXIA">Nvidia Wouldn't Send Me This $30,000 GPU: H200</a> - Linus Tech Tips, 23 мин, 2025, на английском. С <a href="https://www.youtube.com/watch?v=lNumJwHpXIA&amp;t=963">16:03</a> H200 против RTX 5090.</li>
+    <li><a href="https://youtu.be/LjU89rZa8HQ">Inside a 1.44TB HBM3e HGX B200 server</a> - ServeTheHome, 19 мин, 2025. С <a href="https://www.youtube.com/watch?v=LjU89rZa8HQ&amp;t=745">12:25</a> 8 карт и коммутаторы NVLink.</li>
+    <li>Статья: <a href="https://habr.com/en/companies/selectel/articles/955242/">Как мы запустили H200 в Selectel</a> - Хабр, 10.10.2025, по-русски: эволюция от V100 до H200 и сравнение с L4 и RTX PRO 6000<a class="ref" href="#r54">54</a>.</li>
+    <li>Статья: <a href="https://habr.com/ru/articles/1019730">Какие GPU вам подойдут? Обзор H200 и L40S</a> - Хабр, T1, 2026<a class="ref" href="#r55">55</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-mini">
+  <span class="num">08</span>
+  <h2>Мини-станции</h2>
+  <p>Мини-станция - это компьютер размером с книгу, у которого процессор и графика делят одну большую единую память. Проще говоря, видеокарты в нём нет, зато вся оперативная память, до 128-512 ГБ, доступна модели. Таких машин три семейства: NVIDIA на чипе GB10, AMD Strix Halo и Apple Mac Studio (табл. 8).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Машина</th><th>Память</th><th>ГБ/с</th><th>Платформа</th><th>Цена (дата)</th></tr></thead>
+    <tbody>
+      <tr><td>NVIDIA DGX Spark (GB10)</td><td class="n">128 ГБ LPDDR5x</td><td class="n">273</td><td>CUDA</td><td>$6950 с 02.10.2026<a class="ref" href="#r28">28</a></td></tr>
+      <tr><td>ASUS, Dell, Lenovo, HP, MSI, Gigabyte, Acer на GB10</td><td class="n">128 ГБ</td><td class="n">273</td><td>CUDA</td><td>ASUS GX10 954 800 руб., под заказ<a class="ref" href="#r31">31</a></td></tr>
+      <tr><td>NVIDIA DGX Station GB300</td><td class="n">748 ГБ, из них 252 HBM3e</td><td>не нашли</td><td>CUDA</td><td>около $95-101 тыс.<a class="ref" href="#r29">29</a></td></tr>
+      <tr><td>AMD Strix Halo (Ryzen AI Max+ 395)</td><td class="n">128 ГБ, до 96 под графику</td><td class="n">256</td><td>ROCm, Vulkan</td><td>от 660 тыс. руб. (август 2026)<a class="ref" href="#r32">32</a></td></tr>
+      <tr><td>Mac Studio M5 Max</td><td class="n">36-128 ГБ</td><td class="n">460-614</td><td>MLX, Metal</td><td>от $2499<a class="ref" href="#r33">33</a></td></tr>
+      <tr><td>Mac Studio M5 Ultra</td><td class="n">96-512 ГБ</td><td class="n">1200</td><td>MLX, Metal</td><td>от $5499, поставки с 22.09.2026<a class="ref" href="#r33">33</a></td></tr>
+      <tr><td>Mac Studio M3 Ultra</td><td class="n">до 512 ГБ</td><td>около 819, не перепроверено</td><td>MLX, Metal</td><td>около 600 тыс. руб. при запуске, пересказ</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 8 - Мини-станции. Цена Spark в разных источниках расходится: $6950 у The Register на 02.10.2026, $4699-4800 у продавцов в сентябре.</p>
+  <h3>DGX Spark и сборки на GB10</h3>
+  <p>DGX Spark - это мини-компьютер NVIDIA на чипе GB10 из поколения Blackwell с CUDA и 128 ГБ памяти. ASUS, Dell, Lenovo, HP, MSI, Gigabyte и Acer продают свои версии на том же чипе. Отличаются они накопителем и охлаждением: у ASUS накопитель PCIe 4.0 на младших версиях, и модель загружается за 11,5 с против 8,5 с у Spark, а Acer в тесте StorageReview оказался на 10-15 градусов холоднее остальных<a class="ref" href="#r30">30</a>. На скорость генерации версия почти не влияет: её задают одинаковые 273 ГБ/с.</p>
+  <p>Два Spark соединяются кабелем через сетевую карту ConnectX-7 на 200 Гбит/с. NVIDIA заявляет, что пара запускает модели до 405B в FP4<a class="ref" href="#r27">27</a>. Замеров скорости пары разведка не нашла.</p>
+  <h3>Почему Spark быстро читает промпт</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Железо</th><th>Prefill, ток/с</th><th>Генерация, ток/с</th><th>Источник</th></tr></thead>
+    <tbody>
+      <tr><td>DGX Spark, CUDA</td><td class="n">2444</td><td class="n">58,7</td><td>замеры llama.cpp<a class="ref" href="#r25">25</a></td></tr>
+      <tr><td>Strix Halo, ROCm</td><td class="n">662</td><td class="n">35,5</td><td>Level1Techs<a class="ref" href="#r26">26</a></td></tr>
+      <tr><td>Strix Halo, Vulkan</td><td class="n">515</td><td class="n">36,5</td><td>Level1Techs<a class="ref" href="#r26">26</a></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 9 - gpt-oss-120b в MXFP4 (59 ГиБ) на мини-станциях. Spark: pp2048 и tg32, Strix Halo: pp512 и tg128; длина промпта разная, сравнивай порядок величин.</p>
+  <p>Из таблицы 9 видно, что пропускная способность у машин почти одинаковая (273 и 256 ГБ/с), а генерация отличается в 1,6 раза: разницу дают платформа CUDA против ROCm и Vulkan и разная длина замера. Prefill у Spark выше в 3,7-4,7 раза: у GB10 тензорные ядра Blackwell, и вычислений у него больше. Это тот же механизм, что у RTX 3090 и 4090 в таблице 4.</p>
+  <h3>Strix Halo</h3>
+  <p>Strix Halo (AMD Ryzen AI Max+ 395) - это процессор со встроенной графикой и до 128 ГБ памяти, его ставят в мини-ПК Framework, GMKtec, Minisforum и других. Он потребляет 45-120 Вт и стоит дешевле Spark. Слабое место - платформа: на полном контексте ROCm теряет до 64% скорости генерации, Vulkan около 12-14%, а плотная 27B выдаёт всего 6-9 ток/с<a class="ref" href="#r26">26</a>.</p>
+  <h3>Mac Studio</h3>
+  <p>Mac Studio на M5 Ultra даёт до 512 ГБ при 1200 ГБ/с: среди мини-станций только Mac Studio Ultra и вмещают много, и печатают быстро. Он работает тихо и без настройки через LM Studio и MLX. Слабое место Mac - prefill. На модели 7B M3 Ultra читает промпт со скоростью 1471 ток/с, а более новый M5 Max - 3220: по мнению сопровождающего замеров, рост дали новые тензорные блоки в графике M5<a class="ref" href="#r24">24</a>.</p>
+  <div class="xref"><b>Вспомни лекцию 1</b><p>Мини-станции покупают под большие MoE-модели (лекция 1, раздел 07): память по всем параметрам, скорость по активным. На плотной Llama 3.1 70B в FP8 Spark даёт всего 2,7 ток/с<a class="ref" href="#r27">27</a>.</p></div>
+  <div class="q"><b>Вывод</b>Spark читает промпт быстрее Strix Halo, Mac Studio Ultra быстрее всех мини-станций печатает, Strix Halo дешевле всех. Плотные модели 27-32B на них печатают медленно.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/DVpJiFfA63s">ASUS GX10 (NVIDIA DGX Spark): честный тест для инференса</a> - Виталий Кулиев, 29 мин, 2026, по-русски. С <a href="https://www.youtube.com/watch?v=DVpJiFfA63s&amp;t=1211">20:11</a> альтернативы.</li>
+    <li><a href="https://youtu.be/lLG-xN25v20">Тест Nvidia DGX Spark против AMD и Mac Mini</a> - PRO Hi-Tech, 22 мин, 2026, по-русски. Тесты с <a href="https://www.youtube.com/watch?v=lLG-xN25v20&amp;t=394">6:34</a>.</li>
+    <li><a href="https://youtu.be/FjRKvKC4ntw">A tiny AI supercomputer for your desk</a> - Jeff Geerling, 11 мин, 2025, на английском. С <a href="https://www.youtube.com/watch?v=FjRKvKC4ntw&amp;t=420">7:00</a> замеры, с <a href="https://www.youtube.com/watch?v=FjRKvKC4ntw&amp;t=520">8:40</a> связка на 2x200 Гбит/с.</li>
+    <li><a href="https://youtu.be/J29fhTkI0wA">DGX Spark Deep Dive</a> - StorageReview, 22 мин, 2025. С <a href="https://www.youtube.com/watch?v=J29fhTkI0wA&amp;t=1055">17:35</a> связка двух машин.</li>
+    <li><a href="https://youtu.be/Gz62bniDkpg">Is STRIX better than SPARK?</a> - Level1Techs, 32 мин, 2026. С <a href="https://www.youtube.com/watch?v=Gz62bniDkpg&amp;t=313">5:13</a> сравнение.</li>
+    <li><a href="https://youtu.be/in9SWFrnfp4">Тест Ryzen Max+ 395 со 128 ГБ в играх, ПО и нейронках</a> - PRO Hi-Tech, 41 мин, по-русски. С <a href="https://www.youtube.com/watch?v=in9SWFrnfp4&amp;t=497">8:17</a> настройка памяти, с <a href="https://www.youtube.com/watch?v=in9SWFrnfp4&amp;t=2003">33:23</a> нейросети.</li>
+    <li><a href="https://youtu.be/mmntN7zIekU">Local AI on the Framework Desktop: 32, 64 и 128 ГБ</a> - Framework, 39 мин, 2026. С <a href="https://www.youtube.com/watch?v=mmntN7zIekU&amp;t=749">12:29</a> KV-кэш.</li>
+    <li><a href="https://youtu.be/G9xEHuzxceo">OpenClaw + Mac Studio: честный опыт с локальными LLM</a> - Алексей Андреевский, 39 мин, 2026, по-русски. С <a href="https://www.youtube.com/watch?v=G9xEHuzxceo&amp;t=775">12:55</a> MLX против GGUF, с <a href="https://www.youtube.com/watch?v=G9xEHuzxceo&amp;t=961">16:01</a> параллельные запросы.</li>
+    <li><a href="https://youtu.be/AuYfT3fnlCo">Are Macs slow at large context?</a> - xCreate, 39 мин, 2025. С <a href="https://www.youtube.com/watch?v=AuYfT3fnlCo&amp;t=1424">23:44</a> большой промпт на Mac.</li>
+    <li>Статья: <a href="https://habr.com/en/articles/994058">Бенчмарк DGX Spark с Qwen3</a> - Хабр, В. Гречин, 2026, по-русски: упор в память и сравнение с 3090<a class="ref" href="#r56">56</a>.</li>
+    <li>Статья: <a href="https://lmsys.org/blog/2025-10-13-nvidia-dgx-spark/">NVIDIA DGX Spark In-Depth Review</a> - LMSYS, 13.10.2025, на английском<a class="ref" href="#r27">27</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-multi">
+  <span class="num">09</span>
+  <h2>Несколько карт</h2>
+  <h3>Зачем</h3>
+  <p>Несколько карт ставят ради суммарной памяти: три RTX 3090 дают 72 ГБ. Модель делится между картами двумя способами (рис. 3). Конвейерное деление (pipeline parallel) отдаёт каждой карте свой кусок слоёв, и карты работают по очереди. Тензорное деление (tensor parallel) делит каждый слой между картами, и они работают одновременно, но постоянно обмениваются данными.</p>
+  <figure>
+    <div class="ttl">Рисунок 3 - Два способа поделить модель между картами</div>
+    <svg class="d" viewBox="0 0 760 170" role="img" aria-label="Конвейерное деление: слои 1-32 на карте 1, слои 33-64 на карте 2, карты работают по очереди. Тензорное деление: каждый слой разрезан пополам между картами, карты обмениваются данными на каждом слое">
+      <text class="b" x="10" y="24">Конвейерное деление</text>
+      <rect class="hl" x="10" y="36" width="160" height="40" rx="4"/><text x="90" y="61" text-anchor="middle">карта 1: слои 1-32</text>
+      <line class="ln" x1="170" y1="56" x2="208" y2="56" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="210" y="36" width="160" height="40" rx="4"/><text x="290" y="61" text-anchor="middle">карта 2: слои 33-64</text>
+      <text class="sm mut" x="190" y="100" text-anchor="middle">по очереди; связь редкая, хватает PCIe</text>
+      <text class="b" x="400" y="24">Тензорное деление</text>
+      <rect class="rs" x="400" y="36" width="160" height="40" rx="4"/><text x="480" y="61" text-anchor="middle">карта 1: половина слоя</text>
+      <rect class="rs" x="590" y="36" width="160" height="40" rx="4"/><text x="670" y="61" text-anchor="middle">карта 2: половина слоя</text>
+      <line class="ln" x1="560" y1="50" x2="588" y2="50" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="590" y1="64" x2="562" y2="64" marker-end="url(#m-fill)"/>
+      <text class="sm mut" x="575" y="100" text-anchor="middle">одновременно; обмен на каждом слое, нужен NVLink</text>
+      <text class="mut sm" x="380" y="150" text-anchor="middle">слева выигрыш только в объёме памяти, справа ещё и в скорости, если связь быстрая</text>
+    </svg>
+    <figcaption>Схема по документации vLLM о параллелизме<a class="ref" href="#r50">50</a>.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Слева карты передают друг другу результат один раз на токен, поэтому медленной связи PCIe хватает.</li>
+      <li>Справа карты обмениваются данными в каждом слое: без NVLink они больше ждут, чем считают.</li>
+    </ol>
+  </div>
+  <h3>Где подвох</h3>
+  <p>Тензорному делению нужна быстрая связь между картами. У домашних карт NVLink остался только на RTX 3090, у серий 40 и 50 его нет<a class="ref" href="#r53">53</a>. Для карт без NVLink документация vLLM рекомендует конвейерное деление<a class="ref" href="#r50">50</a>. Автор сборки на четырёх картах через переходники M.2-PCIe отмечает: деление по слоям не ускоряет генерацию, оно нужно только ради объёма<a class="ref" href="#r52">52</a>. У серверных карт SXM NVLink есть всегда, поэтому сервер на 8 H100 работает как одна большая карта.</p>
+  <h3>Пример сборки</h3>
+  <p>Сборка на майнинговой плате с тремя RTX 3090 стоила около 202 тыс. руб. и даёт 100-115 ток/с на gpt-oss-120b при потреблении около 800 Вт<a class="ref" href="#r51">51</a>. Это вдвое быстрее DGX Spark на той же модели: память каждой 3090 читается со скоростью 936 ГБ/с против 273 у Spark, а MoE-модель читает мало весов на токен. Минусы - шум, жар и место.</p>
+  <div class="q"><b>Вывод</b>Несколько домашних карт покупают ради памяти. Скорость одного запроса заметно растёт только при тензорном делении с быстрой связью, то есть на серверных картах с NVLink.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=YtheC1qr6VI&amp;t=561">Что такое NVLink за 40 секунд</a> - Run Bot Run, с 9:21.</li>
+    <li><a href="https://www.youtube.com/watch?v=L9sI7sUKLIM&amp;t=2249">Работа с несколькими видеокартами</a> - «Этот Компьютер», с 37:29.</li>
+    <li><a href="https://youtu.be/So7tqRSZ0s8">Ultimate local AI quad 3090 build</a> - Digital Spaceport, 30 мин, 2025, на английском. С <a href="https://www.youtube.com/watch?v=So7tqRSZ0s8&amp;t=1026">17:06</a> мощность и шум, с <a href="https://www.youtube.com/watch?v=So7tqRSZ0s8&amp;t=1315">21:55</a> стоимость.</li>
+    <li><a href="https://youtu.be/S1xqC5nBk4A">Рабочая станция на 3 GPU</a> - ServerFlow, 18 мин, 2025, по-русски.</li>
+    <li>Статья: <a href="https://habr.com/ru/articles/1019940">Локальный ИИ: майнинг-плата и 3 RTX 3090</a> - Хабр, апрель 2026<a class="ref" href="#r51">51</a>.</li>
+    <li>Статья: <a href="https://habr.com/ru/articles/1041422/">Как я собрал LLM-печку на 4 GPU</a> - Хабр, май 2026<a class="ref" href="#r52">52</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-task">
+  <span class="num">10</span>
+  <h2>Карты в учебном расчёте</h2>
+  <p>Условная задача - одна плотная модель 27-32B в FP8 и 5-16 одновременных запросов. Кандидаты - Qwen3.6-27B (27,8 ГБ весов в FP8) и T-pro-it-2.1 (32,8 ГБ). Таблица 10 применяет к ним формулу потолка из раздела 02.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Карта</th><th>Память</th><th>ГБ/с</th><th>Qwen3.6-27B, ток/с</th><th>T-pro-it-2.1, ток/с</th><th>Оценка</th></tr></thead>
+    <tbody>
+      <tr><td>L40S</td><td class="n">48 ГБ</td><td class="n">864</td><td class="n">31</td><td class="n">26</td><td><span class="tag r">тесно для T-pro</span></td></tr>
+      <tr><td>RTX PRO 5000 72 ГБ</td><td class="n">72 ГБ</td><td class="n">1344</td><td class="n">48</td><td class="n">41</td><td><span class="tag p">годится</span></td></tr>
+      <tr><td>RTX PRO 6000 Server</td><td class="n">96 ГБ</td><td class="n">1597</td><td class="n">57</td><td class="n">49</td><td><span class="tag ok">кандидат</span></td></tr>
+      <tr><td>RTX PRO 6000 Max-Q</td><td class="n">96 ГБ</td><td class="n">1792</td><td class="n">64</td><td class="n">55</td><td><span class="tag ok">кандидат</span></td></tr>
+      <tr><td>A100 80 ГБ SXM</td><td class="n">80 ГБ</td><td class="n">2039</td><td class="n">73</td><td class="n">62</td><td><span class="tag r">без аппаратного FP8</span></td></tr>
+      <tr><td>H100 PCIe</td><td class="n">80 ГБ</td><td class="n">2000</td><td class="n">72</td><td class="n">61</td><td><span class="tag ok">кандидат</span></td></tr>
+      <tr><td>H100 SXM</td><td class="n">80 ГБ</td><td class="n">3350</td><td class="n">120</td><td class="n">102</td><td><span class="tag ok">кандидат</span></td></tr>
+      <tr><td>H200</td><td class="n">141 ГБ</td><td class="n">4800</td><td class="n">173</td><td class="n">146</td><td><span class="tag r">избыток</span></td></tr>
+      <tr><td>DGX Spark</td><td class="n">128 ГБ</td><td class="n">273</td><td class="n">10</td><td class="n">8</td><td><span class="tag no">медленно</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 10 - Потолок генерации одного запроса: ГБ/с, делённые на ГБ весов. Это расчёт, а не замер; параметры моделей из карточек на Hugging Face.</p>
+  <h3>Что показал замер</h3>
+  <p>Единственный найденный замер на модели из примера - пост на Reddit в пересказе Prismix: Qwen3.6-27B на RTX PRO 6000 Max-Q в vLLM 0.24 с одним запросом<a class="ref" href="#r41">41</a>. Генерация составила 59 ток/с в BF16, 97,5 в FP8 и 169 в NVFP4. Цифры выше потолка: в FP8 потолок 64 ток/с (табл. 10), в BF16 около 32, потому что автор включил MTP - спекулятивное декодирование, при котором модель угадывает несколько токенов вперёд и проверяет их за одно чтение весов. Механизм разобран в лекции 3.</p>
+  <p>Из замера видно ещё одно: переход BF16, FP8, NVFP4 каждый раз ускорил генерацию в 1,6-1,7 раза. Байт на вес стало вдвое меньше, и формула потолка предсказывает рост вдвое. Замер дал меньше, потому что часть времени уходит не на чтение весов.</p>
+  <div class="xref"><b>Дальше в серии</b><p>Таблица 10 считает один запрос. Суммарная скорость карты при 16 запросах в разы выше, потому что сервер с непрерывным батчингом (лекция 3, раздел 05) читает веса один раз на все запросы. Сколько запросов влезет в память - решает KV-кэш, расчёт в <a href="local-llm-3-serving.html">лекции 3</a>.</p></div>
+  <div class="q"><b>Вывод</b>Для одной модели 27-32B кандидаты - RTX PRO 6000 и H100. A100 дешевле, но без аппаратного FP8, L40S тесна для T-pro, H200 и мини-станции не подходят по разным причинам.</div>
+</section>
+
+
+<section id="s-pick">
+  <span class="num">11</span>
+  <h2>Как подобрать железо</h2>
+  <p>Железо подбирают от задачи к карте (рис. 4). Каждый шаг опирается на формулы таблицы 1. Класс памяти - ближайший стандартный объём карты (24, 48 или 80-96 ГБ), в который влезает расчёт.</p>
+  <figure>
+    <div class="ttl">Рисунок 4 - Порядок расчёта</div>
+    <svg class="d" viewBox="0 0 720 120" role="img" aria-label="Порядок: нагрузка, модель и точность, веса, KV на параллельность, класс памяти, карта и корпус">
+      <rect class="box" x="5" y="30" width="105" height="50" rx="4"/><text class="b" x="57" y="52" text-anchor="middle">Нагрузка</text><text class="mut sm" x="57" y="68" text-anchor="middle">токенов в сутки</text>
+      <line class="ln" x1="110" y1="55" x2="125" y2="55" marker-end="url(#m-fill)"/>
+      <rect class="box" x="127" y="30" width="105" height="50" rx="4"/><text class="b" x="179" y="52" text-anchor="middle">Модель</text><text class="mut sm" x="179" y="68" text-anchor="middle">и точность</text>
+      <line class="ln" x1="232" y1="55" x2="247" y2="55" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="249" y="30" width="105" height="50" rx="4"/><text class="b" x="301" y="52" text-anchor="middle">Веса</text><text class="mut sm" x="301" y="68" text-anchor="middle">ГиБ</text>
+      <line class="ln" x1="354" y1="55" x2="369" y2="55" marker-end="url(#m-fill)"/>
+      <rect class="oks" x="371" y="30" width="105" height="50" rx="4"/><text class="b" x="423" y="52" text-anchor="middle">KV-кэш</text><text class="mut sm" x="423" y="68" text-anchor="middle">на запросы</text>
+      <line class="ln" x1="476" y1="55" x2="491" y2="55" marker-end="url(#m-fill)"/>
+      <rect class="box" x="493" y="30" width="105" height="50" rx="4"/><text class="b" x="545" y="52" text-anchor="middle">Класс памяти</text><text class="mut sm" x="545" y="68" text-anchor="middle">24, 48, 80-96</text>
+      <line class="ln" x1="598" y1="55" x2="613" y2="55" marker-end="url(#m-fill)"/>
+      <rect class="rs" x="615" y="30" width="100" height="50" rx="4"/><text class="b" x="665" y="52" text-anchor="middle">Карта</text><text class="mut sm" x="665" y="68" text-anchor="middle">и корпус</text>
+      <text class="mut sm" x="360" y="108" text-anchor="middle">скорость проверяется после выбора класса: результат зависит от нагрузки</text>
+    </svg>
+    <figcaption>Синий - веса, зелёный - KV-кэш, коричневый - решение о покупке или аренде.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Иди слева направо: каждый шаг берёт число из предыдущего.</li>
+      <li>Синий и зелёный шаги дают гигабайты, их сумма выбирает класс памяти.</li>
+      <li>Карту и корпус выбирают последними, внутри класса.</li>
+    </ol>
+  </div>
+  <h3>Пример расчёта для проекта</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Шаг</th><th>T-pro-it-2.1</th><th>Qwen3.6-27B</th></tr></thead>
+    <tbody>
+      <tr><td>Нагрузка</td><td colspan="2">200 звонков в сутки, запрос до 8 тыс. токенов, 16 одновременных запросов</td></tr>
+      <tr><td>Веса FP8</td><td class="n">31 ГиБ</td><td class="n">26 ГиБ</td></tr>
+      <tr><td>KV-кэш на запрос 8 тыс. токенов</td><td class="n">2 ГиБ</td><td class="n">0,5 ГиБ</td></tr>
+      <tr><td>KV-кэш на 16 запросов</td><td class="n">16 * 2 = 32 ГиБ</td><td class="n">16 * 0,5 = 8 ГиБ</td></tr>
+      <tr><td>Плюс запас 4 ГиБ</td><td class="n">67 ГиБ</td><td class="n">38 ГиБ</td></tr>
+      <tr><td>Класс памяти</td><td><span class="tag r">80-96 ГБ</span></td><td><span class="tag ok">48 ГБ</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 11 - Расчёт для проекта звонков. KV-кэш в BF16, формула - в лекции 3, раздел 04; с KV в FP8 он вдвое меньше. Запас 4 ГиБ больше, чем 1-3 ГБ на Mac: серверу vLLM нужно больше служебной памяти (допущение). 1 ГиБ = 1,074 ГБ.</p>
+  <p>Из таблицы 11 видно, что выбор модели меняет класс железа: у T-pro KV-кэш на запрос вчетверо больше. Поэтому пилот идёт на карте 80-96 ГБ, где поместятся обе модели, а покупка - после замера.</p>
+  <h3>Остальной сервер</h3>
+  <p>NVIDIA проверяет серверы партнёров и публикует ориентиры для таких сертифицированных систем<a class="ref" href="#r61">61</a>: от 6 ядер процессора на одну карту, оперативной памяти не меньше удвоенной памяти карт, NVMe от 1 ТБ, слот PCIe Gen5 x16 на каждую карту. Для двух RTX PRO 6000 это 12 ядер и от 384 ГБ оперативной памяти: 2 * 96 ГБ карт, умноженные на 2 (расчёт).</p>
+  <div class="mist">
+    <div><b>Считать только веса</b>Модель на 31 ГиБ «влезает» в 48 ГБ, но на параллельные запросы памяти не остаётся.</div>
+    <div><b>Карта не того охлаждения</b>Пассивная Server Edition в тихом корпусе станции перегреется. Workstation-версия в плотном сервере мешает соседним картам.</div>
+    <div><b>Мало оперативной памяти</b>Веса грузятся в карту через оперативную память. Если её меньше весов, загрузка будет медленной или упадёт.</div>
+  </div>
+  <div class="q"><b>Вывод</b>Считай от нагрузки к карте: модель, веса, KV-кэш, класс памяти. Для проекта звонков расчёт даёт класс 80-96 ГБ.</div>
+  <p class="links">Читать: <a href="https://habr.com/en/articles/891656">руководство по конфигурации сервера для LLM, Хабр</a>; <a href="https://www.runpod.io/articles/guides/gpu-memory-sizing-guide-for-llm-inference">RunPod, GPU memory sizing</a>.</p>
+</section>
+
+
+
+
+
+
+
+
+<section id="s-words">
+  <span class="num">14</span>
+  <h2>Словарь</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Термин</th><th>Что значит</th><th>Раздел</th></tr></thead>
+    <tbody>
+      <tr><td>пропускная способность</td><td>сколько ГБ в секунду чип читает из памяти</td><td>02</td></tr>
+      <tr><td>TFLOPS, dense, sparsity</td><td>триллионы операций в секунду; dense - реальная цифра, sparsity - вдвое больше</td><td>03</td></tr>
+      <tr><td>HBM, GDDR, LPDDR</td><td>память серверных карт, обычных видеокарт и мини-станций</td><td>03</td></tr>
+      <tr><td>CUDA, ROCm, Vulkan, MLX</td><td>программные платформы NVIDIA, AMD, любых карт и Apple</td><td>03</td></tr>
+      <tr><td>поколение, архитектура</td><td>устройство чипа: Ampere, Ada, Hopper, Blackwell, Rubin</td><td>04</td></tr>
+      <tr><td>FP8, FP4, NVFP4, MXFP4</td><td>форматы чисел в 8 и 4 бита; аппаратно с Ada и Hopper, с Blackwell</td><td>04</td></tr>
+      <tr><td>Transformer Engine</td><td>блок Hopper и Blackwell, который выбирает точность по слоям</td><td>04</td></tr>
+      <tr><td>Marlin</td><td>ядро vLLM для FP8-весов на картах без аппаратного FP8</td><td>04</td></tr>
+      <tr><td>TDP</td><td>предельная мощность карты в ваттах</td><td>03</td></tr>
+      <tr><td>Max-Q, Server Edition</td><td>версии RTX PRO 6000 на 300 Вт с турбиной и пассивная для стойки</td><td>06</td></tr>
+      <tr><td>MIG</td><td>деление одной карты на изолированные части</td><td>03, 06</td></tr>
+      <tr><td>SXM, OAM, PCIe</td><td>модуль на плату сервера NVIDIA и AMD; карта в слот</td><td>03, 07</td></tr>
+      <tr><td>NVLink</td><td>прямая быстрая связь между картами NVIDIA</td><td>03, 07, 09</td></tr>
+      <tr><td>единая память</td><td>общая память процессора и графики</td><td>08</td></tr>
+      <tr><td>ConnectX-7</td><td>сетевая карта на 200 Гбит/с, связывает два Spark</td><td>08</td></tr>
+      <tr><td>pipeline и tensor parallel</td><td>деление модели между картами по слоям или внутри слоя</td><td>09</td></tr>
+      <tr><td>MTP, спекулятивное декодирование</td><td>модель угадывает несколько токенов вперёд и проверяет их за одно чтение весов</td><td>10, лекция 3</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 14 - Термины лекции. Термины лекции 1 - в её словаре.</p>
+</section>
+
+
+<section id="s-watch">
+  <span class="num">15</span>
+  <h2>Что смотреть и читать</h2>
+  <h3>Порядок просмотра</h3>
+  <p>Восемь пунктов, около 2,5 часа вместе со статьями. Порядок идёт от механизма к конкретным картам.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Материал</th><th>Автор</th><th>Длит.</th><th>Язык</th><th>Зачем</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td><a href="https://www.ssdnodes.com/learn/lang/ru/prefill-vs-decode-llm-inference">Разница между prefill и decode</a></td><td>SSD Nodes</td><td>статья</td><td>ru</td><td>механизм раздела 02</td></tr>
+      <tr><td class="n">2</td><td><a href="https://youtu.be/2AZJP_vjPEs">LLM decode is memory-bound, prefill is compute-bound</a></td><td>DevOps 2 AI</td><td class="n">14:07</td><td>en</td><td>то же на схемах</td></tr>
+      <tr><td class="n">3</td><td><a href="https://www.youtube.com/watch?v=uTLHK4Qkokg&amp;t=196">Tensor Cores: 6 generations</a>, куски с 3:16 до 7:11</td><td>ErrorFixer</td><td class="n">13:44</td><td>en</td><td>поколения и FP8, FP4</td></tr>
+      <tr><td class="n">4</td><td><a href="https://www.youtube.com/watch?v=lk-urUlDafg&amp;t=915">Обзор серверного железа 2025</a>, с 15:15 до 20:00</td><td>Виталий Кулиев</td><td class="n">45:38</td><td>ru</td><td>HBM, NVLink, серверные карты</td></tr>
+      <tr><td class="n">5</td><td><a href="https://habr.com/en/companies/selectel/articles/955242/">Как мы запустили H200 в Selectel</a></td><td>Selectel</td><td>статья</td><td>ru</td><td>серверные карты в России</td></tr>
+      <tr><td class="n">6</td><td><a href="https://youtu.be/bAao58hXo9w">New 96GB king</a></td><td>Alex Ziskind</td><td class="n">22:27</td><td>en</td><td>RTX PRO 6000 в тестах LLM</td></tr>
+      <tr><td class="n">7</td><td><a href="https://youtu.be/Oa3MUGsFays">The only local AI GPUs worth buying</a></td><td>Digital Spaceport</td><td class="n">20:28</td><td>en</td><td>домашние карты 2026</td></tr>
+      <tr><td class="n">8</td><td><a href="https://youtu.be/FjRKvKC4ntw">A tiny AI supercomputer for your desk</a> и <a href="https://habr.com/en/articles/994058">бенчмарк Spark на Хабре</a></td><td>Jeff Geerling, В. Гречин</td><td class="n">11:17</td><td>en, ru</td><td>DGX Spark</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 15 - Основной маршрут. Названия и каналы сверены через YouTube 14.10.2026, таймкоды взяты из глав видео; сами видео разведка не смотрела.</p>
+  <p>Пробелы: русского разбора поколений NVIDIA и форматов FP8 и FP4, русского видео с тестами LLM на RTX PRO 6000 и отдельных видео про A100, L40S и L4 разведка не нашла. Их заменяют разделы 04, 06 и 07 и английские видео.</p>
+</section>
+
+
+<section id="s-check">
+  <span class="num">16</span>
+  <h2>Контрольные вопросы</h2>
+  <h3>По этой лекции</h3>
+  <ol class="plain">
+    <li>Почему у RTX 4090 prefill в 2,3 раза быстрее, чем у 3090, а генерация только на 18%?</li>
+    <li>Посчитай потолок генерации T-pro-it-2.1 в FP8 на H100 SXM и на H100 PCIe. Откуда разница?</li>
+    <li>Что даёт FP8-модель на A100 и чего не даёт?</li>
+    <li>Какую версию RTX PRO 6000 ставить в стоечный сервер, а какую по четыре штуки в рабочую станцию?</li>
+    <li>Почему DGX Spark читает длинный промпт в 4 раза быстрее Strix Halo при почти одинаковой пропускной способности памяти?</li>
+    <li>Чем модуль SXM отличается от карты PCIe и когда это важно?</li>
+    <li>Почему RTX 5090 нельзя просто поставить в серверную компании?</li>
+    <li>Зачем ставить три RTX 3090, если генерация от этого почти не ускоряется?</li>
+    <li>Почему замер Qwen3.6-27B на RTX PRO 6000 оказался выше потолка из таблицы 10?</li>
+  </ol>
+  <h3>Повторение лекции 1</h3>
+  <ol class="plain" start="10">
+    <li>Сколько весит модель 14B в Q4_K_M и в FP8?</li>
+    <li>Почему MoE-модель занимает память по полному размеру, а печатает со скоростью маленькой?</li>
+    <li>Что растёт в памяти при длинном контексте, если веса не меняются?</li>
+  </ol>
+  <p>Ответы присылай агенту: он проверит их и допишет в лекцию то, что осталось непонятным.</p>
+</section>
+
+
+<section id="sources">
+  <span class="num">17</span>
+  <h2>Источники</h2>
+  <ol class="srclist">
+    <li id="r1"><span class="i">1</span><span><a href="https://www.nvidia.com/en-us/data-center/h100/">NVIDIA H100</a>. <span class="w">Первоисточник: память, ГБ/с, TFLOPS со sparsity, NVLink 900, MIG.</span></span></li>
+    <li id="r2"><span class="i">2</span><span><a href="https://www.nvidia.com/en-us/data-center/h200/">NVIDIA H200</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r3"><span class="i">3</span><span><a href="https://www.nvidia.com/en-us/data-center/l40s/">NVIDIA L40S</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r4"><span class="i">4</span><span><a href="https://www.nvidia.com/en-us/data-center/l4/">NVIDIA L4</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r5"><span class="i">5</span><span><a href="https://www.nvidia.com/en-us/data-center/a100/">NVIDIA A100</a>. <span class="w">Первоисточник: FP8 в таблице не указан.</span></span></li>
+    <li id="r6"><span class="i">6</span><span><a href="https://www.nvidia.com/content/dam/en-zz/Solutions/Data-Center/h100/PB-11773-001_v01.pdf">H100 NVL, product brief</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r7"><span class="i">7</span><span><a href="https://dam-cdn.nvd.orangelogic.com/AssetLink/y441155802qub41q118b2852i557jem5.pdf">NVIDIA HGX B200, даташит</a>. <span class="w">Первоисточник, цифры на одну карту.</span></span></li>
+    <li id="r8"><span class="i">8</span><span><a href="https://www.nvidia.com/en-us/data-center/hgx/">NVIDIA HGX: B300 и Rubin</a>. <span class="w">Первоисточник, Rubin - предварительные цифры.</span></span></li>
+    <li id="r9"><span class="i">9</span><span><a href="https://www.nvidia.com/en-us/data-center/rtx-pro-6000-blackwell-server-edition/">RTX PRO 6000 Blackwell Server Edition</a>. <span class="w">Первоисточник, перепроверено 14.10.2026: 1597 ГБ/с.</span></span></li>
+    <li id="r10"><span class="i">10</span><span><a href="https://www.nvidia.com/en-us/products/workstations/professional-desktop-gpus/rtx-pro-6000/">RTX PRO 6000 Blackwell Workstation</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r11"><span class="i">11</span><span><a href="https://www.nvidia.com/en-us/products/workstations/professional-desktop-gpus/rtx-pro-6000-family/">RTX PRO 6000 family</a>. <span class="w">Первоисточник: три версии охлаждения, Max-Q до 4 карт.</span></span></li>
+    <li id="r12"><span class="i">12</span><span><a href="https://www.nvidia.com/en-us/products/workstations/professional-desktop-gpus/rtx-pro-5000/">RTX PRO 5000 Blackwell</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r13"><span class="i">13</span><span><a href="https://www.nvidia.com/en-us/products/workstations/professional-desktop-gpus/rtx-pro-4500/">RTX PRO 4500 Blackwell</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r14"><span class="i">14</span><span><a href="https://www.nvidia.com/en-us/design-visualization/rtx-6000/">RTX 6000 Ada</a>. <span class="w">Первоисточник; пропускная способность на странице не указана.</span></span></li>
+    <li id="r15"><span class="i">15</span><span><a href="https://www.amd.com/en/products/accelerators/instinct/mi300/mi300x.html">AMD Instinct MI300X</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r16"><span class="i">16</span><span><a href="https://www.amd.com/en/products/accelerators/instinct/mi300/mi325x.html">AMD Instinct MI325X</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r17"><span class="i">17</span><span><a href="https://www.amd.com/en/products/accelerators/instinct/mi350/mi355x.html">AMD Instinct MI355X</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r18"><span class="i">18</span><span><a href="https://www.nvidia.com/en-us/drivers/geforce-license/">Лицензия драйвера GeForce, п. 2.8</a>. <span class="w">Первоисточник, версия 25.02.2025.</span></span></li>
+    <li id="r19"><span class="i">19</span><span><a href="https://docs.nvidia.com/ai-enterprise/planning-resource/licensing-guide/latest/licensing.html">NVIDIA AI Enterprise, licensing guide</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r20"><span class="i">20</span><span><a href="https://docs.vllm.ai/en/latest/features/quantization/">vLLM, Quantization</a>. <span class="w">Первоисточник: FP8 на Ada и Hopper, Marlin на Ampere.</span></span></li>
+    <li id="r21"><span class="i">21</span><span><a href="https://github.com/ggml-org/llama.cpp/discussions/15013">llama.cpp: замеры CUDA</a>. <span class="w">Первоисточник, сообщество.</span></span></li>
+    <li id="r22"><span class="i">22</span><span><a href="https://github.com/ggml-org/llama.cpp/discussions/15021">llama.cpp: замеры ROCm</a>. <span class="w">Первоисточник, сообщество.</span></span></li>
+    <li id="r23"><span class="i">23</span><span><a href="https://github.com/ggml-org/llama.cpp/discussions/10879">llama.cpp: замеры Vulkan</a>. <span class="w">Первоисточник, сообщество.</span></span></li>
+    <li id="r24"><span class="i">24</span><span><a href="https://github.com/ggml-org/llama.cpp/discussions/4167">llama.cpp: замеры Apple Silicon</a>. <span class="w">Первоисточник; объяснение роста prefill у M5 - мнение сопровождающего темы.</span></span></li>
+    <li id="r25"><span class="i">25</span><span><a href="https://github.com/ggml-org/llama.cpp/blob/master/benches/dgx-spark/dgx-spark.md">llama.cpp: замеры DGX Spark</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r26"><span class="i">26</span><span><a href="https://forum.level1techs.com/t/strix-halo-llm-inference-notes/249466">Strix Halo LLM inference notes</a>, форум Level1Techs, 2026. <span class="w">Пересказ разведки.</span></span></li>
+    <li id="r27"><span class="i">27</span><span><a href="https://lmsys.org/blog/2025-10-13-nvidia-dgx-spark/">NVIDIA DGX Spark In-Depth Review</a>, LMSYS, 13.10.2025. <span class="w">Пересказ разведки.</span></span></li>
+    <li id="r28"><span class="i">28</span><span><a href="https://www.theregister.com/a/5300622">DGX Spark price</a>, The Register, 02.10.2026. <span class="w">Перепроверено 12.10.2026.</span></span></li>
+    <li id="r29"><span class="i">29</span><span><a href="https://pi3g.com/?p=32200">pi3g: DGX Spark и DGX Station</a>, сентябрь 2026. <span class="w">Пересказ, продавец.</span></span></li>
+    <li id="r30"><span class="i">30</span><span><a href="https://starryhope.com/minipcs/models/asus-ascent-gx10">ASUS Ascent GX10</a>, StarryHope. <span class="w">Пересказ: накопители и время загрузки; температура - по тесту StorageReview в пересказе.</span></span></li>
+    <li id="r31"><span class="i">31</span><span><a href="https://serverflow.ru/catalog/ai-servers/asus-ascent-gx10-gb10-ssd1">Serverflow: ASUS Ascent GX10</a>. <span class="w">Первоисточник: 954 800 руб., под заказ 40-60 рабочих дней, 14.10.2026.</span></span></li>
+    <li id="r32"><span class="i">32</span><span><a href="https://digital-razor.ru/media/articles/workstation/amd-ryzen-ai-max-395-strix-halo-review/">Ryzen AI Max+ 395: обзор</a>, DigitalRazor, 19.08.2026. <span class="w">Пересказ; цены магазина на 18.08.2026.</span></span></li>
+    <li id="r33"><span class="i">33</span><span><a href="https://macworld.com/article/3220024/apple-announces-the-m5-ultra-mac-studio-with-up-to-512gb-of-ram.html">Apple announces the M5 Ultra Mac Studio</a>, Macworld, 25.08.2026. <span class="w">Перепроверено; для M5 Max другие сайты дают до 614 ГБ/с.</span></span></li>
+    <li id="r34"><span class="i">34</span><span><a href="https://en.wikipedia.org/wiki/GeForce_RTX_50_series">GeForce RTX 50 series</a>, Wikipedia. <span class="w">Пересказ.</span></span></li>
+    <li id="r35"><span class="i">35</span><span><a href="https://en.wikipedia.org/wiki/GeForce_40_series">GeForce 40 series</a>, Wikipedia. <span class="w">Пересказ.</span></span></li>
+    <li id="r36"><span class="i">36</span><span><a href="https://en.wikipedia.org/wiki/Radeon_RX_7000_series">Radeon RX 7000 series</a>, Wikipedia. <span class="w">Пересказ.</span></span></li>
+    <li id="r38"><span class="i">38</span><span><a href="https://aiindigo.com/hardware/amd-radeon-ai-pro-r9700-32gb">AMD Radeon AI PRO R9700 32GB</a>, aiindigo. <span class="w">Пересказ, агрегатор: характеристики, цена, работа в Ollama через Vulkan.</span></span></li>
+    <li id="r39"><span class="i">39</span><span><a href="https://www.cloudrift.ai/blog/benchmarking-rtx6000-vs-datacenter-gpus">Benchmarking RTX 6000 vs datacenter GPUs</a>, CloudRift, 27.11.2025. <span class="w">Перепроверено 14.10.2026: 3140 против 2987 ток/с.</span></span></li>
+    <li id="r40"><span class="i">40</span><span><a href="https://www.cloudrift.ai/blog/benchmarking-b200">Benchmarking B200</a>, CloudRift, 21.01.2026. <span class="w">Пересказ разведки.</span></span></li>
+    <li id="r41"><span class="i">41</span><span><a href="https://prismix.dev/news/d238dab26aa7">Qwen3.6-27B на RTX PRO 6000 Max-Q</a>, Prismix, 05.07.2026. <span class="w">Пересказ поста r/LocalLLaMA.</span></span></li>
+    <li id="r43"><span class="i">43</span><span><a href="https://docs.selectel.ru/en/cloud-servers/create/gpus/">Selectel: GPU в облачных серверах</a>. <span class="w">Первоисточник, 14.10.2026.</span></span></li>
+    <li id="r44"><span class="i">44</span><span><a href="https://cloud.ru/docs/virtual-machines/ug/topics/concepts__gpu">Cloud.ru: GPU</a>. <span class="w">Первоисточник, 14.10.2026.</span></span></li>
+    <li id="r45"><span class="i">45</span><span><a href="https://cloud.vk.com/docs/computing/gpu/concepts/about">VK Cloud: GPU</a>. <span class="w">Первоисточник, 14.10.2026.</span></span></li>
+    <li id="r46"><span class="i">46</span><span><a href="https://yandex.cloud/ru/docs/compute/concepts/gpus">Yandex Cloud: GPU</a>. <span class="w">Первоисточник, 14.10.2026.</span></span></li>
+    <li id="r47"><span class="i">47</span><span><a href="https://immers.cloud/gpu/">Immers.cloud: GPU</a>. <span class="w">Первоисточник, 14.10.2026.</span></span></li>
+    <li id="r48"><span class="i">48</span><span><a href="https://hostkey.ru/gpu-dedicated-servers/">HOSTKEY: GPU-серверы</a>. <span class="w">Первоисточник, часть позиций - предзаказ.</span></span></li>
+    <li id="r49"><span class="i">49</span><span><a href="https://serverflow.ru/catalog/komplektuyushchie/videokarty/nvidia-rtx-pro-blackwell/">Serverflow: RTX PRO Blackwell</a>. <span class="w">Первоисточник, наличие и сроки 14.10.2026.</span></span></li>
+    <li id="r50"><span class="i">50</span><span><a href="https://docs.vllm.ai/en/latest/serving/parallelism_scaling.html">vLLM: Parallelism and scaling</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r51"><span class="i">51</span><span><a href="https://habr.com/ru/articles/1019940">Локальный ИИ: майнинг-плата и 3 RTX 3090</a>, Хабр, апрель 2026. <span class="w">Пересказ.</span></span></li>
+    <li id="r52"><span class="i">52</span><span><a href="https://habr.com/ru/articles/1041422/">Как я собрал LLM-печку на 4 GPU</a>, Хабр, май 2026. <span class="w">Пересказ.</span></span></li>
+    <li id="r53"><span class="i">53</span><span><a href="https://en.wikipedia.org/wiki/GeForce_30_series">GeForce 30 series</a>, Wikipedia. <span class="w">Пересказ: NVLink у RTX 3090.</span></span></li>
+    <li id="r54"><span class="i">54</span><span><a href="https://habr.com/en/companies/selectel/articles/955242/">Как мы запустили GPU H200 в Selectel</a>, Хабр, 10.10.2025. <span class="w">Пересказ.</span></span></li>
+    <li id="r55"><span class="i">55</span><span><a href="https://habr.com/ru/articles/1019730">Какие GPU вам подойдут? Обзор H200 и L40S</a>, Хабр, T1. <span class="w">Пересказ; год выведен косвенно.</span></span></li>
+    <li id="r56"><span class="i">56</span><span><a href="https://habr.com/en/articles/994058">Бенчмарк DGX Spark с Qwen3</a>, Хабр, В. Гречин. <span class="w">Пересказ; год выведен косвенно.</span></span></li>
+    <li id="r57"><span class="i">57</span><span><a href="https://www.ssdnodes.com/learn/lang/ru/prefill-vs-decode-llm-inference">Разница между prefill и decode</a>, SSD Nodes, 11.10.2026. <span class="w">Пересказ.</span></span></li>
+    <li id="r61"><span class="i">61</span><span><a href="https://docs.nvidia.com/ngc/ngc-deploy-on-premises/nvidia-certified-configuration-guide/">NVIDIA-Certified Configuration Guide</a>. <span class="w">Пересказ разведки проекта звонков.</span></span></li>
+  </ol>
+</section>
+</main>
+</div>
+
+
+<script>
+// tooltip for the hardware chart: works on hover and keyboard focus
+(function(){
+  var fig = document.getElementById('fig-hw');
+  var tip = fig.querySelector('.tip');
+  function show(e){
+    var parts = e.target.getAttribute('data-tip').split('|');
+    tip.innerHTML = '';
+    parts.forEach(function(t, i){
+      var line = document.createElement(i === 0 ? 'b' : 'div');
+      line.textContent = t;
+      if (i === 0) line.style.display = 'block';
+      tip.appendChild(line);
+    });
+    var fr = fig.getBoundingClientRect(), pr = e.target.getBoundingClientRect();
+    var left = pr.left - fr.left + 14;
+    if (left + 260 > fr.width) left = pr.left - fr.left - 270;
+    tip.style.left = Math.max(8, left) + 'px';
+    tip.style.top = (pr.top - fr.top - 10) + 'px';
+    tip.style.display = 'block';
+  }
+  function hide(){ tip.style.display = 'none'; }
+  fig.querySelectorAll('circle[data-tip]').forEach(function(c){
+    c.addEventListener('mouseenter', show);
+    c.addEventListener('focus', show);
+    c.addEventListener('mouseleave', hide);
+    c.addEventListener('blur', hide);
+  });
+})();
+</script>
+</body>
+</html>

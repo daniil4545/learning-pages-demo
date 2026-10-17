@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Локальные LLM: старт</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --s1:#2a78d6; --s2:#eb6834;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+    --s1:#3987e5; --s2:#d95926;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  --s1:#3987e5; --s2:#d95926;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px;max-height:calc(100vh - 48px);overflow-y:auto}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:7px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t,decimal-leading-zero);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:20px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+ul.plain,ol.plain{margin:0 0 14px;padding-left:22px;max-width:70ch}
+ul.plain li,ol.plain li{margin-bottom:6px}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+pre{font:13.5px/1.55 var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;overflow-x:auto;margin:12px 0 16px}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static;max-height:none}}
+
+/* callout */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+.watch{font-size:14.5px;background:var(--res-soft);border-radius:8px;padding:10px 14px;margin:14px 0;max-width:72ch}
+.watch b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--res);display:block;margin-bottom:6px}
+.watch ul{margin:0;padding-left:18px}
+.watch li{margin-bottom:4px}
+.xref{font-size:14.5px;background:var(--proc-soft);border-radius:8px;padding:10px 14px;margin:14px 0;max-width:72ch}
+.xref b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--proc);display:block;margin-bottom:6px}
+.xref p{margin:0 0 6px}
+
+/* series navigation */
+nav.series{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:22px;font-size:14px}
+nav.series span{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+nav.series a{padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);text-decoration:none}
+nav.series a.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+nav.series a:hover,nav.series a:focus-visible{border-color:var(--accent)}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cap{font-size:13px;color:var(--muted);margin:-8px 0 16px}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+
+/* intro: advance organizer */
+.intro{background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:16px 20px 8px;margin:24px 0 0;max-width:78ch}
+.intro>b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:10px}
+.intro p{font-size:15px;color:var(--muted)}
+.intro ol{margin:0 0 10px;padding-left:22px}
+.intro li{margin-bottom:8px}
+.intro li a{font:600 11px/1 var(--mono);text-decoration:none;margin-left:4px}
+
+/* figure with inline svg */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px;position:relative}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .rs{fill:var(--res-soft);stroke:var(--res);stroke-width:1.5}
+svg .oks{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+svg .ws{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .sm{font-size:11px}
+svg .pt1{fill:var(--s1);stroke:var(--paper);stroke-width:2}
+svg .pt2{fill:var(--s2);stroke:var(--paper);stroke-width:2}
+svg .pt1:hover,svg .pt2:hover,svg .pt1:focus,svg .pt2:focus{stroke:var(--ink);outline:none}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.tip{position:absolute;pointer-events:none;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:13px;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;max-width:260px;z-index:2}
+
+/* walkthrough */
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+
+/* cards */
+.mist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:14px 0}
+.mist div{background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:14px}
+.mist b{display:block;color:var(--warn);font-size:13px;margin-bottom:3px}
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px 1fr;gap:6px}
+.ex div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.tier{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 4px;margin:14px 0}
+.tier h3{margin:0 0 8px}
+.tier .meta{font:600 12px/1.5 var(--mono);color:var(--muted);margin-bottom:8px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+@media print{body{background:#fff}nav.toc{display:none}.wrap{display:block}section{break-inside:avoid-page}}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Оглавление</p>
+  <ol>
+    <li><a href="#s-start">С чего начать</a></li>
+    <li><a href="#s-map">Четыре вопроса</a></li>
+    <li><a href="#s-file">Модель - это файл</a></li>
+    <li><a href="#s-quant">Квантование</a></li>
+    <li><a href="#s-fit">Влезет ли модель</a></li>
+    <li><a href="#s-speed">Скорость</a></li>
+    <li><a href="#s-moe">MoE-модели</a></li>
+    <li><a href="#s-hw">Железо: два числа</a></li>
+    <li><a href="#s-soft">Программы запуска</a></li>
+    <li><a href="#s-hf">Hugging Face</a></li>
+    <li><a href="#s-name">Имя файла GGUF</a></li>
+    <li><a href="#s-card">Карточка модели</a></li>
+    <li><a href="#s-models">Модели 2026 года</a></li>
+    <li><a href="#s-choose">Как выбрать модель</a></li>
+    <li><a href="#s-mac">Практика на компьютере из примера</a></li>
+    <li><a href="#s-words">Словарь</a></li>
+    <li><a href="#s-watch">Что смотреть и читать</a></li>
+    <li><a href="#s-check">Контрольные вопросы</a></li>
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <nav class="series" aria-label="Серия лекций"><span>Серия «Локальные LLM»</span><a class="on" href="local-llm-1-start.html" aria-current="page">1. Старт</a><a href="local-llm-2-hardware.html">2. Железо</a><a href="local-llm-3-serving.html">3. Сервер и работа с моделью</a><a href="local-llm-4-finetuning.html">4. Дообучение и LoRA</a></nav>
+  <span class="eyebrow">Лекция 1 из 4 · 14.10.2026 · вход в тему</span>
+  <h1>Локальные LLM с нуля: модель, память, скорость</h1>
+  <p class="lead">Мягкий вход для того, кто любит железо, но ещё не запускал модели. Вся тема сводится к четырём вопросам. Влезет ли модель в память? Как быстро она отвечает? Насколько она умная? Можно ли её использовать в компании? К каждому разделу приложены видео и статьи для самостоятельного просмотра.</p>
+  <div class="intro">
+    <b>Коротко: вся лекция за две минуты</b>
+    <p>Прочитай эти восемь мыслей до основного текста. Это каркас лекции. Каждая мысль дальше раскрыта в своём разделе, ссылка стоит в конце пункта. Те же восемь мыслей повторяются в лекциях 2 и 3, но с другой стороны.</p>
+    <ol>
+      <li>Модель - это файл с миллиардами чисел. Его размер в гигабайтах примерно равен миллиардам параметров, умноженным на биты и делённым на 8. <a href="#s-file">03</a></li>
+      <li>Квантование сжимает модель до 4 бит почти без потерь качества. Стандартный выбор - файл с <code>Q4_K_M</code> в имени. <a href="#s-quant">04</a></li>
+      <li>Модель должна целиком влезть в память вместе с контекстом. Если не влезла, она работает в разы медленнее. <a href="#s-fit">05</a></li>
+      <li>При обычной генерации плотной модели по одному запросу скорость часто ограничена памятью. Отношение ГБ/с к размеру весов даёт грубый ориентир. Это не универсальный предел для батчинга, MoE и спекулятивного декодирования. <a href="#s-speed">06</a></li>
+      <li>MoE-модели большие, но быстрые: память они занимают по всем параметрам, а скорость дают по активным. <a href="#s-moe">07</a></li>
+      <li>Железо сравнивают по двум числам: объём памяти и её скорость. Видеокарты быстрые, но маленькие. Мини-станции вроде DGX Spark большие, но медленные. <a href="#s-hw">08</a></li>
+      <li>Модели берут на Hugging Face. Нужен GGUF-файл от авторов модели или от известных команд вроде unsloth и bartowski. <a href="#s-hf">10</a></li>
+      <li>Рейтинги только сужают список. Модель выбирают по 20-50 своим реальным примерам. <a href="#s-choose">14</a></li>
+    </ol>
+  </div>
+<p class="library-edition">Учебная версия для публичной библиотеки. Рабочие сведения исключены, примеры обобщены. Версии и измерения сохранены на дату исходной лекции.</p></header>
+
+
+<section id="s-start">
+  <span class="num">01</span>
+  <h2>С чего начать</h2>
+  <h3>Серия из трёх лекций</h3>
+  <p>Эта лекция - первая из трёх. Каждая следующая опирается на предыдущую и повторяет её главные мысли с другой стороны (рис. 1). Повторение сделано нарочно: при втором и третьем прочтении одна и та же формула встречается в новом месте, и так она лучше запоминается.</p>
+  <figure>
+    <div class="ttl">Рисунок 1 - Серия «Локальные LLM»</div>
+    <svg class="d" viewBox="0 0 760 150" role="img" aria-label="Три лекции: старт, железо, сервер и работа с моделью. Каждая следующая опирается на предыдущие">
+      <rect class="hl" x="10" y="20" width="220" height="74" rx="6"/>
+      <text class="b" x="120" y="44" text-anchor="middle">1. Старт</text>
+      <text class="sm" x="120" y="64" text-anchor="middle">модель, память, скорость,</text>
+      <text class="sm" x="120" y="80" text-anchor="middle">Hugging Face, выбор модели</text>
+      <line class="ln" x1="230" y1="57" x2="268" y2="57" marker-end="url(#m-fill)"/>
+      <rect class="rs" x="270" y="20" width="220" height="74" rx="6"/>
+      <text class="b" x="380" y="44" text-anchor="middle">2. Железо</text>
+      <text class="sm" x="380" y="64" text-anchor="middle">карты, поколения,</text>
+      <text class="sm" x="380" y="80" text-anchor="middle">мини-станции, расчёт под задачу</text>
+      <line class="ln" x1="490" y1="57" x2="528" y2="57" marker-end="url(#m-fill)"/>
+      <rect class="oks" x="530" y="20" width="220" height="74" rx="6"/>
+      <text class="b" x="640" y="44" text-anchor="middle">3. Сервер и работа</text>
+      <text class="sm" x="640" y="64" text-anchor="middle">vLLM и Ollama, KV-кэш,</text>
+      <text class="sm" x="640" y="80" text-anchor="middle">параметры, JSON, замер</text>
+      <text class="mut sm" x="380" y="124" text-anchor="middle">каждая лекция начинается с блока «Что уже знаешь» и повторяет формулы предыдущих</text>
+    </svg>
+    <figcaption>Три лекции серии и их темы. Внутри разделов голубые блоки «Дальше в серии» показывают, где тема продолжается.</figcaption>
+  </figure>
+  <h3>Как проходить эту лекцию</h3>
+  <p>Лекцию удобно проходить в три захода:</p>
+  <div class="ex">
+    <div><span><b>Вечер 1: увидеть, как это выглядит.</b> Посмотри три коротких видео (40 минут суммарно) и запусти модель на своём Mac по разделу 15.<small><a href="https://youtu.be/Bzn1r7zkHys">Зачем ставить нейросеть на комп</a> (5 мин), <a href="https://youtu.be/L-5dfPhNirk">Локальные LLM на своём железе</a> (17 мин), <a href="https://youtu.be/yJPJLA57JDs">Локальные LLM на MacBook Air M5 с 16 ГБ</a> (16 мин): почти твоя машина.</small></span></div>
+    <div><span><b>Вечер 2: понять память и скорость.</b> Прочитай разделы 02-08 и посмотри большое видео про железо.<small><a href="https://youtu.be/L9sI7sUKLIM">Какое железо нужно для локальных нейросетей?</a>, канал «Этот Компьютер», 52 мин. Это самое близкое к привычным обзорам железа.</small></span></div>
+    <div><span><b>Вечер 3: научиться выбирать модель.</b> Прочитай разделы 09-14 и пройдись по Hugging Face с открытой лекцией.<small>В конце ответь на контрольные вопросы из раздела 18, затем переходи к лекции 2.</small></span></div>
+  </div>
+  <div class="q"><b>Вывод</b>Начни с видео и запуска на своём Mac, а теорию читай уже после первой живой модели.</div>
+</section>
+
+
+<section id="s-map">
+  <span class="num">02</span>
+  <h2>Четыре вопроса</h2>
+  <p>Локальная LLM (Large Language Model, большая языковая модель) - это нейросеть вроде ChatGPT, которая работает на твоём компьютере, а не на чужом сервере. Проще говоря, ты скачиваешь файл модели и запускаешь его программой, как игру. Данные при этом никуда не уходят, а платить за каждый запрос не нужно.</p>
+  <p>Модель читает и пишет текст токенами. Токен (token) - это кусок текста, в среднем часть слова: русский звонок на 1200-1500 слов даёт около 1900-3500 токенов. Поэтому скорость модели меряют в токенах в секунду.</p>
+  <p>Перед запуском любой модели на любом железе ты отвечаешь на четыре вопроса (рис. 2). Разделы лекции идут в том же порядке.</p>
+  <figure>
+    <div class="ttl">Рисунок 2 - Четыре вопроса к модели и железу</div>
+    <svg class="d" viewBox="0 0 760 130" role="img" aria-label="Четыре вопроса: влезет ли, как быстро, насколько умная, можно ли использовать">
+      <rect class="hl" x="8" y="10" width="176" height="80" rx="6"/>
+      <text class="b" x="96" y="38" text-anchor="middle">1. Влезет ли?</text>
+      <text x="96" y="58" text-anchor="middle">объём памяти</text>
+      <text class="mut sm" x="96" y="76" text-anchor="middle">разделы 03-05</text>
+      <rect class="hl" x="196" y="10" width="176" height="80" rx="6"/>
+      <text class="b" x="284" y="38" text-anchor="middle">2. Как быстро?</text>
+      <text x="284" y="58" text-anchor="middle">пропускная способность</text>
+      <text class="mut sm" x="284" y="76" text-anchor="middle">разделы 06-08</text>
+      <rect class="rs" x="384" y="10" width="176" height="80" rx="6"/>
+      <text class="b" x="472" y="38" text-anchor="middle">3. Насколько умная?</text>
+      <text x="472" y="58" text-anchor="middle">размер, квант, тесты</text>
+      <text class="mut sm" x="472" y="76" text-anchor="middle">разделы 10-14</text>
+      <rect class="rs" x="572" y="10" width="176" height="80" rx="6"/>
+      <text class="b" x="660" y="38" text-anchor="middle">4. Можно ли?</text>
+      <text x="660" y="58" text-anchor="middle">лицензия модели</text>
+      <text class="mut sm" x="660" y="76" text-anchor="middle">разделы 12-14</text>
+      <text class="mut" x="190" y="118" text-anchor="middle">синие вопросы решает железо</text>
+      <text class="mut" x="566" y="118" text-anchor="middle">оранжевые вопросы решает выбор модели</text>
+    </svg>
+    <figcaption>Синие вопросы про железо, оранжевые про модель. Схема лекции.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Иди слева направо: если модель не влезла, скорость и ум уже не важны.</li>
+      <li>Первые два вопроса решаются покупкой железа, вторые два - выбором файла модели.</li>
+    </ol>
+  </div>
+  <div class="q"><b>Вывод</b>Любой обзор железа или модели ты теперь читаешь через четыре вопроса: влезет, как быстро, насколько умная, можно ли.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://youtu.be/Bzn1r7zkHys">Зачем ставить нейросеть на комп (и как это сделать)</a> - Тостер Скрипт, 5 мин, 2025.</li>
+    <li><a href="https://youtu.be/L-5dfPhNirk">Локальные LLM на своём железе: через что запускать, какую модель выбрать</a> - IT with Vladimir Yakovlev, 17 мин, 04.10.2026. С <a href="https://www.youtube.com/watch?v=L-5dfPhNirk&amp;t=945">15:45</a> - честный итог, где польза.</li>
+    <li><a href="https://youtu.be/1GEML055VNE">Платные LLM против локальной модели на бытовом ноутбуке</a> - Диджитализируй!, 24 мин, 2026.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-file">
+  <span class="num">03</span>
+  <h2>Модель - это файл</h2>
+  <h3>Из чего состоит</h3>
+  <p>Модель - это файл с миллиардами чисел, которые называют параметрами или весами. Проще говоря, это таблица коэффициентов, подобранных при обучении. Буква B в имени модели означает миллиарды параметров (billions): Qwen3.8-27B содержит 27,8 млрд чисел<a class="ref" href="#r30">30</a>.</p>
+  <h3>Сколько весит</h3>
+  <p>Каждый параметр в исходном виде хранится в 16 битах, то есть в 2 байтах. Поэтому размер файла считается просто:</p>
+  <pre>размер, ГБ = миллиарды параметров * бит на параметр / 8
+8B в 16 битах: 8 * 16 / 8 = 16 ГБ</pre>
+  <p>Из формулы видно, что даже маленькая модель 8B в исходном виде не помещается в 16 ГБ компьютера из примера. Решение - квантование, о нём следующий раздел.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Модель</th><th>16 бит (исходник)</th><th>8 бит (Q8_0)</th><th>4 бита (Q4_K_M)</th></tr></thead>
+    <tbody>
+      <tr><td>4B</td><td class="n">8 ГБ</td><td class="n">4,3 ГБ</td><td class="n">2,5 ГБ</td></tr>
+      <tr><td>8B, например T-lite-it-2.1</td><td class="n">16 ГБ</td><td class="n">8,7 ГБ</td><td class="n">5,0 ГБ</td></tr>
+      <tr><td>27B, например Qwen3.8-27B</td><td class="n">56 ГБ</td><td class="n">29,1 ГБ</td><td class="n">17,4 ГБ</td></tr>
+      <tr><td>70B</td><td class="n">140 ГБ</td><td class="n">74 ГБ</td><td class="n">43 ГБ</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 1 - Размер файла модели. Для T-lite и Qwen3.8 указаны реальные файлы на Hugging Face<a class="ref" href="#r43">43</a><a class="ref" href="#r30">30</a>, для остальных расчёт по формуле с 8,5 и 4,9 бита на параметр<a class="ref" href="#r3">3</a>.</p>
+  <h3>Слой и внимание</h3>
+  <p>Слой (layer) - это один блок вычислений, через который проходит каждый токен. Модель - стопка одинаковых слоёв: у T-pro-it-2.1 их 64<a class="ref" href="#r51">51</a>. Внутри слоя работает внимание (attention): эта часть смотрит на все предыдущие токены и решает, какие из них важны для следующего. Для этого слой хранит по каждому прошедшему токену два вектора, ключ (key) и значение (value). Из них складывается KV-кэш, о нём раздел 05.</p>
+  <h3>Где лежит и чем запускается</h3>
+  <p>Файлы моделей хранятся на Hugging Face, это «GitHub для моделей» (раздел 10). Запускает модель программа-движок (inference engine): Ollama, LM Studio или llama.cpp (раздел 09). Инференс (inference) - это работа уже обученной модели, то есть генерация ответа.</p>
+  <div class="q"><b>Вывод</b>Размер модели в гигабайтах примерно равен числу миллиардов параметров, умноженному на число бит и делённому на 8.</div>
+</section>
+
+
+<section id="s-quant">
+  <span class="num">04</span>
+  <h2>Квантование</h2>
+  <h3>Что это</h3>
+  <p>Квантование (quantization) - это сжатие модели: каждое число округляется до меньшего числа бит. Проще говоря, это как выбрать качество текстур «среднее» вместо «ультра»: файл в 3-4 раза меньше, картинка почти та же. Файл в кванте <code>Q4_K_M</code> хранит около 4,9 бита на параметр и занимает около трети исходного размера: у Qwen3.8-27B 17,4 ГБ из 56 (табл. 1).</p>
+  <h3>Сколько теряется</h3>
+  <p>Потери измеряют двумя способами. Первый - перплексия (perplexity): насколько модель «удивлена» правильным текстом, чем меньше, тем лучше; потерю считают в процентах от перплексии исходной модели. Второй - баллы на наборе тестовых заданий. Замеры на Llama 3.1 8B в 2026 году показали, что до Q4_K_M качество почти не меняется (табл. 2)<a class="ref" href="#r4">4</a>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Квант</th><th>Бит на параметр</th><th>Размер 8B</th><th>Средний балл тестов</th><th>Как оценить</th></tr></thead>
+    <tbody>
+      <tr><td><code>F16</code> (исходник)</td><td class="n">16</td><td class="n">15,0 ГиБ</td><td class="n">69,47</td><td>эталон</td></tr>
+      <tr><td><code>Q8_0</code></td><td class="n">8,5</td><td class="n">7,95 ГиБ</td><td class="n">69,41</td><td><span class="tag ok">не отличить</span></td></tr>
+      <tr><td><code>Q6_K</code></td><td class="n">6,6</td><td class="n">6,14 ГиБ</td><td class="n">69,23</td><td><span class="tag ok">не отличить</span></td></tr>
+      <tr><td><code>Q5_K_M</code></td><td class="n">5,7</td><td class="n">5,33 ГиБ</td><td class="n">69,36</td><td><span class="tag ok">почти без потерь</span></td></tr>
+      <tr><td><code>Q4_K_M</code></td><td class="n">4,9</td><td class="n">4,58 ГиБ</td><td class="n">69,15</td><td><span class="tag p">стандартный выбор</span></td></tr>
+      <tr><td><code>Q3_K_M</code></td><td class="n">4,0</td><td class="n">3,74 ГиБ</td><td class="n">68,07</td><td><span class="tag no">заметно хуже</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 2 - Кванты Llama 3.1 8B. Баллы - среднее пяти известных тестов: школьная математика (GSM8K), здравый смысл (HellaSwag), выполнение инструкций (IFEval), общие знания (MMLU) и правдивость (TruthfulQA)<a class="ref" href="#r4">4</a>. ГиБ (гибибайт) = 1,074 ГБ, поэтому 8B в 16 битах здесь 15,0 ГиБ, а в таблице 1 - 16 ГБ; биты и размеры из README llama.cpp<a class="ref" href="#r3">3</a>.</p>
+  <p>Из таблицы видно, что разница между Q8 и Q4 меньше половины балла, а Q3 уже теряет больше балла. На моделях 70B картина та же: Q4_K_M теряет около 1,2% перплексии, Q2_K - почти 9%<a class="ref" href="#r44">44</a>. Замеров потерь именно на русском языке разведка не нашла, поэтому на малых моделях русский стоит проверять самому.</p>
+  <h3>Где применяется</h3>
+  <p>Формат квантования определяет, какая программа его прочитает (табл. 3). Расшифровка имён GGUF - в разделе 11.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Формат</th><th>Бит на вес</th><th>Кто запускает</th><th>Где встретишь</th></tr></thead>
+    <tbody>
+      <tr><td>GGUF (<code>Q4_K_M</code>, <code>Q8_0</code>)</td><td class="n">2-8</td><td>llama.cpp, Ollama, LM Studio</td><td>дом, Mac, мини-станции</td></tr>
+      <tr><td>MLX</td><td class="n">4-8</td><td>MLX, LM Studio на Mac</td><td>только Mac</td></tr>
+      <tr><td>FP8</td><td class="n">8</td><td>vLLM, SGLang</td><td>сервер на картах NVIDIA</td></tr>
+      <tr><td>AWQ, GPTQ</td><td class="n">4</td><td>vLLM, SGLang</td><td>сервер, когда FP8 не влезает</td></tr>
+      <tr><td>NVFP4, MXFP4</td><td class="n">4</td><td>vLLM, TensorRT-LLM</td><td>карты Blackwell</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 3 - Форматы квантования. AWQ и GPTQ - методы 4-битного сжатия, которые подбирают округление по образцу текста; Hopper и Blackwell - поколения карт NVIDIA, о них лекция 2. Источник: документация vLLM о квантовании<a class="ref" href="#r52">52</a>.</p>
+  <div class="xref"><b>Дальше в серии</b><p>FP8 и FP4 считаются аппаратно не на всех картах: FP8 появился в поколениях Ada и Hopper, FP4 в Blackwell. Почему A100 запускает FP8-модель, но не ускоряется от неё, разобрано в <a href="local-llm-2-hardware.html">лекции 2</a>.</p></div>
+  <div class="q"><b>Вывод</b>Бери Q4_K_M по умолчанию, Q5-Q8 - если память позволяет, а ниже Q4 опускайся только от безысходности. На сервере с NVIDIA стандарт - FP8.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=L-5dfPhNirk&amp;t=326">Квантизация простыми словами</a> - Vladimir Yakovlev, фрагмент с 5:26, около минуты.</li>
+    <li><a href="https://www.youtube.com/watch?v=L9sI7sUKLIM&amp;t=542">Типы данных: что это и на что влияет</a> - «Этот Компьютер», фрагмент с 9:02, около 5 мин.</li>
+    <li><a href="https://youtu.be/37g8S71LfmQ">LLM Quantization Explained: FP32, FP16, INT8, INT4, GPTQ, AWQ, GGUF</a> - Liv4IT, 21 мин, на английском.</li>
+    <li>Статья: <a href="https://habr.com/ru/articles/918936/">Разбираемся с суффиксами квантования LLM: Q4_K_M, Q6_K, Q8_0</a> - Хабр, 2025<a class="ref" href="#r5">5</a>.</li>
+    <li>Статья: <a href="https://habr.com/ru/companies/first/articles/849560/">Квантовать или не квантовать LLM?</a> - Хабр, 2024, замеры Llama 3.1 8B<a class="ref" href="#r45">45</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-fit">
+  <span class="num">05</span>
+  <h2>Влезет ли модель</h2>
+  <h3>Что занимает память</h3>
+  <p>Видеопамять (VRAM) - это память на видеокарте, и модель должна поместиться в неё целиком. Кроме весов, в памяти лежит контекст. Контекст (context) - это весь текст диалога, который модель видит сейчас: твой вопрос, документ, предыдущие ответы. Для контекста модель хранит промежуточные результаты, их называют KV-кэш (KV cache). Чем длиннее контекст, тем больше KV-кэш.</p>
+  <p>Для расчёта памяти сложи три части:</p>
+  <ol class="plain">
+    <li>Веса: размер файла модели (раздел 03).</li>
+    <li>KV-кэш: у Llama 3.1 8B около 4 ГБ на 32 тысячи токенов и около 17 ГБ на 128 тысяч<a class="ref" href="#r10">10</a>. У новых моделей он меньше: у Qwen3.8-27B около 2 ГБ на 32 тысячи<a class="ref" href="#r30">30</a>.</li>
+    <li>Запас на программу и систему: 1-3 ГБ, грубая оценка.</li>
+  </ol>
+  <p>Токен (token) - кусок текста, в среднем часть слова. Модель читает и пишет текст токенами, поэтому скорость меряют в токенах в секунду.</p>
+  <figure>
+    <div class="ttl">Рисунок 3 - Qwen3.8-27B Q4_K_M на видеокарте 24 ГБ</div>
+    <svg class="d" viewBox="0 0 760 120" role="img" aria-label="Полоса 24 ГБ: веса 17,4 ГБ, KV-кэш 2,1 ГБ, запас 2 ГБ, свободно 2,5 ГБ">
+      <rect class="hl" x="20" y="30" width="522" height="40"/>
+      <text class="b" x="281" y="55" text-anchor="middle">веса 17,4 ГБ</text>
+      <rect class="rs" x="542" y="30" width="63" height="40"/>
+      <text class="b sm" x="573" y="55" text-anchor="middle">KV 2,1</text>
+      <rect class="soft" x="605" y="30" width="60" height="40"/>
+      <text class="sm" x="635" y="55" text-anchor="middle">запас 2</text>
+      <rect class="oks" x="665" y="30" width="75" height="40"/>
+      <text class="sm" x="702" y="55" text-anchor="middle">свободно</text>
+      <line class="ln" x1="20" y1="85" x2="740" y2="85"/>
+      <text class="mut sm" x="20" y="102">0</text>
+      <text class="mut sm" x="740" y="102" text-anchor="end">24 ГБ (RTX 3090, RTX 4090)</text>
+      <text class="mut sm" x="20" y="20">контекст 32 тысячи токенов</text>
+    </svg>
+    <figcaption>Масштаб: 30 точек на 1 ГБ. Веса - файл bartowski Q4_K_M, KV-кэш - расчёт по config.json модели, запас - грубая оценка.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Синяя часть не меняется: это файл модели.</li>
+      <li>Оранжевая часть растёт с длиной контекста. На 128 тысячах токенов она займёт около 8 ГБ, и модель уже не влезет.</li>
+      <li>Отсюда практическое правило: 27B в Q4 требует минимум 24 ГБ, комфортно 32 ГБ<a class="ref" href="#r11">11</a>.</li>
+    </ol>
+  </div>
+  <h3>Пример: контекст на компьютере из примера</h3>
+  <p>Одна и та же модель qwen3.5:4b занимает разную память при разной длине контекста. Замер сделан командой <code>ollama ps</code> 12.10.2026<a class="ref" href="#r39">39</a>:</p>
+  <pre>контекст   4 096 токенов   3,2 ГБ
+контекст  32 768 токенов   4,3 ГБ
+контекст 131 072 токенов   8,2 ГБ</pre>
+  <p>Из вывода видно, что при длинном контексте память выросла в 2,5 раза, хотя веса не изменились. Растёт только KV-кэш.</p>
+  <div class="xref"><b>Дальше в серии</b><p>KV-кэш считается по файлу <code>config.json</code> модели одной формулой. На сервере его делят все одновременные запросы, и поэтому именно он, а не веса, решает выбор между картой на 48 и 96 ГБ. Формула и расчёт - в <a href="local-llm-3-serving.html">лекции 3</a>.</p></div>
+  <h3>Что будет, если не влезло</h3>
+  <p>Если модель не помещается в видеопамять, программа отдаёт часть слоёв процессору и обычной оперативной памяти. Это называют выгрузкой (offload). Модель запустится, но скорость упадёт в разы: обычная память в несколько раз медленнее видеопамяти. Замеры деления модели между процессором и видеокартой есть в видео «Этот Компьютер» с 30:19.</p>
+  <h3>Mac и мини-станции</h3>
+  <p>У Mac, DGX Spark и AMD Strix Halo нет отдельной видеопамяти. Там единая (унифицированная, unified) память: процессор и графика берут её из общего пула. Strix Halo - это процессор AMD со встроенной графикой, его ставят в мини-станции. Мини-станция со 128 ГБ вмещает модель, которой нужны 4 видеокарты по 24 ГБ. Metal - программная платформа графики Apple, через неё модели работают на Mac. Часть памяти при этом держит система: на компьютере из примера графика Metal отдаёт под модель и KV-кэш около 12,7 ГБ из 16 (строка <code>recommendedMaxWorkingSetSize</code> в выводе llama.cpp)<a class="ref" href="#r39">39</a>.</p>
+  <div class="q"><b>Вывод</b>Память модели складывается из файла весов, KV-кэша и запаса. Если сумма не влезла в видеопамять, модель работает в разы медленнее.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=L9sI7sUKLIM&amp;t=1819">Что будет, если модель не входит в видеопамять</a> - «Этот Компьютер», с 30:19, около 10 мин с практическими тестами.</li>
+    <li><a href="https://www.youtube.com/watch?v=DvSwvJVens8&amp;t=206">Дело не только в мощности: память UMA</a> - Droider, с 3:26, про единую память.</li>
+    <li><a href="https://www.youtube.com/watch?v=L-5dfPhNirk&amp;t=551">Почему контекст надо ограничивать</a> - Vladimir Yakovlev, с 9:11.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-speed">
+  <span class="num">06</span>
+  <h2>Скорость</h2>
+  <h3>Два этапа ответа</h3>
+  <p>Модель отвечает в два этапа (рис. 4). Сначала она читает весь твой запрос разом, этот этап называют prefill. Потом она пишет ответ по одному токену, этот этап называют генерацией (decode). Prefill упирается в вычислительную мощность чипа, генерация упирается в скорость памяти<a class="ref" href="#r2">2</a>.</p>
+  <figure>
+    <div class="ttl">Рисунок 4 - Два этапа ответа модели</div>
+    <svg class="d" viewBox="0 0 760 150" role="img" aria-label="Файл модели загружается в память, затем prefill читает запрос, затем генерация выдаёт токены по одному">
+      <rect class="soft" x="10" y="30" width="150" height="60" rx="6"/>
+      <text class="b" x="85" y="56" text-anchor="middle">Файл модели</text>
+      <text class="sm mut" x="85" y="74" text-anchor="middle">на диске</text>
+      <line class="ln" x1="160" y1="60" x2="208" y2="60" marker-end="url(#m-fill)"/>
+      <text class="sm mut" x="184" y="22" text-anchor="middle">загрузка</text>
+      <rect class="box" x="210" y="30" width="150" height="60" rx="6"/>
+      <text class="b" x="285" y="56" text-anchor="middle">Память</text>
+      <text class="sm mut" x="285" y="74" text-anchor="middle">VRAM или единая</text>
+      <line class="ln" x1="360" y1="60" x2="408" y2="60" marker-end="url(#m-fill)"/>
+      <rect class="rs" x="410" y="30" width="150" height="60" rx="6"/>
+      <text class="b" x="485" y="56" text-anchor="middle">Prefill</text>
+      <text class="sm" x="485" y="74" text-anchor="middle">весь запрос разом</text>
+      <line class="ln" x1="560" y1="60" x2="598" y2="60" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="600" y="30" width="150" height="60" rx="6"/>
+      <text class="b" x="675" y="56" text-anchor="middle">Генерация</text>
+      <text class="sm" x="675" y="74" text-anchor="middle">по токену за шаг</text>
+      <text class="sm mut" x="485" y="115" text-anchor="middle">упирается в вычисления</text>
+      <text class="sm mut" x="485" y="131" text-anchor="middle">важно для длинных документов</text>
+      <text class="sm mut" x="675" y="115" text-anchor="middle">упирается в память</text>
+      <text class="sm mut" x="675" y="131" text-anchor="middle">это «скорость печати»</text>
+    </svg>
+    <figcaption>Источник механизма: блог NVIDIA об оптимизации инференса<a class="ref" href="#r2">2</a>.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Короткий вопрос в чате почти всё время тратит на генерацию, поэтому тебе важна скорость памяти.</li>
+      <li>Длинный документ на вход (договор, расшифровка звонка) нагружает prefill, и тогда важна вычислительная мощность.</li>
+    </ol>
+  </div>
+  <h3>Почему генерация упирается в память</h3>
+  <p>Пропускная способность памяти (memory bandwidth) - это сколько гигабайт в секунду чип читает из памяти. Ты знаешь её из обзоров видеокарт как результат ширины шины и частоты памяти. Чтобы выдать один токен, модель читает из памяти все свои веса. Значит, верхняя граница скорости генерации считается делением:</p>
+  <pre>токенов в секунду, не больше чем = пропускная способность, ГБ/с / размер модели, ГБ
+пример Mac: 120 ГБ/с / 6,6 ГБ (qwen3.5:9b) = 18 ток/с, замер дал 16</pre>
+  <p>Реальная скорость обычно составляет 60-90% от этой оценки<a class="ref" href="#r1">1</a>. Формула объясняет, почему RTX 3090 с её 936 ГБ/с генерирует быстрее DGX Spark с 273 ГБ/с, хотя у Spark новее чип и в пять раз больше памяти.</p>
+  <h3>Сколько токенов в секунду нужно</h3>
+  <p>Обычный темп чтения - несколько слов в секунду, поэтому для чата хватает 15-20 токенов в секунду (моя оценка). Для агентов, которые пишут код и много «думают» перед ответом, нужно 40 и больше: им приходится генерировать тысячи служебных токенов. Цифры зависят от задачи, их разбирают в видео «Этот Компьютер» с 13:47.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Железо</th><th>Модель</th><th>Генерация, ток/с</th><th>Prefill, ток/с</th><th>Источник</th></tr></thead>
+    <tbody>
+      <tr><td>пример MacBook Air M4 16 ГБ</td><td>qwen3.5:4b, Q4</td><td class="n">24,2</td><td class="n">116</td><td>замер 12.10.2026<a class="ref" href="#r39">39</a></td></tr>
+      <tr><td>пример MacBook Air M4 16 ГБ</td><td>qwen3.5:4b, Q8</td><td class="n">17,2</td><td class="n">145</td><td>замер 12.10.2026<a class="ref" href="#r39">39</a></td></tr>
+      <tr><td>пример MacBook Air M4 16 ГБ</td><td>qwen3.5:9b, Q4</td><td class="n">16,2</td><td class="n">70</td><td>замер 12.10.2026<a class="ref" href="#r39">39</a></td></tr>
+      <tr><td>Mac mini M4 16 ГБ</td><td>Llama 3.1 8B, Q4_K_M</td><td class="n">21,2</td><td class="n">587</td><td>Хабр<a class="ref" href="#r1">1</a></td></tr>
+      <tr><td>Mac mini M4 16 ГБ</td><td>Qwen 2.5 14B, Q4_K_M</td><td class="n">11,7</td><td class="n">606</td><td>Хабр<a class="ref" href="#r1">1</a></td></tr>
+      <tr><td>RTX 3090</td><td>Qwen3-32B, Q4</td><td class="n">30,8</td><td>-</td><td>Хабр<a class="ref" href="#r13">13</a></td></tr>
+      <tr><td>DGX Spark</td><td>Qwen3-32B, Q4_K_M</td><td class="n">9-9,5</td><td>-</td><td>Serverflow<a class="ref" href="#r25">25</a></td></tr>
+      <tr><td>DGX Spark</td><td>Llama 3.1 70B, FP8</td><td class="n">2,7</td><td class="n">803</td><td>LMSYS<a class="ref" href="#r17">17</a></td></tr>
+      <tr><td>Strix Halo</td><td>Llama 3.3 70B, Q4</td><td class="n">5,1-5,3</td><td>-</td><td>Level1Techs<a class="ref" href="#r23">23</a></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 4 - Замеры генерации на плотных моделях. Методики у источников разные, сравнивай порядок величин. Prefill в моём замере низкий из-за короткого запроса в 28 токенов.</p>
+  <p>Из таблицы видно два эффекта. Первый: Q8 на компьютере из примера медленнее Q4 той же модели, потому что файл больше. Второй: модель 70B на мини-станциях работает со скоростью 3-5 токенов в секунду, то есть ею почти невозможно пользоваться в чате.</p>
+  <div class="xref"><b>Дальше в серии</b><p>В лекции 2 эта формула станет инструментом выбора карты: по ней ты за минуту оценишь любую карту из обзора. В лекции 3 появится второй эффект: сервер с непрерывным батчингом выдаёт за одно чтение весов токены сразу для многих запросов, поэтому суммарная скорость карты в разы выше скорости одного запроса.</p></div>
+  <div class="q"><b>Вывод</b>Скорость генерации не превышает пропускную способность памяти, делённую на размер модели. Это главная формула для чтения любых обзоров железа под LLM.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=L9sI7sUKLIM&amp;t=827">Сколько нужно токенов в секунду в разных задачах</a> - «Этот Компьютер», с 13:47.</li>
+    <li>Статья: <a href="https://habr.com/ru/articles/1065948/">Сколько токенов в секунду выдаёт Mac mini M4</a> - Хабр: замеры и та же формула<a class="ref" href="#r1">1</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-moe">
+  <span class="num">07</span>
+  <h2>MoE-модели</h2>
+  <h3>Что это</h3>
+  <p>MoE (Mixture of Experts, смесь экспертов) - это модель, разделённая на много «экспертов». На каждый токен работает только небольшая их часть. Проще говоря, модель большая, но на каждом шаге читает из памяти только активные параметры (active parameters). Модель, где на каждый токен работают все параметры, называют плотной (dense).</p>
+  <h3>Как читать имя</h3>
+  <p>В имени MoE-модели обычно указаны оба числа: Qwen3-30B-A3B содержит 30 млрд параметров, из них 3 млрд активны (A - active). У gpt-oss-120b 117 млрд параметров, из них активны около 5 млрд.</p>
+  <figure>
+    <div class="ttl">Рисунок 5 - Что читается из памяти на каждый токен</div>
+    <svg class="d" viewBox="0 0 760 150" role="img" aria-label="Плотная модель 32B читает все параметры на токен, MoE-модель 120B читает только около 5 млрд">
+      <text class="b" x="10" y="30">Плотная 32B</text>
+      <rect class="hl" x="160" y="14" width="120" height="24"/>
+      <text class="sm" x="290" y="31">читает 32 млрд на токен, ~20 ГБ в Q4</text>
+      <text class="b" x="10" y="90">MoE 120B, 5B акт.</text>
+      <rect class="soft" x="160" y="74" width="440" height="24"/>
+      <rect class="hl" x="160" y="74" width="19" height="24"/>
+      <text class="sm" x="610" y="91">в памяти ~60 ГБ</text>
+      <text class="sm mut" x="160" y="122">синее - что читается на каждый токен, серое - лежит в памяти без дела</text>
+    </svg>
+    <figcaption>Масштаб: 3,7 точки на 1 млрд параметров. Числа gpt-oss-120b по карточке модели.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Длина полосы - сколько памяти нужно. MoE нужно в три раза больше.</li>
+      <li>Синяя часть - сколько читается на токен. У MoE её в шесть раз меньше, поэтому генерация быстрее.</li>
+    </ol>
+  </div>
+  <p>Отсюда правило: память считается по всем параметрам, скорость - по активным. На DGX Spark плотная Qwen3-32B даёт около 9 ток/с, а MoE gpt-oss-120b - от 39 до 55 ток/с в зависимости от версии программы<a class="ref" href="#r16">16</a><a class="ref" href="#r18">18</a>. Поэтому мини-станции со 128 ГБ медленной памяти покупают именно под большие MoE-модели.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Железо</th><th>gpt-oss-120b, ток/с</th><th>Источник</th></tr></thead>
+    <tbody>
+      <tr><td>DGX Spark</td><td class="n">38,6-55,4</td><td>Hardware Corner, NVIDIA<a class="ref" href="#r16">16</a><a class="ref" href="#r18">18</a></td></tr>
+      <tr><td>Strix Halo (Ryzen AI Max+ 395)</td><td class="n">36,5-54</td><td>Level1Techs, DigitalRazor<a class="ref" href="#r23">23</a><a class="ref" href="#r20">20</a></td></tr>
+      <tr><td>Mac Studio M3 Ultra</td><td class="n">70,8</td><td>Hardware Corner<a class="ref" href="#r16">16</a></td></tr>
+      <tr><td>3x RTX 3090</td><td class="n">100-124</td><td>Хабр, Hardware Corner<a class="ref" href="#r14">14</a><a class="ref" href="#r16">16</a></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 5 - Одна большая MoE-модель на разном железе. Разброс у Spark и Strix Halo объясняется версиями llama.cpp и драйверов.</p>
+  <div class="q"><b>Вывод</b>MoE-модель занимает память по полному размеру, а скорость даёт по активным параметрам. Для мини-станций с большой и медленной памятью это лучший класс моделей.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=L9sI7sUKLIM&amp;t=1376">Плотные против разреженных нейросетей</a> - «Этот Компьютер», с 22:56.</li>
+    <li><a href="https://youtu.be/uf9yDBy21pA">Бюджетные сборки до 100 тыс. рублей</a> - DevOps от первого лица, 15 мин: MoE-модели на процессоре и старых картах.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-hw">
+  <span class="num">08</span>
+  <h2>Железо: два числа</h2>
+  <h3>Как сравнивать железо</h3>
+  <p>Железо под LLM сравнивают по двум числам. Объём памяти отвечает на вопрос «влезет ли» (раздел 05). Пропускная способность памяти отвечает на вопрос «как быстро» (раздел 06). Остальные характеристики из обзоров, например частота чипа или число ядер, влияют в основном на prefill.</p>
+  <p>По этим двум числам всё железо делится на пять классов (табл. 6). Оценка скорости в последней колонке - верхняя граница по формуле раздела 06 для Qwen3.8-27B в Q4_K_M, файл 17,4 ГБ.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Класс</th><th>Пример</th><th>Память</th><th>ГБ/с</th><th>27B Q4, ток/с, не больше</th></tr></thead>
+    <tbody>
+      <tr><td>Ноутбук</td><td>пример MacBook Air M4</td><td class="n">16 ГБ</td><td class="n">120</td><td><span class="tag no">не влезет</span></td></tr>
+      <tr><td>Домашняя карта</td><td>RTX 3090, RTX 5090</td><td class="n">24-32 ГБ</td><td class="n">936-1792</td><td class="n">54-103</td></tr>
+      <tr><td>Мини-станция</td><td>DGX Spark, Strix Halo</td><td class="n">128 ГБ</td><td class="n">256-273</td><td class="n">15-16</td></tr>
+      <tr><td>Карта рабочей станции</td><td>RTX PRO 6000 Blackwell</td><td class="n">96 ГБ</td><td class="n">около 1800</td><td class="n">около 103</td></tr>
+      <tr><td>Серверная карта</td><td>H100, H200</td><td class="n">80-141 ГБ</td><td class="n">3350-4800</td><td class="n">190-275</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 6 - Классы железа. Характеристики - из лекции 2, где у каждой цифры есть первоисточник; скорость - расчёт по формуле, реальная обычно на треть ниже.</p>
+  <p>Из таблицы видно главное противоречие рынка. Видеокарты быстрые, но маленькие. Мини-станции вмещают много, но читают память медленно. Поэтому мини-станции покупают под большие MoE-модели (раздел 07), а плотные модели 27-32B лучше работают на видеокартах.</p>
+  <h3>Что взять для старта</h3>
+  <p>Для учёбы хватает компьютера из примера: на нём работают модели 4-9B в Q4 со скоростью 15-25 токенов в секунду. Первая покупка, которая открывает модели 27-32B, - б/у RTX 3090 с 24 ГБ<a class="ref" href="#r13">13</a>. Для работы компании железо подбирают расчётом от задачи, об этом лекция 2.</p>
+  <div class="xref"><b>Дальше в серии</b><p>Лекция 2 разбирает каждую карту и мини-станцию по отдельности: поколения NVIDIA, FP8 и FP4, версии одной карты, несколько карт в одном компьютере, обзоры с таймкодами и расчёт железа под проект оценки звонков.</p></div>
+  <div class="q"><b>Вывод</b>Железо сравнивают по объёму памяти и её скорости. Видеокарты быстрые и маленькие, мини-станции большие и медленные.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://youtu.be/L9sI7sUKLIM">Какое железо нужно для локальных нейросетей?</a> - «Этот Компьютер», 52 мин: главное видео про железо, подробный разбор - в лекции 2.</li>
+    <li><a href="https://youtu.be/DvSwvJVens8">AI PC - личный ИИ у вас дома! Объясняем</a> - Droider, 24 мин, 27.09.2026: обзор всего класса.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-soft">
+  <span class="num">09</span>
+  <h2>Программы запуска</h2>
+  <p>Программа запуска (движок) загружает файл модели в память, принимает запрос и выдаёт ответ. Для старта хватает одной из двух: LM Studio с окном как у ChatGPT или Ollama в терминале (команды - в разделе 15). Остальные понадобятся позже.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Программа</th><th>Что это</th><th>Формат моделей</th><th>Когда брать</th></tr></thead>
+    <tbody>
+      <tr><td>LM Studio</td><td>приложение с окном чата и поиском моделей на Hugging Face</td><td>GGUF, MLX на Mac</td><td>первое знакомство, сравнение моделей глазами</td></tr>
+      <tr><td>Ollama</td><td>программа в терминале, одна команда на запуск</td><td>GGUF</td><td>быстрый запуск, API для своих скриптов</td></tr>
+      <tr><td>llama.cpp</td><td>движок, на котором построены оба выше</td><td>GGUF</td><td>тонкая настройка и максимум скорости</td></tr>
+      <tr><td>vLLM</td><td>сервер для видеокарт NVIDIA, много пользователей сразу</td><td>safetensors (исходные веса, раздел 10), AWQ, GPTQ, FP8</td><td>сервис на всю компанию</td></tr>
+      <tr><td>MLX</td><td>фреймворк Apple</td><td>MLX</td><td>максимум скорости на Mac</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 7 - Программы запуска. Подробно Ollama, llama.cpp и vLLM разобраны в <a href="local-llm-3-serving.html">лекции 3</a>.</p>
+  <p>Ollama по умолчанию удобна, но не всегда быстра. На одной машине llama.cpp дал втрое большую скорость, чем Ollama, на той же модели<a class="ref" href="#r40">40</a>. Цифра касается одной машины, но направление верное: когда освоишься, попробуй llama.cpp.</p>
+  <div class="q"><b>Вывод</b>Начни с LM Studio или Ollama. llama.cpp и vLLM понадобятся, когда упрёшься в скорость или в число пользователей.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/JZF4H1JW2cc">Локальная LLM за 20 минут: Qwen 3.6 + LM Studio</a> - Дмитрий Черкашин, 23 мин, 2026. С <a href="https://www.youtube.com/watch?v=JZF4H1JW2cc&amp;t=628">10:28</a> настройки загрузки модели.</li>
+    <li><a href="https://youtu.be/kj_oP_cknoA">Локальный LLM в 2026: что нужно знать перед запуском</a> - Рома Филонов, 16 мин: LM Studio, Ollama с Python, vLLM.</li>
+    <li>Статья: <a href="https://habr.com/ru/articles/1005054/">Как запускать LLM локально с LM Studio: полное руководство 2026</a> - Хабр<a class="ref" href="#r31">31</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-hf">
+  <span class="num">10</span>
+  <h2>Hugging Face</h2>
+  <h3>Что это</h3>
+  <p>Hugging Face (HF) - это сайт, где хранятся открытые модели, наборы данных и демо-приложения. Проще говоря, это GitHub для нейросетей: у каждой модели свой репозиторий с файлами, описанием и историей. Сайт состоит из трёх частей: Models (модели), Datasets (наборы данных) и Spaces (демо-приложения на чужих серверах)<a class="ref" href="#r7">7</a>.</p>
+  <h3>Страница модели</h3>
+  <p>Открой для примера <a href="https://huggingface.co/Qwen/Qwen3.8-27B">Qwen/Qwen3.8-27B</a>. Имя репозитория состоит из автора и названия. На странице модели шесть мест, куда нужно смотреть (рис. 6).</p>
+  <figure>
+    <div class="ttl">Рисунок 6 - Страница модели на Hugging Face</div>
+    <svg class="d" viewBox="0 0 760 250" role="img" aria-label="Схема страницы модели: имя и метки сверху, вкладки, карточка модели слева, справа кнопка Use this model, дерево моделей с квантами и панель совместимости с железом">
+      <rect class="box" x="10" y="10" width="740" height="230" rx="6"/>
+      <rect class="hl" x="24" y="22" width="420" height="34" rx="4"/>
+      <text class="b" x="34" y="44">1. автор/имя модели + метки: лицензия, размер</text>
+      <rect class="soft" x="24" y="66" width="420" height="26" rx="4"/>
+      <text class="sm" x="34" y="83">2. вкладки: Model card · Files and versions · Community</text>
+      <rect class="soft" x="24" y="102" width="420" height="126" rx="4"/>
+      <text class="b" x="34" y="124">3. Карточка модели (README)</text>
+      <text class="sm" x="34" y="146">размер и тип (dense или MoE), длина контекста</text>
+      <text class="sm" x="34" y="166">рекомендуемые параметры генерации</text>
+      <text class="sm" x="34" y="186">результаты тестов: заявление авторов</text>
+      <text class="sm" x="34" y="206">шаблон чата, режим размышлений</text>
+      <rect class="rs" x="460" y="22" width="276" height="34" rx="4"/>
+      <text class="b" x="472" y="44">4. Use this model: Ollama, LM Studio</text>
+      <rect class="rs" x="460" y="66" width="276" height="76" rx="4"/>
+      <text class="b" x="472" y="88">5. Model tree: Quantizations</text>
+      <text class="sm" x="472" y="108">ссылки на все кванты этой модели</text>
+      <text class="sm" x="472" y="126">от unsloth, bartowski и других</text>
+      <rect class="oks" x="460" y="152" width="276" height="76" rx="4"/>
+      <text class="b" x="472" y="174">6. Hardware compatibility</text>
+      <text class="sm" x="472" y="194">на страницах GGUF и MLX: какой</text>
+      <text class="sm" x="472" y="212">квант влезет в твоё железо</text>
+    </svg>
+    <figcaption>Упрощённая схема. Источники: документация HF о карточках моделей и локальных приложениях<a class="ref" href="#r7">7</a><a class="ref" href="#r8">8</a>; панель совместимости описана во вторичном источнике.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Метки сверху (1): сразу видно лицензию и размер. Метка <code>license: other</code> значит «читай файл LICENSE вручную».</li>
+      <li>Карточка модели (3): главное - тип модели, контекст и рекомендуемые параметры. Результаты тестов в карточке - это заявление авторов, а не независимая проверка.</li>
+      <li>Model tree (5): здесь ищут GGUF-файлы под свою программу. Официальный репозиторий часто содержит только исходные веса.</li>
+      <li>Use this model (4): кнопка даёт готовую команду для Ollama или открывает модель в LM Studio. Свои приложения включаются в <a href="https://huggingface.co/settings/local-apps">настройках</a><a class="ref" href="#r8">8</a>.</li>
+    </ol>
+  </div>
+  <h3>Кто делает кванты</h3>
+  <p>Авторы модели обычно выкладывают исходные веса в формате safetensors. Кванты в GGUF и MLX чаще делают известные сторонние команды:</p>
+  <ol class="plain">
+    <li><code>unsloth</code> - динамические кванты UD: важные слои хранятся точнее остальных<a class="ref" href="#r50">50</a>.</li>
+    <li><code>bartowski</code> - большой набор квантов с матрицей важности (imatrix): по образцу текста определяют, какие веса важнее, и округляют их аккуратнее.</li>
+    <li><code>lmstudio-community</code> и <code>ggml-org</code> - кванты от команд LM Studio и llama.cpp.</li>
+    <li><code>mlx-community</code> - модели для MLX на Mac.</li>
+  </ol>
+  <p>В поиске рядом с ними всплывают переделки неизвестных авторов, например с «uncensored» в названии: это модели со снятыми ограничениями, их качество и безопасность никто не проверял. Для работы бери кванты от авторов модели или от команд из списка.</p>
+  <h3>Доступ по запросу</h3>
+  <p>Некоторые модели закрыты запросом доступа (gated): нужно войти в аккаунт и согласиться передать автору имя и email<a class="ref" href="#r9">9</a>. Так закрыта, например, Llama 4. Модели Qwen, Gemma 4, gpt-oss, GigaChat и T-lite скачиваются свободно.</p>
+  <div class="q"><b>Вывод</b>На странице модели смотри метки, карточку и Model tree. Кванты бери у авторов модели или у известных команд.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=kj_oP_cknoA&amp;t=697">HuggingFace - что это, и пример запуска модели</a> - Рома Филонов, с 11:37, около 3 мин.</li>
+    <li><a href="https://youtu.be/yCB_aHfvcDM">Hugging Face: открытая платформа для моделей ИИ</a> - Теплица социальных технологий, 6 мин, 2024.</li>
+    <li><a href="https://youtu.be/w4YIkrECELo">Which GGUF should you download?</a> - Next Tech and AI, 12 мин, на английском: выбор файла на HF.</li>
+    <li>Документация: <a href="https://huggingface.co/docs/hub/en/gguf">GGUF на Hugging Face</a><a class="ref" href="#r6">6</a>, <a href="https://huggingface.co/docs/hub/en/model-cards">карточки моделей</a><a class="ref" href="#r7">7</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-name">
+  <span class="num">11</span>
+  <h2>Имя файла GGUF</h2>
+  <p>GGUF - это формат, в котором модель лежит одним файлом вместе с описанием и шаблоном чата<a class="ref" href="#r6">6</a>. Имя файла рассказывает почти всё, что нужно для выбора (рис. 7).</p>
+  <figure>
+    <div class="ttl">Рисунок 7 - Разбор имени файла</div>
+    <svg class="d" viewBox="0 0 760 150" role="img" aria-label="Имя Qwen3.8-27B-UD-Q4_K_XL.gguf разбито на части: семейство и версия, размер, метод unsloth dynamic, 4 бита, K-квант, размер набора, формат">
+      <text class="b" x="380" y="34" text-anchor="middle" style="font-family:var(--mono);font-size:20px">Qwen3.8-27B-UD-Q4_K_XL.gguf</text>
+      <line class="ln" x1="200" y1="50" x2="300" y2="50"/>
+      <line class="ln" x1="306" y1="50" x2="344" y2="50"/>
+      <line class="ln" x1="356" y1="50" x2="380" y2="50"/>
+      <line class="ln" x1="392" y1="50" x2="416" y2="50"/>
+      <line class="ln" x1="428" y1="50" x2="440" y2="50"/>
+      <line class="ln" x1="452" y1="50" x2="476" y2="50"/>
+      <line class="ln" x1="482" y1="50" x2="550" y2="50"/>
+      <text class="sm" x="160" y="74" text-anchor="middle">семейство Qwen,</text>
+      <text class="sm" x="160" y="90" text-anchor="middle">версия 3.8</text>
+      <line class="ln" x1="250" y1="50" x2="190" y2="62"/>
+      <text class="sm" x="290" y="110" text-anchor="middle">27 млрд</text>
+      <text class="sm" x="290" y="126" text-anchor="middle">параметров</text>
+      <line class="ln" x1="326" y1="50" x2="292" y2="98"/>
+      <text class="sm" x="368" y="74" text-anchor="middle">Unsloth</text>
+      <text class="sm" x="368" y="90" text-anchor="middle">Dynamic</text>
+      <line class="ln" x1="368" y1="50" x2="368" y2="62"/>
+      <text class="sm" x="410" y="126" text-anchor="middle">~4 бита</text>
+      <line class="ln" x1="404" y1="50" x2="408" y2="114"/>
+      <text class="sm" x="434" y="74" text-anchor="middle">K</text>
+      <line class="ln" x1="434" y1="50" x2="434" y2="62"/>
+      <text class="sm" x="530" y="110" text-anchor="middle">набор XL:</text>
+      <text class="sm" x="530" y="126" text-anchor="middle">S, M, L, XL</text>
+      <line class="ln" x1="464" y1="50" x2="520" y2="98"/>
+      <text class="sm" x="620" y="74" text-anchor="middle">формат для</text>
+      <text class="sm" x="620" y="90" text-anchor="middle">llama.cpp и Ollama</text>
+      <line class="ln" x1="506" y1="50" x2="600" y2="62"/>
+    </svg>
+    <figcaption>Расшифровка по README llama.cpp<a class="ref" href="#r3">3</a> и документации Unsloth<a class="ref" href="#r50">50</a>.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Число после Q - примерно сколько бит на параметр: Q8, Q6, Q5, Q4. Чем меньше, тем легче файл и ниже качество.</li>
+      <li>Буква K означает блочный метод k-квантов, он точнее старых <code>Q4_0</code>.</li>
+      <li>Метка <code>it</code> или <code>Instruct</code> в имени означает версию, дообученную отвечать на инструкции. Для чата и задач бери её, а не базовую.</li>
+      <li>Суффикс S, M, L или XL говорит, сколько важных частей модели оставлено в повышенной точности. M - разумная середина.</li>
+      <li>Приставка IQ (например <code>IQ4_XS</code>) - i-кванты с матрицей важности. Они выгодны при 2-3 битах, когда памяти совсем мало.</li>
+    </ol>
+  </div>
+  <div class="q"><b>Вывод</b>Для начала ищи файл с <code>Q4_K_M</code> в имени. Если память позволяет, бери <code>Q5_K_M</code> или <code>Q6_K</code>.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://youtu.be/yzMENYCtPxg">GGUF file names explained for beginners: Q4_K_M, IQ, UD, QAT, MoE</a> - Liv4IT, 17 мин, на английском.</li>
+    <li><a href="https://www.youtube.com/watch?v=JZF4H1JW2cc&amp;t=214">Квантизация: оптимизация размера и скорости</a> - Дмитрий Черкашин, с 3:34, около минуты.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-card">
+  <span class="num">12</span>
+  <h2>Карточка модели</h2>
+  <p>Карточка модели (model card) - это страница модели на Hugging Face с описанием, лицензией, замерами и файлами (раздел 10). Рядом с ней лежит <code>config.json</code>, из которого считается память. Карточку читай в порядке ниже: каждый пункт может отсеять модель ещё до запуска.</p>
+  <h3>Лицензия</h3>
+  <p>Лицензия определяет условия применения модели. Перед коммерческим использованием проверь действующие ограничения правообладателя.</p>
+  <h3>Контекст</h3>
+  <p>Длина контекста (context length) - это максимальная длина входа и выхода вместе, в токенах. Русский звонок на 1200-1500 слов даёт около 1900-3500 токенов, в зависимости от токенизатора - программы, которая режет текст на токены. Длинный контекст в карточке не бесплатен: каждый токен контекста занимает память под KV-кэш (раздел 05).</p>
+  <h3>Бенчмарки</h3>
+  <p>Бенчмарк (benchmark) - это набор заданий с известными ответами, по которому модели сравнивают между собой. Для русского языка есть лидерборд MERA (набор тестов на русском от Альянса ИИ) и Ru Arena Hard (сравнение ответов на сложные вопросы). Разные бенчмарки меряют разное и часто расходятся. Пример T-pro-it-2.1: на Ru Arena Hard у неё 93,8, лучший результат среди кандидатов проекта, а на MERA 0,196, один из худших<a class="ref" href="#r35">35</a><a class="ref" href="#r54">54</a>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Модель</th><th>Параметры</th><th>Лицензия</th><th>Русский</th><th>Веса FP8</th></tr></thead>
+    <tbody>
+      <tr><td>T-pro-it-2.1</td><td class="n">32,8B dense</td><td>Apache 2.0</td><td>Ru Arena Hard 93,8; MERA 0,196</td><td class="n">31 ГиБ</td></tr>
+      <tr><td>Qwen3.6-27B</td><td class="n">27,8B dense</td><td>Apache 2.0</td><td>MERA 0,435</td><td class="n">26 ГиБ</td></tr>
+      <tr><td>Qwen3.6-35B-A3B</td><td class="n">35B, 3B активных</td><td>Apache 2.0</td><td>MERA 0,391</td><td class="n">33 ГиБ</td></tr>
+      <tr><td>T-lite-it-2.1</td><td class="n">8,2B dense</td><td>Apache 2.0</td><td>Ru Arena Hard 83,9</td><td class="n">8 ГиБ</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 8 - Кандидаты проекта оценки звонков, разведка 12.10.2026. Qwen3.8-27B вышла 5.08.2026 и в эту разведку не попала; у неё столько же параметров, 27,8 млрд, архитектура та же<a class="ref" href="#r30">30</a>.</p>
+  <h3>Файл config.json</h3>
+  <p>В <code>config.json</code> лежит устройство модели. Для расчёта памяти контекста нужны три поля. Ниже настоящие значения T-pro-it-2.1<a class="ref" href="#r51">51</a>:</p>
+  <pre>"num_hidden_layers": 64,          // число слоёв (раздел 03)
+"num_key_value_heads": 8,         // число голов ключей и значений
+"head_dim": 128,                  // размер одной головы
+"max_position_embeddings": 40960  // предел позиций; рабочий контекст сверяй с карточкой</pre>
+  <p>Голова внимания (head) - одна из параллельных частей внимания внутри слоя, каждая смотрит на текст по-своему. Из вывода видно, что у модели 64 слоя и всего 8 голов ключей и значений по 128 чисел. Из этих чисел в лекции 3 получится память контекста: 256 КиБ на каждый токен.</p>
+  <div class="xref"><b>Дальше в серии</b><p>Лекция 3 считает по этим трём полям, сколько звонков одна карта обработает одновременно. Лекция 2 по весам FP8 из таблицы 8 выбирает класс карты: 48 или 96 ГБ.</p></div>
+  <div class="q"><b>Вывод</b>Карточка отсеивает модель по лицензии, языку и размеру. Бенчмарки только сужают список, лучшую модель показывает замер на своих данных (раздел 14).</div>
+  <p class="links">Читать: <a href="https://habr.com/ru/articles/865582">Т-Банк о T-pro и T-lite на Хабре</a>; <a href="https://mera.a-ai.ru/ru/text/leaderboard">лидерборд MERA</a><a class="ref" href="#r35">35</a>.</p>
+</section>
+
+
+<section id="s-models">
+  <span class="num">13</span>
+  <h2>Модели 2026 года</h2>
+  <p>Открытых семейств около десятка. Обновляются они каждые 2-4 месяца, поэтому таблицу ниже стоит перепроверять. Данные взяты из HF API 12.10.2026.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Семейство</th><th>Кто</th><th>Размеры для дома</th><th>Тип</th><th>Лицензия</th><th>Заметка</th></tr></thead>
+    <tbody>
+      <tr><td>Qwen 3.5-3.8</td><td>Alibaba</td><td>4B, 9B, 27B, 35B-A3B</td><td>dense и MoE</td><td><span class="tag ok">Apache 2.0</span></td><td>главное семейство энтузиастов; у крупных версий лицензии с порогами</td></tr>
+      <tr><td>Gemma 4</td><td>Google</td><td>E2B, E4B, 12B, 26B-A4B, 31B</td><td>dense и MoE</td><td><span class="tag ok">Apache 2.0</span></td><td>в карточке заявлено 35+ языков; E4B - около 4 млрд параметров в работе; есть QAT-кванты, обученные сразу с учётом квантования</td></tr>
+      <tr><td>gpt-oss</td><td>OpenAI</td><td>20b, 120b</td><td>MoE</td><td><span class="tag ok">Apache 2.0</span></td><td>вышла в августе 2025, новее нет</td></tr>
+      <tr><td>Mistral</td><td>Mistral AI</td><td>Ministral 3-14B, Small 4 (119B-A6.5B)</td><td>dense и MoE</td><td><span class="tag ok">Apache 2.0</span></td><td>Medium 3.5 запрещён компаниям с выручкой от $20 млн в месяц</td></tr>
+      <tr><td>GigaChat 3.1-3.5</td><td>Сбер</td><td>10B-A1.8B (6,5 ГБ в Q4)</td><td>MoE</td><td><span class="tag ok">MIT</span></td><td>родная русская модель; старшие версии 432B и 702B</td></tr>
+      <tr><td>T-pro, T-lite 2.1</td><td>Т-Банк</td><td>T-lite 8B, T-pro 32B</td><td>dense на базе Qwen3</td><td><span class="tag ok">Apache 2.0</span></td><td>дообучены под русский, декабрь 2025</td></tr>
+      <tr><td>AliceAI-Foundation</td><td>Яндекс</td><td>80B-A3B</td><td>MoE</td><td><span class="tag ok">Apache 2.0</span></td><td>только базовая модель, как чат-ассистент не готова<a class="ref" href="#r34">34</a></td></tr>
+      <tr><td>DeepSeek V4, GLM-5, Kimi K3</td><td>Китай</td><td>от 320B до 2,8T</td><td>MoE</td><td><span class="tag r">разные</span></td><td>для серверов; у части лицензий пороги по выручке</td></tr>
+      <tr><td>Llama 4</td><td>Meta</td><td>Scout 109B-A17B</td><td>MoE</td><td><span class="tag no">своя, gated</span></td><td>новых открытых весов с апреля 2025 нет</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 9 - Семейства открытых моделей на октябрь 2026. Источник: HF API, карточки моделей.</p>
+  <p>Независимых замеров качества русского языка у новых моделей разведка не нашла. Проверка 18 моделей на Хабре показала, что 7 из них вставляют иероглифы в русский текст<a class="ref" href="#r32">32</a>. Метод там слабый, но риск реальный: русский у каждой модели нужно проверять на своих примерах.</p>
+  <div class="q"><b>Вывод</b>Для компьютера из примера есть Qwen 4-9B, Gemma 4 E4B и 12B, T-lite 8B и GigaChat 10B-A1.8B. Все под свободными лицензиями Apache 2.0 или MIT.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=L-5dfPhNirk&amp;t=215">Какие модели брать и подвох с лицензиями</a> - Vladimir Yakovlev, с 3:35.</li>
+    <li><a href="https://youtu.be/_roc1w1ZwHQ">Запускаем Qwen 3.8 на RTX 2080, 3090, 4090</a> - Галера Морева, 73 мин, 2026: смотреть выборочно, итог с <a href="https://www.youtube.com/watch?v=_roc1w1ZwHQ&amp;t=4162">69:22</a>.</li>
+    <li>Статья: <a href="https://habr.com/ru/articles/1033808/">Локальные LLM в реальной работе: Gemma 4, Qwen 3.6 и Qwen Coder</a> - Хабр, май 2026<a class="ref" href="#r41">41</a>.</li>
+    <li>Статья: <a href="https://habr.com/ru/companies/gpugo/articles/1056192/">Всё, что вы хотели знать про локальные LLM</a> - Хабр, июль 2026: 8 конфигураций на RTX 5090<a class="ref" href="#r12">12</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-choose">
+  <span class="num">14</span>
+  <h2>Как выбрать модель</h2>
+  <p>Выбор модели - это сужение списка в пять шагов (рис. 8). Первые четыре шага делаются за вечер по таблицам и рейтингам. Пятый шаг решает: модель проверяется на твоих задачах.</p>
+  <figure>
+    <div class="ttl">Рисунок 8 - Пять шагов выбора модели</div>
+    <svg class="d" viewBox="0 0 760 120" role="img" aria-label="Пять шагов: задача, бюджет памяти, кандидаты по рейтингам, лицензия, проверка на своих примерах">
+      <rect class="box" x="6" y="20" width="132" height="60" rx="6"/>
+      <text class="b" x="72" y="46" text-anchor="middle">1. Задача</text>
+      <text class="sm mut" x="72" y="64" text-anchor="middle">чат, код, документы</text>
+      <line class="ln" x1="138" y1="50" x2="156" y2="50" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="158" y="20" width="132" height="60" rx="6"/>
+      <text class="b" x="224" y="46" text-anchor="middle">2. Память</text>
+      <text class="sm" x="224" y="64" text-anchor="middle">какой размер влезет</text>
+      <line class="ln" x1="290" y1="50" x2="308" y2="50" marker-end="url(#m-fill)"/>
+      <rect class="rs" x="310" y="20" width="132" height="60" rx="6"/>
+      <text class="b" x="376" y="46" text-anchor="middle">3. Кандидаты</text>
+      <text class="sm" x="376" y="64" text-anchor="middle">2-4 по рейтингам</text>
+      <line class="ln" x1="442" y1="50" x2="460" y2="50" marker-end="url(#m-fill)"/>
+      <rect class="rs" x="462" y="20" width="132" height="60" rx="6"/>
+      <text class="b" x="528" y="46" text-anchor="middle">4. Лицензия</text>
+      <text class="sm" x="528" y="64" text-anchor="middle">можно ли компании</text>
+      <line class="ln" x1="594" y1="50" x2="612" y2="50" marker-end="url(#m-fill)"/>
+      <rect class="oks" x="614" y="20" width="140" height="60" rx="6"/>
+      <text class="b" x="684" y="46" text-anchor="middle">5. Свои примеры</text>
+      <text class="sm" x="684" y="64" text-anchor="middle">20-50 реальных задач</text>
+      <text class="sm mut" x="684" y="104" text-anchor="middle">решает этот шаг</text>
+    </svg>
+    <figcaption>Порядок шагов: от фильтров, которые отсекают больше всего, к дорогой ручной проверке.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Шаг 2 считается формулами разделов 03-05: файл модели плюс контекст должны влезть в память.</li>
+      <li>Шаг 3 даёт 2-4 кандидата. Рейтинги показывают общий уровень, но не твою задачу.</li>
+      <li>Шаг 5 проверяет кандидатов на 20-50 реальных примерах, например на твоих типовых вопросах. Результаты из карточки модели - это заявление авторов: модель, лучшая в тесте кода, на длинном контексте может провалиться<a class="ref" href="#r12">12</a>.</li>
+    </ol>
+  </div>
+  <h3>Где смотреть рейтинги</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Рейтинг</th><th>Что показывает</th><th>Статус на 12.10.2026</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://artificialanalysis.ai/leaderboards/models">Artificial Analysis</a></td><td>сводный индекс ума, скорость, фильтр открытых весов</td><td><span class="tag ok">работает</span></td></tr>
+      <tr><td><a href="https://arena.ai/leaderboard">LMArena</a></td><td>люди вслепую сравнивают ответы двух моделей</td><td><span class="tag ok">работает</span>, переехал на arena.ai</td></tr>
+      <tr><td><a href="https://mera.a-ai.ru/en/text">MERA</a></td><td>русскоязычные тесты, в сентябре 2026 вышла версия Text 2.0</td><td><span class="tag ok">работает</span></td></tr>
+      <tr><td>Open LLM Leaderboard (HF)</td><td>старый рейтинг открытых моделей</td><td><span class="tag no">закрыт</span> с марта 2025</td></tr>
+      <tr><td><a href="https://huggingface.co/spaces/Vokturz/can-it-run-llm">Can it run LLM</a></td><td>калькулятор: влезет ли модель в память</td><td><span class="tag ok">работает</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 10 - Рейтинги и калькуляторы<a class="ref" href="#r35">35</a><a class="ref" href="#r36">36</a><a class="ref" href="#r37">37</a><a class="ref" href="#r38">38</a>. Калькулятор работает на чужом сервере: вводи туда параметры модели, но не данные компании.</p>
+  <div class="q"><b>Вывод</b>Сначала отсей модели по памяти и лицензии, потом выбери 2-4 по рейтингам. Решение принимай по своим 20-50 примерам.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://youtu.be/9CAZapI_WTE">Best local AI model for every GPU (8 GB to 512 GB+)</a> - RepoChad, 20 мин, на английском, август 2026.</li>
+    <li><a href="https://youtu.be/mmntN7zIekU">Local AI on the Framework Desktop: best models for 32, 64 and 128 GB</a> - Framework, 39 мин, на английском.</li>
+    <li><a href="https://www.youtube.com/watch?v=JZF4H1JW2cc&amp;t=502">Альтернативные модели и подбор под ваше железо</a> - Дмитрий Черкашин, с 8:22.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-mac">
+  <span class="num">15</span>
+  <h2>Практика на компьютере из примера</h2>
+  <p>На компьютере из примераBook Air уже стоят Ollama 0.34.4 и llama.cpp, а в Ollama скачаны три модели Qwen 3.5. Упражнения ниже идут от готового к новому.</p>
+  <h3>Упражнение 1: замерить скорость</h3>
+  <p>Команда запускает модель с выводом статистики. Флаг <code>--think=false</code> выключает режим размышлений, чтобы замер был коротким.</p>
+  <pre># --verbose печатает статистику после ответа
+ollama run qwen3.5:9b --verbose --think=false "Объясни в пяти предложениях, что такое видеопамять."</pre>
+  <p>В конце ответа Ollama печатает статистику. Вот реальный вывод на компьютере из примера 12.10.2026:</p>
+  <pre>prompt eval count:    28 token(s)
+prompt eval rate:     70.03 tokens/s     # prefill
+eval count:           145 token(s)
+eval rate:            16.18 tokens/s     # генерация</pre>
+  <p>Из вывода видно, что генерация составила 16 ток/с при расчётной границе 18 ток/с (раздел 06). Повтори замер для <code>qwen3.5:4b</code> и <code>qwen3.5:4b-q8_0</code> и сравни с таблицей 4.</p>
+  <h3>Упражнение 2: скачать модель с Hugging Face</h3>
+  <p>Ollama умеет брать GGUF прямо с Hugging Face по имени репозитория и кванта<a class="ref" href="#r8">8</a>. Для примера возьми русскоязычную T-lite 8B: её файл Q4_K_M весит 5,0 ГБ<a class="ref" href="#r43">43</a>.</p>
+  <pre># репозиторий t-tech/T-lite-it-2.1-GGUF, квант Q4_K_M, 5,0 ГБ
+ollama run hf.co/t-tech/T-lite-it-2.1-GGUF:Q4_K_M --verbose</pre>
+  <p>Команда собрана по документации HF, на компьютере из примера я её не запускал. Задай T-lite и qwen3.5:9b одинаковые пять вопросов о своей работе и сравни русский язык.</p>
+  <h3>Упражнение 3: выбрать модель самому</h3>
+  <ol class="plain">
+    <li>Открой <a href="https://huggingface.co/models?library=gguf&amp;sort=trending">модели GGUF на HF</a>, отсортированные по популярности.</li>
+    <li>Найди модель размером до 9B, посчитай файл Q4_K_M по формуле раздела 03 с 4,9 бита на параметр и сверь с вкладкой Files and versions.</li>
+    <li>Проверь лицензию в метках страницы.</li>
+    <li>Запусти модель через <code>ollama run hf.co/&lt;автор&gt;/&lt;репозиторий&gt;:Q4_K_M</code> и замерь скорость.</li>
+  </ol>
+  <h3>Упражнение 4: LM Studio</h3>
+  <p>Поставь <a href="https://lmstudio.ai/">LM Studio</a> и найди ту же модель во встроенном поиске. На Mac LM Studio предложит версию MLX: сравни её скорость с GGUF в Ollama.</p>
+  <div class="mist">
+    <div><b>Не держи открытыми две модели</b>Ollama держит модель в памяти ещё 5 минут после ответа. Команда <code>ollama ps</code> показывает загруженные модели, <code>ollama stop &lt;имя&gt;</code> выгружает модель.</div>
+    <div><b>Модели 14B на пределе</b>Файл около 9 ГБ плюс браузер и система - это почти все 16 ГБ. Mac начнёт использовать файл подкачки, и скорость упадёт.</div>
+  </div>
+  <div class="q"><b>Вывод</b>Четыре упражнения за вечер дают живые ответы на все четыре вопроса: влезет, как быстро, насколько умная, можно ли.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://youtu.be/yJPJLA57JDs">Запустил локальные LLM на MacBook Air M5 с 16 ГБ</a> - Глеб Куровский, 16 мин, 2026: почти твоя машина, с <a href="https://www.youtube.com/watch?v=yJPJLA57JDs&amp;t=816">13:36</a> что потянул Air.</li>
+    <li><a href="https://youtu.be/i0CHdNl2vbA">Что такое Ollama? Полный разбор на практике</a> - Web3Day AI, 12 мин, 2025.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-words">
+  <span class="num">16</span>
+  <h2>Словарь</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Термин</th><th>Что значит</th><th>Раздел</th></tr></thead>
+    <tbody>
+      <tr><td>параметр, вес</td><td>одно число в модели; 8B - 8 млрд чисел</td><td>03</td></tr>
+      <tr><td>слой, внимание</td><td>блок вычислений модели; внимание выбирает важные прошлые токены</td><td>03</td></tr>
+      <tr><td>токен</td><td>кусок текста, обычно часть слова; скорость меряют в токенах в секунду</td><td>05</td></tr>
+      <tr><td>инференс</td><td>работа обученной модели: генерация ответа</td><td>03</td></tr>
+      <tr><td>квантование, квант</td><td>сжатие весов до меньшего числа бит; квант - конкретный вариант, например Q4_K_M</td><td>04</td></tr>
+      <tr><td>GGUF</td><td>формат файла модели для llama.cpp, Ollama, LM Studio</td><td>11</td></tr>
+      <tr><td>safetensors</td><td>формат исходных весов на Hugging Face</td><td>10</td></tr>
+      <tr><td>VRAM</td><td>память видеокарты</td><td>05</td></tr>
+      <tr><td>единая память</td><td>общая память процессора и графики: Mac, Spark, Strix Halo</td><td>05</td></tr>
+      <tr><td>контекст</td><td>весь текст, который модель видит за раз</td><td>05</td></tr>
+      <tr><td>KV-кэш</td><td>память под контекст, растёт с его длиной</td><td>05</td></tr>
+      <tr><td>выгрузка (offload)</td><td>часть модели в обычной памяти, когда не влезла в VRAM</td><td>05</td></tr>
+      <tr><td>prefill</td><td>чтение запроса, упирается в вычисления</td><td>06</td></tr>
+      <tr><td>генерация (decode)</td><td>выдача ответа по токену, упирается в память</td><td>06</td></tr>
+      <tr><td>пропускная способность</td><td>сколько ГБ в секунду читается из памяти</td><td>06</td></tr>
+      <tr><td>dense, плотная модель</td><td>на каждый токен работают все параметры</td><td>07</td></tr>
+      <tr><td>MoE, активные параметры</td><td>модель из экспертов; на токен работает их часть</td><td>07</td></tr>
+      <tr><td>Metal</td><td>программная платформа графики Apple</td><td>05</td></tr>
+      <tr><td>токенизатор</td><td>программа, которая режет текст на токены</td><td>12</td></tr>
+      <tr><td>голова внимания</td><td>параллельная часть внимания внутри слоя</td><td>12</td></tr>
+      <tr><td>it, instruct</td><td>версия модели, дообученная отвечать на инструкции</td><td>11</td></tr>
+      <tr><td>карточка модели</td><td>README репозитория на HF: описание, лицензия, параметры</td><td>10, 12</td></tr>
+      <tr><td>бенчмарк</td><td>набор заданий с ответами для сравнения моделей</td><td>12</td></tr>
+      <tr><td>config.json</td><td>файл устройства модели: слои, головы, контекст</td><td>12</td></tr>
+      <tr><td>FP8, AWQ, GPTQ</td><td>форматы квантования для сервера на NVIDIA</td><td>04</td></tr>
+      <tr><td>gated</td><td>модель, доступ к которой надо запросить</td><td>10</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 11 - Термины лекции.</p>
+</section>
+
+
+<section id="s-watch">
+  <span class="num">17</span>
+  <h2>Что смотреть и читать</h2>
+  <h3>Порядок просмотра</h3>
+  <p>Восемь видео на русском, около 3,2 часа. Порядок идёт от «что это» к выбору железа и модели.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Видео</th><th>Канал</th><th>Длит.</th><th>Зачем</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td><a href="https://youtu.be/Bzn1r7zkHys">Зачем ставить нейросеть на комп</a></td><td>Тостер Скрипт</td><td class="n">5:00</td><td>общая идея</td></tr>
+      <tr><td class="n">2</td><td><a href="https://youtu.be/L-5dfPhNirk">Локальные LLM на своём железе</a></td><td>IT with Vladimir Yakovlev</td><td class="n">17:20</td><td>обзор всего: модели, железо, программы</td></tr>
+      <tr><td class="n">3</td><td><a href="https://youtu.be/yJPJLA57JDs">Локальные LLM на MacBook Air M5 16 ГБ</a></td><td>Глеб Куровский</td><td class="n">15:40</td><td>что тянет твой класс машины</td></tr>
+      <tr><td class="n">4</td><td><a href="https://youtu.be/L9sI7sUKLIM">Какое железо нужно для локальных нейросетей?</a></td><td>Этот Компьютер</td><td class="n">52:33</td><td>главное видео про железо</td></tr>
+      <tr><td class="n">5</td><td><a href="https://youtu.be/YtheC1qr6VI">Какую видеокарту взять для нейросетей в 2026</a></td><td>Run Bot Run</td><td class="n">29:15</td><td>карты, цены Avito, подвохи</td></tr>
+      <tr><td class="n">6</td><td><a href="https://youtu.be/lLG-xN25v20">Тест DGX Spark против AMD и Mac Mini</a></td><td>PRO Hi-Tech</td><td class="n">21:57</td><td>мини-станции в одном тесте</td></tr>
+      <tr><td class="n">7</td><td><a href="https://youtu.be/DVpJiFfA63s">ASUS GX10 (DGX Spark): честный тест</a></td><td>Виталий Кулиев</td><td class="n">28:50</td><td>Spark против видеокарт, цена в РФ</td></tr>
+      <tr><td class="n">8</td><td><a href="https://youtu.be/JZF4H1JW2cc">Локальная LLM за 20 минут: Qwen 3.6 + LM Studio</a></td><td>Дмитрий Черкашин</td><td class="n">23:08</td><td>практика и настройки LM Studio</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 12 - Основной маршрут. Названия, каналы и длительность сверены по YouTube 12.10.2026; содержание проверено по главам видео, сами видео я не смотрел.</p>
+  <h3>Дополнительно</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Тема</th><th>Видео</th><th>Язык</th><th>Длит.</th></tr></thead>
+    <tbody>
+      <tr><td>старт</td><td><a href="https://youtu.be/kj_oP_cknoA">Локальный LLM в 2026: что нужно знать перед запуском</a> - Рома Филонов</td><td>ru</td><td class="n">15:51</td></tr>
+      <tr><td>старт</td><td><a href="https://youtu.be/1GEML055VNE">Платные LLM против локальной модели на ноутбуке</a> - Диджитализируй!</td><td>ru</td><td class="n">23:59</td></tr>
+      <tr><td>старт</td><td><a href="https://youtu.be/bq8NMQg2MeE">Ollama: модели локально и без интернета</a> - Теплица социальных технологий</td><td>ru</td><td class="n">5:59</td></tr>
+      <tr><td>железо</td><td><a href="https://youtu.be/uf9yDBy21pA">Бюджетные сборки до 100 тыс. рублей</a> - DevOps от первого лица</td><td>ru</td><td class="n">15:21</td></tr>
+      <tr><td>железо</td><td><a href="https://youtu.be/dNk3EJ-szwk">RTX PRO 6000 Blackwell 96 ГБ</a> - VIK-off</td><td>ru</td><td class="n">16:05</td></tr>
+      <tr><td>железо</td><td><a href="https://youtu.be/x6siPRkPAeQ">The only guide you need for local AI hardware</a> - Tech With Tim</td><td>en</td><td class="n">19:14</td></tr>
+      <tr><td>мини-станции</td><td><a href="https://youtu.be/in9SWFrnfp4">Ryzen Max+ 395 со 128 ГБ в играх, софте и нейронках</a> - PRO Hi-Tech</td><td>ru</td><td class="n">41:07</td></tr>
+      <tr><td>мини-станции</td><td><a href="https://youtu.be/wIgAdYU6GRs">NVIDIA DIGITS / DGX Spark - объясняем</a> - Droider, анонс до выхода</td><td>ru</td><td class="n">10:17</td></tr>
+      <tr><td>мини-станции</td><td><a href="https://youtu.be/Ze5XLooTt6g">I thought DGX Spark was slower until I changed one thing</a> - Alex Ziskind</td><td>en</td><td class="n">15:04</td></tr>
+      <tr><td>мини-станции</td><td><a href="https://youtu.be/8FmJ2ypu1KQ">NVIDIA DGX Spark vs RTX 4090</a> - Daniel Bourke</td><td>en</td><td class="n">11:28</td></tr>
+      <tr><td>мини-станции</td><td><a href="https://youtu.be/prIUKAbHlj8">Strix Halo for AI: an honest review</a> - Bijan Bowen</td><td>en</td><td class="n">18:14</td></tr>
+      <tr><td>модели</td><td><a href="https://youtu.be/UHfVq7LtO0o">HuggingFace для новичков</a> - Настя Бут, уклон в картинки</td><td>ru</td><td class="n">4:47</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 13 - Видео сверх основного маршрута. Видео, привязанные к разделам, перечислены в блоках «Смотреть» внутри разделов.</p>
+  <h3>Статьи для чтения</h3>
+  <ol class="plain">
+    <li><a href="https://habr.com/ru/articles/1065948/">Сколько токенов в секунду выдаёт Mac mini M4</a> - Хабр: твой класс машины и формула скорости.</li>
+    <li><a href="https://habr.com/ru/articles/918936/">Разбираемся с суффиксами квантования LLM</a> - Хабр: имена квантов.</li>
+    <li><a href="https://habr.com/ru/articles/919394">Две RTX 5060 Ti 16 ГБ или одна RTX 3090</a> - Хабр: замеры на картах.</li>
+    <li><a href="https://habr.com/ru/articles/1019940">Майнинг-плата и 3 RTX 3090</a> - Хабр: реальная домашняя сборка.</li>
+    <li><a href="https://digital-razor.ru/media/articles/workstation/dgx-spark-vs-ryzen-ai-max-395/">DGX Spark или Ryzen AI Max+ 395</a> - DigitalRazor: мини-станции с ценами в рублях.</li>
+    <li><a href="https://habr.com/ru/articles/1005054/">Как запускать LLM локально с LM Studio</a> - Хабр: практика.</li>
+    <li><a href="https://habr.com/ru/companies/gpugo/articles/1056192/">Всё, что вы хотели знать про локальные LLM</a> - Хабр: модели, память, контекст на RTX 5090.</li>
+    <li><a href="https://habr.com/ru/articles/945086/">Локальный AI: прагматичное руководство</a> - Хабр, 2025: обзор целиком, цены устарели.</li>
+  </ol>
+  <p>Пробелы: VK Видео и Rutube не просмотрены. Отдельного русского видео про пропускную способность памяти и русского обзора Hugging Face под LLM не нашлось, их заменяют разделы 06 и 10 и английские видео.</p>
+</section>
+
+
+<section id="s-check">
+  <span class="num">18</span>
+  <h2>Контрольные вопросы</h2>
+  <ol class="plain">
+    <li>Сколько гигабайт займёт модель 14B в Q4_K_M и влезет ли она в 12,7 ГБ, которые пример Mac отдаёт модели, если KV-кэш на 8 тысяч токенов занимает около 1 ГБ?</li>
+    <li>Почему RTX 3090 генерирует быстрее DGX Spark, хотя у Spark в пять раз больше памяти?</li>
+    <li>Какую скорость генерации ты ожидаешь от Qwen3.8-27B Q4_K_M на RTX 5090? Посчитай верхнюю границу.</li>
+    <li>Чем prefill отличается от генерации и что важнее для анализа длинного договора?</li>
+    <li>Почему gpt-oss-120b на мини-станции быстрее плотной 32B, хотя она в четыре раза больше?</li>
+    <li>Что означает каждая часть имени <code>gemma-4-12B-it-Q5_K_M.gguf</code>?</li>
+    <li>Где на странице модели HF найти GGUF-файлы, если в официальном репозитории их нет?</li>
+    <li>Что проверить в лицензии модели, прежде чем использовать её в компании?</li>
+    <li>Какие три поля <code>config.json</code> нужны, чтобы посчитать память контекста?</li>
+    <li>Почему рейтинг модели не заменяет проверку на своих 20-50 примерах?</li>
+  </ol>
+  <p>Ответы присылай агенту: он проверит их и допишет в лекцию то, что осталось непонятным. Вопросы 2, 4 и 5 вернутся в лекции 2 на примере серверных карт.</p>
+</section>
+
+
+<section id="sources">
+  <span class="num">19</span>
+  <h2>Источники</h2>
+  <ol class="srclist">
+    <li id="r1"><span class="i">1</span><span><a href="https://habr.com/ru/articles/1065948/">Сколько токенов в секунду выдаёт Mac mini M4</a>, Хабр, 3 августа. <span class="w">Пересказ, числа сверены 12.10.2026.</span></span></li>
+    <li id="r2"><span class="i">2</span><span><a href="https://developer.nvidia.com/blog/mastering-llm-techniques-inference-optimization/">Mastering LLM techniques: inference optimization</a>, NVIDIA, 2023. <span class="w">Первоисточник механизма prefill и генерации.</span></span></li>
+    <li id="r3"><span class="i">3</span><span><a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/quantize/README.md">llama.cpp: quantize README</a>. <span class="w">Первоисточник: биты на параметр и размеры квантов.</span></span></li>
+    <li id="r4"><span class="i">4</span><span><a href="https://arxiv.org/abs/2601.14277">arXiv 2601.14277</a>, Kurt, январь 2026, таблица 2. <span class="w">Первоисточник, пересказ разведки.</span></span></li>
+    <li id="r5"><span class="i">5</span><span><a href="https://habr.com/ru/articles/918936/">Разбираемся с суффиксами квантования LLM</a>, Хабр, 2025. <span class="w">Пересказ; описание _0 и _1 местами спорное.</span></span></li>
+    <li id="r6"><span class="i">6</span><span><a href="https://huggingface.co/docs/hub/en/gguf">GGUF</a>, документация Hugging Face. <span class="w">Первоисточник.</span></span></li>
+    <li id="r7"><span class="i">7</span><span><a href="https://huggingface.co/docs/hub/en/model-cards">Model cards</a>, документация Hugging Face. <span class="w">Первоисточник.</span></span></li>
+    <li id="r8"><span class="i">8</span><span><a href="https://huggingface.co/docs/hub/en/local-apps">Use models with local apps</a>, документация Hugging Face. <span class="w">Первоисточник: команды hf.co для Ollama.</span></span></li>
+    <li id="r9"><span class="i">9</span><span><a href="https://huggingface.co/docs/hub/en/models-gated">Gated models</a>, документация Hugging Face. <span class="w">Первоисточник.</span></span></li>
+    <li id="r10"><span class="i">10</span><span><a href="https://huggingface.co/blog/kv-cache-quantization">KV cache quantization</a>, блог Hugging Face. <span class="w">Формула KV-кэша; числа для Llama 3.1 8B посчитаны по config.json.</span></span></li>
+    <li id="r11"><span class="i">11</span><span><a href="https://habr.com/ru/articles/1072048/">Qwen3.8-27B: лучший локальный LLM, который вы, вероятно, не сможете запустить</a>, Хабр, август 2026. <span class="w">Пересказ.</span></span></li>
+    <li id="r12"><span class="i">12</span><span><a href="https://habr.com/ru/companies/gpugo/articles/1056192/">Всё, что вы хотели знать про локальные LLM</a>, Хабр, GPUGO, июль 2026. <span class="w">Пересказ, замеры одной машины.</span></span></li>
+    <li id="r13"><span class="i">13</span><span><a href="https://habr.com/ru/articles/919394">Две RTX 5060 Ti 16GB или одна RTX 3090</a>, Хабр, 2025. <span class="w">Пересказ, перевод Hardware Corner.</span></span></li>
+    <li id="r14"><span class="i">14</span><span><a href="https://habr.com/ru/articles/1019940">Локальный ИИ: майнинг-плата и 3 RTX 3090</a>, Хабр, апрель 2026. <span class="w">Пересказ.</span></span></li>
+    <li id="r16"><span class="i">16</span><span><a href="https://www.hardware-corner.net/first-dgx-spark-llm-benchmarks/">First DGX Spark LLM benchmarks</a>, Hardware Corner, 15.10.2025. <span class="w">Пересказ разведки.</span></span></li>
+    <li id="r17"><span class="i">17</span><span><a href="https://lmsys.org/blog/2025-10-13-nvidia-dgx-spark/">NVIDIA DGX Spark review</a>, LMSYS, 13.10.2025. <span class="w">Пересказ разведки.</span></span></li>
+    <li id="r18"><span class="i">18</span><span><a href="https://developer.nvidia.com/blog/how-nvidia-dgx-sparks-performance-enables-intensive-ai-tasks">How DGX Spark's performance enables intensive AI tasks</a>, NVIDIA, 24.10.2025. <span class="w">Данные производителя.</span></span></li>
+    <li id="r20"><span class="i">20</span><span><a href="https://digital-razor.ru/media/articles/workstation/amd-ryzen-ai-max-395-strix-halo-review/">Ryzen AI Max+ 395: обзор</a>, DigitalRazor, 19.08.2026. <span class="w">Пересказ; магазин сборок, цены на 18.08.2026.</span></span></li>
+    <li id="r23"><span class="i">23</span><span><a href="https://forum.level1techs.com/t/strix-halo-llm-inference-notes/249466">Strix Halo LLM inference notes</a>, форум Level1Techs, май 2026. <span class="w">Пересказ разведки.</span></span></li>
+    <li id="r25"><span class="i">25</span><span><a href="https://serverflow.ru/blog/novosti/nvidia-dgx-spark-moshchnyy-start-no-protivorechivye-testy/">DGX Spark: мощный старт, но противоречивые тесты</a>, Serverflow, 24.10.2025. <span class="w">Пересказ.</span></span></li>
+    <li id="r30"><span class="i">30</span><span><a href="https://huggingface.co/Qwen/Qwen3.8-27B">Qwen/Qwen3.8-27B</a>, Hugging Face. <span class="w">Первоисточник, HF API 12.10.2026.</span></span></li>
+    <li id="r31"><span class="i">31</span><span><a href="https://habr.com/ru/articles/1005054/">Как запускать LLM локально с LM Studio</a>, Хабр, февраль 2026. <span class="w">Пересказ.</span></span></li>
+    <li id="r32"><span class="i">32</span><span><a href="https://habr.com/ru/articles/1021388/">Какую LLM ставить в production для контента на русском? 18 моделей</a>, Хабр, апрель 2026. <span class="w">Пересказ; один судья-модель, метод слабый.</span></span></li>
+    <li id="r34"><span class="i">34</span><span><a href="https://habr.com/ru/companies/yandex/articles/1083300/">AliceAI-Foundation 80B-A3B</a>, Хабр, Яндекс, сентябрь 2026. <span class="w">Пересказ.</span></span></li>
+    <li id="r35"><span class="i">35</span><span><a href="https://mera.a-ai.ru/en/text">MERA</a>. <span class="w">Первоисточник; таблица результатов при проверке не загрузилась.</span></span></li>
+    <li id="r36"><span class="i">36</span><span><a href="https://artificialanalysis.ai/leaderboards/models">Artificial Analysis</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r37"><span class="i">37</span><span><a href="https://arena.ai/leaderboard">LMArena</a>. <span class="w">Первоисточник; 14.10.2026 сайт ответил 403 автоматической проверке, ссылка не подтверждена.</span></span></li>
+    <li id="r38"><span class="i">38</span><span><a href="https://huggingface.co/spaces/Vokturz/can-it-run-llm">Can it run LLM</a>, Space на Hugging Face. <span class="w">Первоисточник.</span></span></li>
+    <li id="r39"><span class="i">39</span><span>Замеры на MacBook Air M4 16 ГБ, Ollama 0.34.4: скорость 12.10.2026, запрос 28 токенов; лимит Metal 14.10.2026. <span class="w">Собственный замер, один прогон.</span></span></li>
+    <li id="r40"><span class="i">40</span><span><a href="https://habr.com/ru/articles/1025132/">Выжать больше из локальных LLM: Ollama медленнее llama.cpp</a>, Хабр, апрель 2026. <span class="w">Пересказ, одна машина.</span></span></li>
+    <li id="r41"><span class="i">41</span><span><a href="https://habr.com/ru/articles/1033808/">Локальные LLM в реальной работе: Gemma 4, Qwen 3.6</a>, Хабр, май 2026. <span class="w">Пересказ, малая выборка.</span></span></li>
+    <li id="r43"><span class="i">43</span><span><a href="https://huggingface.co/t-tech/T-lite-it-2.1-GGUF">t-tech/T-lite-it-2.1-GGUF</a>, Hugging Face. <span class="w">Первоисточник: размеры файлов, 12.10.2026.</span></span></li>
+    <li id="r44"><span class="i">44</span><span><a href="https://habr.com/ru/articles/797443/">Сравнение различных схем квантования для LLM</a>, Хабр, 2024. <span class="w">Пересказ, числа не перепроверены.</span></span></li>
+    <li id="r45"><span class="i">45</span><span><a href="https://habr.com/ru/companies/first/articles/849560/">Квантовать или не квантовать LLM?</a>, Хабр, 2024. <span class="w">Пересказ.</span></span></li>
+    <li id="r50"><span class="i">50</span><span><a href="https://unsloth.ai/docs/basics/unsloth-dynamic-2.0-ggufs">Unsloth Dynamic 2.0 GGUFs</a>, документация Unsloth. <span class="w">Первоисточник.</span></span></li>
+    <li id="r51"><span class="i">51</span><span><a href="https://huggingface.co/t-tech/T-pro-it-2.1/resolve/main/config.json">T-pro-it-2.1, config.json</a>. <span class="w">Первоисточник, перепроверено 12.10.2026: 64 слоя, 8 KV-голов, head_dim 128.</span></span></li>
+    <li id="r52"><span class="i">52</span><span><a href="https://docs.vllm.ai/en/latest/features/quantization/">vLLM, Quantization</a>. <span class="w">Первоисточник: форматы и поддержка по поколениям GPU.</span></span></li>
+    <li id="r54"><span class="i">54</span><span><a href="https://huggingface.co/t-tech/T-pro-it-2.1">T-pro-it-2.1, карточка</a>. <span class="w">Ru Arena Hard - пересказ разведки проекта звонков.</span></span></li>
+  </ol>
+</section>
+</main>
+</div>
+
+</body>
+</html>

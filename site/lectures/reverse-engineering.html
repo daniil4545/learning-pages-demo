@@ -1,0 +1,281 @@
+<!doctype html>
+
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Реверс-инжиниринг устройств и ИИ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+.wrap.solo{grid-template-columns:minmax(0,1fr);max-width:900px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:16px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static}}
+
+/* callout: question, conclusion, how to say */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:middle;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.ic{width:76px}
+td.ic svg{display:block;width:64px;height:32px}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+
+/* figure with inline svg */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .dash{stroke-dasharray:6 4}
+svg .dot{stroke-dasharray:2 3}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .fillc{fill:currentColor}
+
+/* walkthrough: how to read */
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+.read p{font-size:14.5px;color:var(--muted);margin:0 0 8px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+
+pre{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px}
+caption{text-align:left;padding:10px 14px;font-size:13px;color:var(--muted)}
+li{margin-bottom:7px} .meta{font-size:13px;color:var(--muted)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+@media(max-width:600px){figure{padding:12px 8px}.diagram-scroll{overflow-x:auto}.diagram-scroll svg.d{min-width:620px}h1{font-size:28px}}
+@media print{nav.toc{display:none}.wrap{display:block}body{background:var(--paper)}a{overflow-wrap:anywhere}}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+<div class="wrap"><nav class="toc" aria-label="Оглавление"><p><a href="../index.html">Все лекции</a></p><ol><li><a href="#meaning">Что исследуем</a></li><li><a href="#device">Как устроено устройство</a></li><li><a href="#process">Процесс исследования</a></li><li><a href="#bytes">Как байты обретают смысл</a></li><li><a href="#protection">Доступ и защита</a></li><li><a href="#ai">Как работает ИИ</a></li><li><a href="#cases">Реальные проекты</a></li><li><a href="#tools">Инструменты</a></li><li><a href="#books">Книги</a></li><li><a href="#route">С чего продолжить</a></li><li><a href="#sources">Источники</a></li></ol></nav><main><header class="top">
+<span class="eyebrow">Электроника / 17.10.2026</span>
+<h1>Понять устройство изнутри</h1>
+<p class="lead">Реверс-инжиниринг прошивок, протоколов и устройств с помощью ИИ.</p>
+<p>Вещь может работать годами, пока её внутреннее устройство остаётся неизвестным. Реверс-инжиниринг помогает восстановить эту картину по наблюдениям, сигналам и программе. Ты можешь получить собственное управление устройством или изменить часть его поведения. Для этого не всегда нужно извлекать всю прошивку. ИИ помогает разбирать данные и создавать инструменты проверки. В этой лекции ты проследишь процесс и увидишь реальные проекты. Затем сможешь выбрать источник для следующего шага.</p>
+<p class="meta">Вводная для разработчика. Примеры ниже учебные, если прямо не указан проект. Публикации проверены 17.10.2026; результаты авторов независимо не воспроизводились.</p>
+<p class="library-edition">Учебная версия для публичной библиотеки. Рабочие сведения исключены, примеры обобщены. Версии и измерения сохранены на дату исходной лекции.</p></header>
+<section id="meaning"><span class="num">01</span><h2>Что такое реверс-инжиниринг</h2>
+<p><strong>Реверс-инжиниринг</strong> (reverse engineering) - восстановление устройства системы по доступным свидетельствам. Ты наблюдаешь входы и выходы, изучаешь данные и проверяешь объяснение. Результатом становится модель, которая предсказывает поведение. Например, собственная программа включает лампу без приложения производителя.</p>
+<div class="tbl"><table><caption>Таблица 1. Разные результаты исследования</caption><thead><tr><th>Результат</th><th>Что ты восстановил</th><th>Пример</th></tr></thead><tbody>
+<tr><td>Описание протокола</td><td>Правила обмена сообщениями</td><td>Команда изменения яркости</td></tr>
+<tr><td>Описание программы</td><td>Назначение функций и данных</td><td>Обработчик нажатия кнопки</td></tr>
+<tr><td>Модификация</td><td>Место и способ изменения поведения</td><td>Другой порог включения индикатора</td></tr>
+<tr><td>Совместимая реализация</td><td>Поведение, достаточное для замены</td><td>Собственный USB-переходник</td></tr>
+</tbody></table></div>
+<p><strong>Дизассемблер</strong> переводит машинные байты в инструкции процессора. <strong>Декомпилятор</strong> восстанавливает более привычное представление, часто похожее на C. Имена переменных и комментарии при этом обычно не возвращаются. Читаемый результат всё равно требует проверки.</p>
+<p class="q">Открытый код замены и исходный код производителя могут сильно различаться. Публикация восстановленного кода также не меняет права на оригинальные материалы.</p>
+<p class="links">Читать: <a href="#src-re4b">Reverse Engineering for Beginners</a>, <a href="#src-iot">Practical IoT Hacking</a>.</p></section>
+<section id="device"><span class="num">02</span><h2>Как программа связана с железом</h2>
+<figure><div class="ttl">Условная лампа с микроконтроллером</div><div class="diagram-scroll"><svg class="d" viewBox="0 0 720 240" role="img" aria-label="Память хранит программу, процессор читает входы и управляет светодиодом">
+<defs><marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>
+<rect class="soft" x="20" y="30" width="170" height="60" rx="5"/><text x="105" y="55" text-anchor="middle" class="b">Постоянная память</text><text x="105" y="75" text-anchor="middle">прошивка и настройки</text>
+<rect class="hl" x="275" y="90" width="170" height="65" rx="5"/><text x="360" y="117" text-anchor="middle" class="b">Процессор</text><text x="360" y="137" text-anchor="middle">исполняет программу</text>
+<rect class="box" x="20" y="155" width="170" height="60" rx="5"/><text x="105" y="180" text-anchor="middle" class="b">Кнопка / радиомодуль</text><text x="105" y="200" text-anchor="middle">передают команды</text>
+<rect class="box" x="530" y="90" width="170" height="65" rx="5"/><text x="615" y="117" text-anchor="middle" class="b">Драйвер светодиода</text><text x="615" y="137" text-anchor="middle">регулирует ток</text>
+<path class="ln" d="M190 60 H225 V110 H275" marker-end="url(#m-fill)"/><text class="lbl" x="204" y="40">хранит код</text>
+<path class="ln" d="M190 185 H225 V140 H275" marker-end="url(#m-fill)"/>
+<path class="ln" d="M445 122 H530" marker-end="url(#m-fill)"/><text class="lbl" x="454" y="107">управляет</text>
+</svg></div><figcaption>Рисунок 1. Учебная модель. Реальная плата может объединять несколько частей в одном чипе.</figcaption></figure>
+<div class="read"><h3>Как читать схему</h3><ol><li>Найди память с программой.</li><li>Проследи, какие команды получает процессор.</li><li>Посмотри, каким выходом он управляет светом.</li></ol><p>Исследование может затронуть любой участок этой цепи.</p></div>
+<p><strong>Микроконтроллер</strong> (MCU) объединяет процессор, память и периферийные блоки. <strong>Прошивка</strong> (firmware) - программа, хранящаяся в устройстве. Она может работать напрямую с железом или поверх операционной системы реального времени. Более сложное устройство может запускать Linux.</p>
+<p><strong>Загрузчик</strong> (bootloader) запускает основную программу. Некоторые загрузчики также принимают обновления. Цифровая подпись позволяет проверить подлинность и целостность программы открытым ключом. Изменение подписанных данных нарушает проверку. При старте загрузчик может проверять подпись прошивки. Поэтому изменение файла ещё не гарантирует запуск изменённой версии.<a class="ref" href="#src-esp">[1]</a></p>
+<p class="links">Читать: <a href="#src-hardware">The Hardware Hacking Handbook</a>, <a href="#src-esp">защита ESP32</a>.</p></section>
+<section id="process"><span class="num">03</span><h2>Процесс: от вопроса до доказательства</h2>
+<figure><div class="ttl">Один цикл исследования</div><div class="diagram-scroll"><svg class="d" viewBox="0 0 720 205" role="img" aria-label="Вопрос, сбор данных, гипотеза, эксперимент и запись результата">
+<rect class="box" x="10" y="32" width="122" height="55" rx="5"/><text x="71" y="64" text-anchor="middle">Задать вопрос</text>
+<rect class="box" x="155" y="32" width="122" height="55" rx="5"/><text x="216" y="64" text-anchor="middle">Собрать данные</text>
+<rect class="hl" x="300" y="32" width="122" height="55" rx="5"/><text x="361" y="64" text-anchor="middle">Выдвинуть гипотезу</text>
+<rect class="box" x="445" y="32" width="122" height="55" rx="5"/><text x="506" y="64" text-anchor="middle">Проверить опытом</text>
+<rect class="box" x="590" y="32" width="120" height="55" rx="5"/><text x="650" y="64" text-anchor="middle">Записать результат</text>
+<path class="ln" d="M132 60 H155 M277 60 H300 M422 60 H445 M567 60 H590" marker-end="url(#m-fill)"/>
+<path class="ln dash" d="M506 87 V150 H216 V87" marker-end="url(#m-fill)"/><text class="lbl" x="361" y="143" text-anchor="middle">предсказание не сбылось: собрать новые данные</text>
+</svg></div><figcaption>Рисунок 2. Учебный процесс. Пунктир показывает возврат после неудачной проверки.</figcaption></figure>
+<div class="read"><h3>Как читать схему</h3><ol><li>Начни с конкретного вопроса о поведении.</li><li>Сравни предсказание гипотезы с результатом опыта.</li><li>Вернись к измерениям, если объяснение не подошло.</li></ol><p>Успешная проверка подтверждает только проверенный сценарий.</p></div>
+<div class="tbl"><table><caption>Таблица 2. Следы, которые стоит сохранять</caption><thead><tr><th>Этап</th><th>Пример для лампы</th><th>Свидетельство</th></tr></thead><tbody>
+<tr><td>Вопрос</td><td>Как изменить яркость без приложения?</td><td>Описание нужного поведения</td></tr>
+<tr><td>Разведка</td><td>Определить модель и чип, найти обновление</td><td>Фото платы, документация, версия</td></tr>
+<tr><td>Сбор</td><td>Записать обмен при трёх значениях яркости</td><td>Исходные записи с условиями опыта</td></tr>
+<tr><td>Анализ</td><td>Найти изменяющийся байт</td><td>Таблица различий</td></tr>
+<tr><td>Проверка</td><td>Предсказать четвёртое значение</td><td>Новая запись и наблюдение света</td></tr>
+<tr><td>Реализация</td><td>Написать собственный клиент</td><td>Код и повторяемый сценарий</td></tr>
+</tbody></table></div>
+<p>До записи в устройство выясни способ восстановления. Сохрани исходные файлы и контрольные суммы. Копию памяти считай проверенной после повторного чтения и сравнения. Даже совпадающая копия не доказывает, что устройство позволит её восстановить.</p>
+<p class="links">Читать: <a href="#src-iot">Practical IoT Hacking, главы 3 и 7-9</a>.</p></section>
+<section id="bytes"><span class="num">04</span><h2>Пример: восстановить поле сообщения</h2>
+<p><strong>Протокол</strong> задаёт формат и порядок обмена сообщениями. Чтобы восстановить формат, меняй один параметр за опыт. Сравни записи и ищи предсказуемые различия. Ниже вымышленная лампа передаёт яркость одним байтом.</p><p>Hex означает шестнадцатеричную запись. Каждая пара символов обозначает байт. Префикс <code>0x</code> указывает основание 16: <code>0x32 = 3 * 16 + 2 = 50</code>.</p>
+<div class="tbl"><table><caption>Таблица 3. Учебные сообщения, не протокол реального устройства</caption><thead><tr><th>Яркость</th><th>Сообщение, hex</th><th>Наблюдение</th></tr></thead><tbody>
+<tr><td>0</td><td><code>A5 01 00 A4</code></td><td>Третий байт равен 0</td></tr>
+<tr><td>50</td><td><code>A5 01 32 96</code></td><td>0x32 равно 50</td></tr>
+<tr><td>100</td><td><code>A5 01 64 C0</code></td><td>0x64 равно 100</td></tr>
+<tr><td>Предсказание: 25</td><td><code>A5 01 19 BD</code></td><td>Нужен отдельный опыт</td></tr>
+</tbody></table></div>
+<p>Первая гипотеза: третий байт задаёт яркость. Вторая гипотеза: последний байт равен XOR предыдущих трёх. XOR - побитовая операция, оставляющая единицу при разных входных битах. Например, <code>A5 XOR 01 XOR 32 = 96</code>.</p>
+<p>Совпадение трёх записей ещё не доказывает устройство протокола. Последний байт может зависеть от неизвестного состояния. Сначала сравни предсказанное сообщение с новой записью штатного приложения. Затем проверяй собственную реализацию на выбранном устройстве.</p>
+<p class="q">Имя поля и назначение функции остаются гипотезами до проверки предсказания.</p>
+<p class="links">Читать: <a href="#src-disk">разбор записей обмена с Toshiba</a>.</p></section>
+<section id="protection"><span class="num">05</span><h2>Прочитать, понять и запустить</h2>
+<div class="tbl"><table><caption>Таблица 4. Разные механизмы защиты</caption><thead><tr><th>Механизм</th><th>Что ограничивает</th><th>Чего не гарантирует</th></tr></thead><tbody>
+<tr><td>Защита чтения</td><td>Извлечение памяти через выбранный интерфейс</td><td>Отсутствие других путей доступа</td></tr>
+<tr><td>Шифрование памяти</td><td>Получение понятного кода из содержимого памяти</td><td>Проверку автора программы</td></tr>
+<tr><td>Проверка подписи обновления</td><td>Установку неподписанного образа через этот механизм</td><td>Проверку кода при каждом запуске</td></tr>
+<tr><td>Безопасная загрузка</td><td>Запуск кода, не прошедшего проверку подлинности</td><td>Отсутствие ошибок в подписанном коде</td></tr>
+<tr><td>Контрольная сумма</td><td>Незамеченное повреждение данных</td><td>Подлинность образа</td></tr>
+</tbody></table></div>
+<p>В ESP32 шифрование памяти и безопасная загрузка решают разные задачи. Их сочетание зависит от настроек и версии чипа.<a class="ref" href="#src-esp">[1]</a> У STM32 некоторые переходы между уровнями защиты вызывают стирание памяти. Поэтому команда снятия защиты может уничтожить исследуемую прошивку.<a class="ref" href="#src-st">[2]</a></p>
+<p>Обход защиты часто использует ошибку одного компонента или сочетание ошибок. Криптография при этом может оставаться исправной. Физические методы, например кратковременные сбои питания, образуют отдельную область. Для неё нужны измерения и специальное оборудование.<a class="ref" href="#src-hardware">[3]</a></p>
+<p class="links">Читать: <a href="#src-esp">Espressif</a>, <a href="#src-st">ST</a>, <a href="#src-hardware">аппаратные методы</a>.</p></section>
+<section id="ai"><span class="num">06</span><h2>ИИ как участник исследования</h2>
+<div class="tbl"><table><caption>Таблица 5. Разделение работы</caption><thead><tr><th>ИИ помогает</th><th>Инструмент проверяет</th><th>Ты решаешь</th></tr></thead><tbody>
+<tr><td>Объяснить декомпилированную функцию</td><td>Показать инструкции, обращения к памяти и вызовы</td><td>Какие выводы подтверждены</td></tr>
+<tr><td>Предложить формат сообщения</td><td>Сравнить записи и вычислить поля</td><td>Какой эксперимент различит гипотезы</td></tr>
+<tr><td>Написать клиент или декодер</td><td>Сопоставить результат с исходной записью</td><td>Когда разрешить запись в устройство</td></tr>
+</tbody></table></div>
+<p><strong>MCP</strong> (Model Context Protocol) подключает к агенту внешние инструменты. Например, GhidraMCP даёт ему доступ к результатам анализа программы. Агент может сам запрашивать функции и переименовывать найденные элементы. Доступные действия определяет конкретный сервер.<a class="ref" href="#src-mcp">[4]</a></p>
+<p>Передай агенту модель устройства, версию прошивки и неизменённые записи. Попроси разделять наблюдения, гипотезы и результаты проверок. Сохраняй этот разбор вне диалога, чтобы длинная история не стала единственным источником знаний. Такой подход разобран в материалах Tim Blazytko.<a class="ref" href="#src-cartography">[5]</a></p>
+<pre><code>Цель: понять поле яркости по записям обмена.
+Сначала перечисли наблюдения с именами файлов.
+Затем предложи две гипотезы и различающий их опыт.
+Для вычислений напиши проверяемый скрипт.
+Запись в устройство пока не выполняй.</code></pre>
+<p>Это пример постановки исследовательского вопроса. Он ограничивает действия и требует проверяемого результата. Заявленную моделью уверенность нельзя считать вероятностью правильности.</p>
+<p class="links">Читать: <a href="#src-mcp">GhidraMCP</a>, <a href="#src-pipeline">организация агентного анализа</a>.</p></section>
+<section id="cases"><span class="num">07</span><h2>Кто уже делает подобные проекты</h2>
+<div class="tbl"><table><caption>Таблица 6. Состояние доказательств в публикациях</caption><thead><tr><th>Проект</th><th>Результат</th><th>Ограничение</th></tr></thead><tbody>
+<tr><td>Will Whang / Toshiba</td><td>Работающий USB-переходник</td><td>Были ошибки и потеря данных при испытаниях</td></tr>
+<tr><td>Chaz Schlarp / периферия</td><td>Анализ протоколов и модификация камеры</td><td>Модификацию монитора не прошивал на момент статьи</td></tr>
+<tr><td>Faraday / pi32v2</td><td>Описание процессора для Ghidra</td><td>Исследовательский прототип</td></tr>
+<tr><td>Tim Blazytko</td><td>Методика, демонстрации, учебные окружения</td><td>Не инструкция для любого бытового устройства</td></tr>
+</tbody></table></div>
+<h3>Will Whang: собственный мост к старому диску</h3>
+<p>Диск Toshiba MK4001MTD использовал обмен, который не понимал обычный картридер. Will записал сигналы работающей Nokia N91. ИИ построил декодер и прошивку для Raspberry Pi Pico. Переходник переводит запросы USB-накопителя в команды диска. В репозитории доступны код, схема и файлы платы.<a class="ref" href="#src-disk">[6]</a></p>
+<p class="links">Читать целиком: <a href="https://www.willwhang.dev/Reading-MK4001MTD/">Reading MK4001MTD</a>. Затем смотреть <a href="https://github.com/will127534/MK4001MTD-USB-Bridge">код и схему</a>.</p>
+<h3>Chaz Schlarp: исследование настольных устройств</h3>
+<p>В исследовании пяти устройств использованы прошивки и штатные механизмы управления. Для Shure MV7 найден командный интерфейс через USB HID. HID - стандарт обмена с устройствами ввода, допускающий специальные команды производителя. Исследование камеры проверено изменением поведения индикатора. Для монитора найдено место изменения кода, но прошивка ещё не применялась.<a class="ref" href="#src-peripherals">[7]</a></p>
+<p class="links">Читать целиком: <a href="https://schlarp.com/posts/everything-i-own-owned/">Everything I own, owned</a>. Для деталей: <a href="https://github.com/schlarpc/shure-mv7-firmware-re">исследование Shure MV7</a>.</p>
+<h3>Faraday: электронная сигарета с неизвестным процессором</h3>
+<p>Gastón Aznarez и Dan Borgogno исследовали устройство на чипе JieLi. Ghidra не поддерживала его архитектуру pi32v2. Архитектура команд задаёт операции процессора и их кодирование байтами. Описание процессора сообщает Ghidra эти правила для разбора инструкций. Исследователи использовали вывод дизассемблера производителя и создали генератор описания процессора. ИИ определял смысл команд; точные битовые вычисления выполнял обычный код. Созданное описание позволило анализировать прошивку в Ghidra.<a class="ref" href="#src-isa">[8]</a></p>
+<p>Для обработки pi32v2 указаны примерно 2,5 часа и $25 вычислений. Эти числа относятся к этапу генерации описания. Они не включают всё исследование устройства. Готовность загружаемого плагина также не доказывает правильность каждой инструкции.</p>
+<p class="links">Читать целиком: <a href="https://faradaysec.com/ai-reverse-engineering-firmware-isa-recovery/">No Spec, No Problem</a>. Прототип: <a href="https://github.com/infobyte/isa_recovery">ISA Recovery</a>.</p>
+<h3>Tim Blazytko: наблюдать работу агента</h3>
+<p>Binary Cartography объединяет записи, слайды и примеры практического реверса. Материалы показывают, как агент использует анализатор и сохраняет найденное. Начни с темы Agentic Reverse Engineering. Примеры посвящены программам, но помогают понять устройство рабочего процесса.<a class="ref" href="#src-cartography">[5]</a></p>
+<p class="links">Смотреть: <a href="https://github.com/mrphrazer/binary-cartography">Binary Cartography</a>.</p></section>
+<section id="tools"><span class="num">08</span><h2>Инструмент выбирают под вопрос</h2>
+<div class="tbl"><table><caption>Таблица 7. Программные инструменты и их границы</caption><thead><tr><th>Инструмент</th><th>Что получает</th><th>Что позволяет узнать</th></tr></thead><tbody>
+<tr><td><a href="#src-binwalk">Binwalk</a></td><td>Файл прошивки</td><td>Вложенные форматы и данные; не расшифровывает всё автоматически</td></tr>
+<tr><td><a href="#src-mcp">Ghidra + GhidraMCP</a></td><td>Машинный код поддерживаемой архитектуры</td><td>Инструкции, псевдокод, связи; доступ агента к анализу</td></tr>
+<tr><td><a href="#src-binassist">Binary Ninja + BinAssist</a></td><td>Программа в анализаторе</td><td>Объяснения функций, предложения имён, типов и структур</td></tr>
+<tr><td><a href="#src-wire">Wireshark</a></td><td>Запись обмена из поддерживаемого источника</td><td>Структура пакетов и различия между опытами</td></tr>
+<tr><td><a href="#src-sigrok">PulseView / sigrok</a></td><td>Цифровые сигналы логического анализатора</td><td>Время переключений и декодированный обмен</td></tr>
+<tr><td><a href="#src-openocd">OpenOCD</a></td><td>Поддерживаемый отладочный адаптер и чип</td><td>Отладка и работа с памятью при разрешённом доступе</td></tr>
+<tr><td><a href="#src-llm4">LLM4Decompile</a></td><td>Подготовленные данные машинного кода</td><td>Исследовательская декомпиляция моделями</td></tr>
+</tbody></table></div>
+<p>Ghidra бесплатна; Binary Ninja имеет собственные условия лицензирования. Наличие открытого плагина не означает бесплатность основного продукта. Выбор модели и сервера также влияет на стоимость. Этот список не является проверкой установки на твоём компьютере.</p>
+<p>Перед подключением проверь распиновку, допустимые напряжения и схему питания. Название интерфейса не гарантирует электрическую совместимость. Это относится также к UART, SWD, JTAG и логическому анализатору.</p>
+<div class="tbl"><table><caption>Таблица 8. Аппаратные интерфейсы</caption><thead><tr><th>Интерфейс</th><th>Назначение</th><th>Граница возможностей</th></tr></thead><tbody>
+<tr><td>UART, асинхронный последовательный обмен</td><td>Сообщения запуска, иногда консоль</td><td>Не гарантирует доступ к памяти</td></tr>
+<tr><td>SWD, двухпроводная отладка; JTAG, тестовый и отладочный интерфейс</td><td>Регистры, память, управление выполнением</td><td>Поддержка зависит от чипа и защиты</td></tr>
+<tr><td>SPI / I²C, последовательные шины</td><td>Обмен между чипами, иногда внешняя память</td><td>Требуют правильных уровней напряжения и подключения</td></tr>
+</tbody></table></div>
+<p>USB-UART адаптер обслуживает UART. Логический анализатор записывает сигналы. Отладочный адаптер работает с отладочным интерфейсом. Эти устройства выполняют разные задачи и не заменяют друг друга.<a class="ref" href="#src-iot">[9]</a></p>
+<p class="links">Читать: первичные руководства открываются по названиям инструментов в таблице.</p></section>
+<section id="books"><span class="num">09</span><h2>Книги: три разных входа</h2>
+<div class="tbl"><table><caption>Таблица 9. Что читать под свой вопрос</caption><thead><tr><th>Книга</th><th>Для чего</th><th>С чего начать</th></tr></thead><tbody>
+<tr><td><a href="#src-iot">Practical IoT Hacking</a><br>Fotios Chantzis и соавторы, 2021</td><td>Карта исследования подключённых устройств</td><td>Главы 3, 7, 8, 9; затем 11 про Bluetooth Low Energy</td></tr>
+<tr><td><a href="#src-hardware">The Hardware Hacking Handbook</a><br>Jasper van Woudenberg, Colin O’Flynn, 2021</td><td>Интерфейсы, измерения и аппаратные атаки</td><td>Главы 1-3; позже главы про сбои и анализ питания</td></tr>
+<tr><td><a href="#src-re4b">Reverse Engineering for Beginners</a><br>Dennis Yurichev</td><td>Связь кода с инструкциями процессора</td><td>Примеры функций, условий и циклов; доступна русская версия</td></tr>
+</tbody></table></div>
+<p>Для твоего интереса первой подойдёт Practical IoT Hacking. Она связывает устройство, интерфейсы и прошивку в один процесс. Hardware Hacking Handbook стоит брать для аппаратной стороны. Бесплатная книга Юричева поможет, когда потребуется читать машинный код. Проверены описания и оглавления; книги целиком здесь не разобраны.</p>
+<p class="links">Читать: <a href="https://nostarch.com/practical-iot-hacking">оглавление Practical IoT Hacking</a>, <a href="https://nostarch.com/hardwarehacking">оглавление Hardware Hacking Handbook</a>, <a href="https://beginners.re/">книга Юричева</a>.</p></section>
+<section id="route"><span class="num">10</span><h2>Как продолжить без покупки лаборатории</h2>
+<div class="tbl"><table><caption>Таблица 10. Порядок знакомства</caption><thead><tr><th>Шаг</th><th>Материал</th><th>Что должно стать понятно</th></tr></thead><tbody>
+<tr><td>1</td><td>Проект диска Will Whang</td><td>Как наблюдения превращаются в работающую реализацию</td></tr>
+<tr><td>2</td><td>Исследование Shure MV7</td><td>Как связаны протокол, обновление и прошивка</td></tr>
+<tr><td>3</td><td>Practical IoT Hacking, главы 7-9</td><td>Чем отличаются способы доступа</td></tr>
+<tr><td>4</td><td>Демонстрация GhidraMCP или Binary Cartography</td><td>Какие действия может выполнять агент</td></tr>
+<tr><td>5</td><td>Один вопрос к выбранному устройству</td><td>Какой наблюдаемый результат ты хочешь получить</td></tr>
+</tbody></table></div>
+<p>Для первого исследования можно выбрать файл обновления или запись обмена. Полная перепрошивка не обязательна. Учебная плата удобна для проверки методов и восстановления. USB-устройство добавляет интерес настоящего протокола. Сетевые приборы и силовые цепи требуют отдельной подготовки по электробезопасности.</p>
+<h3>Проверь понимание</h3><ol>
+<li>Чем описание протокола отличается от декомпиляции прошивки?</li>
+<li>Почему удачное чтение памяти не доказывает возможность перепрошивки?</li>
+<li>Каким опытом ты проверишь поле яркости в учебном сообщении?</li>
+<li>Какое свидетельство отличает гипотезу ИИ от подтверждённого вывода?</li>
+<li>Что нужно выяснить перед первой записью в устройство?</li>
+</ol>
+<p class="q">Следующий результат: выбрать устройство и сформулировать один вопрос о его поведении. Затем подобрать способ наблюдения и проверить первую гипотезу.</p>
+</section>
+<section id="sources"><span class="num">11</span><h2>Источники и границы проверки</h2><p>Ссылки открыты при подготовке. Метка «первоисточник» означает публикацию разработчика, исследователя или издателя. Она не означает независимую проверку всех результатов. Технические утверждения опираются на ссылки ниже.</p><ol class="srclist"><li id="src-esp"><span class="i">01</span><div><a href="https://docs.espressif.com/projects/esp-idf/en/stable/esp32/security/security.html">Espressif: Security Overview</a><div class="w">Первоисточник. Шифрование и безопасная загрузка; зависит от чипа.</div></div></li><li id="src-st"><span class="i">02</span><div><a href="https://www.st.com/content/st_com/en/technical-documents/an5156-introduction-to-security-for-stm32-mcus-stmicroelectronics_asset/chunk-006-topic-an5156-sec-feat-read-out-protection-rdp-.html">ST: Readout protection</a><div class="w">Первоисточник. Уровни защиты чтения и стирание при переходах. Текст прочитан; автоматическая проверка HTTP-ссылки завершилась ошибкой сервера.</div></div></li><li id="src-hardware"><span class="i">03</span><div><a href="https://nostarch.com/hardwarehacking">The Hardware Hacking Handbook</a><div class="w">Первоисточник издателя. Проверены описание и оглавление.</div></div></li><li id="src-mcp"><span class="i">04</span><div><a href="https://github.com/LaurieWired/GhidraMCP">LaurieWired: GhidraMCP</a><div class="w">Первоисточник. Возможности и демонстрации; локально не запускался.</div></div></li><li id="src-cartography"><span class="i">05</span><div><a href="https://github.com/mrphrazer/binary-cartography">Tim Blazytko: Binary Cartography</a><div class="w">Первоисточник. Записи, слайды, примеры и окружения.</div></div></li><li id="src-disk"><span class="i">06</span><div><a href="https://www.willwhang.dev/Reading-MK4001MTD/">Will Whang: Reading MK4001MTD</a><div class="w">Первоисточник. Статья и демонстрация автора; независимого воспроизведения нет.</div></div></li><li id="src-peripherals"><span class="i">07</span><div><a href="https://schlarp.com/posts/everything-i-own-owned/">Chaz Schlarp: Everything I own, owned</a><div class="w">Первоисточник. У каждого устройства свой уровень проверки результата.</div></div></li><li id="src-isa"><span class="i">08</span><div><a href="https://faradaysec.com/ai-reverse-engineering-firmware-isa-recovery/">Faraday: No Spec, No Problem</a><div class="w">Первоисточник. Прототип и измерения авторов; не универсальный готовый продукт.</div></div></li><li id="src-iot"><span class="i">09</span><div><a href="https://nostarch.com/practical-iot-hacking">Practical IoT Hacking</a><div class="w">Первоисточник издателя. Проверены описание и оглавление.</div></div></li><li id="src-pipeline"><span class="i">10</span><div><a href="https://synthesis.to/2026/03/18/agentic_malware_analysis.html">Tim Blazytko: Building a Pipeline for Agentic Malware Analysis</a><div class="w">Первоисточник. Методика работы с инструментами и состоянием анализа.</div></div></li><li id="src-binwalk"><span class="i">11</span><div><a href="https://github.com/ReFirmLabs/binwalk">ReFirmLabs: Binwalk</a><div class="w">Первоисточник. Поиск вложенных форматов в файлах.</div></div></li><li id="src-binassist"><span class="i">12</span><div><a href="https://github.com/symgraph/BinAssist">Jason Tang: BinAssist</a><div class="w">Первоисточник. Возможности по README; локально не запускался.</div></div></li><li id="src-wire"><span class="i">13</span><div><a href="https://www.wireshark.org/docs/wsug_html_chunked/ChapterIntroduction.html">Wireshark User’s Guide</a><div class="w">Первоисточник. Анализ записанного обмена.</div></div></li><li id="src-sigrok"><span class="i">14</span><div><a href="https://sigrok.org/wiki/PulseView">sigrok: PulseView</a><div class="w">Первоисточник. Интерфейс логического анализатора и декодеры протоколов.</div></div></li><li id="src-openocd"><span class="i">15</span><div><a href="https://openocd.org/doc/html/About.html">OpenOCD User’s Guide: About</a><div class="w">Первоисточник. Отладка через поддерживаемые адаптеры.</div></div></li><li id="src-llm4"><span class="i">16</span><div><a href="https://github.com/albertan017/LLM4Decompile">LLM4Decompile</a><div class="w">Первоисточник. Исследовательские модели и наборы данных, не доказательство работы на любом MCU.</div></div></li><li id="src-re4b"><span class="i">17</span><div><a href="https://beginners.re/">Dennis Yurichev: Reverse Engineering for Beginners</a><div class="w">Первоисточник автора. Бесплатная книга, включая русскую версию.</div></div></li></ol></section></main></div></body></html>

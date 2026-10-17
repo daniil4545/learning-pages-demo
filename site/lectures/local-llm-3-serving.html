@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сервер моделей</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1f9e6e;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+    --s1:#3987e5; --s2:#d95926; --s3:#3fbf8a;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  --s1:#3987e5; --s2:#d95926; --s3:#3fbf8a;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px;max-height:calc(100vh - 48px);overflow-y:auto}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:7px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t,decimal-leading-zero);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:20px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+ul.plain,ol.plain{margin:0 0 14px;padding-left:22px;max-width:70ch}
+ul.plain li,ol.plain li{margin-bottom:6px}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+pre{font:13.5px/1.55 var(--mono);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;overflow-x:auto;margin:12px 0 16px}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static;max-height:none}}
+
+/* callout */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+.watch{font-size:14.5px;background:var(--res-soft);border-radius:8px;padding:10px 14px;margin:14px 0;max-width:72ch}
+.watch b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--res);display:block;margin-bottom:6px}
+.watch ul{margin:0;padding-left:18px}
+.watch li{margin-bottom:4px}
+.xref{font-size:14.5px;background:var(--proc-soft);border-radius:8px;padding:10px 14px;margin:14px 0;max-width:72ch}
+.xref b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--proc);display:block;margin-bottom:6px}
+.xref p{margin:0 0 6px}
+
+details.recall{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:10px 0;max-width:72ch;font-size:15px}
+details.recall summary{cursor:pointer;font-weight:600}
+details.recall p{margin:8px 0 2px;color:var(--muted)}
+
+/* series navigation */
+nav.series{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:22px;font-size:14px}
+nav.series span{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+nav.series a{padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);text-decoration:none}
+nav.series a.on{border-color:var(--accent);color:var(--accent);font-weight:600}
+nav.series a:hover,nav.series a:focus-visible{border-color:var(--accent)}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.cap{font-size:13px;color:var(--muted);margin:-8px 0 16px}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+
+/* intro: advance organizer */
+.intro{background:var(--paper);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:16px 20px 8px;margin:24px 0 0;max-width:78ch}
+.intro>b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:10px}
+.intro p{font-size:15px;color:var(--muted)}
+.intro ol{margin:0 0 10px;padding-left:22px}
+.intro li{margin-bottom:8px}
+.intro li a{font:600 11px/1 var(--mono);text-decoration:none;margin-left:4px}
+
+/* figure with inline svg */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px;position:relative}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .rs{fill:var(--res-soft);stroke:var(--res);stroke-width:1.5}
+svg .oks{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+svg .ws{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .sm{font-size:11px}
+svg .pt1{fill:var(--s1);stroke:var(--paper);stroke-width:2}
+svg .pt2{fill:var(--s2);stroke:var(--paper);stroke-width:2}
+svg .lp{fill:none;stroke:var(--proc);stroke-width:2.5}
+svg .lr{fill:none;stroke:var(--res);stroke-width:2.5}
+svg .dp{fill:var(--proc)}
+svg .dr{fill:var(--res)}
+svg .pt3{fill:var(--s3);stroke:var(--paper);stroke-width:2}
+svg .pt1:hover,svg .pt2:hover,svg .pt3:hover,svg .pt1:focus,svg .pt2:focus,svg .pt3:focus{stroke:var(--ink);outline:none}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);margin-bottom:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.tip{position:absolute;pointer-events:none;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:13px;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.12);display:none;max-width:260px;z-index:2}
+
+/* walkthrough */
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+
+/* cards */
+.mist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:14px 0}
+.mist div{background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:14px}
+.mist b{display:block;color:var(--warn);font-size:13px;margin-bottom:3px}
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px 1fr;gap:6px}
+.ex div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.tier{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 4px;margin:14px 0}
+.tier h3{margin:0 0 8px}
+.tier .meta{font:600 12px/1.5 var(--mono);color:var(--muted);margin-bottom:8px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+@media print{body{background:#fff}nav.toc{display:none}.wrap{display:block}section{break-inside:avoid-page}}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Оглавление</p>
+  <ol>
+    <li><a href="#s-known">Что уже знаешь</a></li>
+    <li><a href="#s-server">Сервер моделей</a></li>
+    <li><a href="#s-engines">Движки</a></li>
+    <li><a href="#s-kv">KV-кэш</a></li>
+    <li><a href="#s-batch">Параллельные запросы</a></li>
+    <li><a href="#s-prefix">Кэш префикса</a></li>
+    <li><a href="#s-run">Запуск сервера</a></li>
+    <li><a href="#s-params">Параметры генерации</a></li>
+    <li><a href="#s-json">Ответ по схеме</a></li>
+    <li><a href="#s-bench">Замер скорости</a></li>
+    <li><a href="#s-spec">Спекулятивное декодирование</a></li>
+    <li><a href="#s-quality">Проверка качества</a></li>
+    <li><a href="#s-mac">Практика на Mac</a></li>
+
+    <li><a href="#s-words">Словарь</a></li>
+    <li><a href="#s-watch">Что смотреть и читать</a></li>
+    <li><a href="#s-check">Контрольные вопросы</a></li>
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <nav class="series" aria-label="Серия лекций"><span>Серия «Локальные LLM»</span><a href="local-llm-1-start.html">1. Старт</a><a href="local-llm-2-hardware.html">2. Железо</a><a class="on" href="local-llm-3-serving.html" aria-current="page">3. Сервер и работа с моделью</a><a href="local-llm-4-finetuning.html">4. Дообучение и LoRA</a></nav>
+  <span class="eyebrow">Лекция 3 из 4 · 14.10.2026 · сервер и работа с моделью</span>
+  <h1>Сервер моделей: как обслужить много запросов и получить ответ по схеме</h1>
+  <p class="lead">Лекции 1 и 2 отвечали, какая модель влезет в какое железо и как быстро она печатает. Эта лекция отвечает, как превратить модель на карте в сервис: сколько запросов карта держит одновременно, какие флаги ставить, как получить ответ строго по JSON-схеме и как замерить скорость. Примеры проверены на Mac из примера 12 и 14.10.2026.</p>
+  <div class="intro">
+    <b>Коротко: вся лекция за две минуты</b>
+    <ol>
+      <li>Сервер моделей держит модель в памяти и отвечает по HTTP. Почти все серверы говорят на языке OpenAI API, поэтому код клиента один на Ollama и vLLM. <a href="#s-server">02</a></li>
+      <li>Ollama - для одной машины и одного пользователя, vLLM - для потока запросов на картах NVIDIA. <a href="#s-engines">03</a></li>
+      <li>KV-кэш на токен считается по config.json: 2 * слои * KV-головы * размер головы * байт на число. Он решает, сколько запросов влезет в карту. <a href="#s-kv">04</a></li>
+      <li>Непрерывный батчинг читает веса один раз на все запросы. Суммарная скорость карты растёт в разы, скорость одного запроса падает. <a href="#s-batch">05</a></li>
+      <li>Общий начальный текст промпта сервер считает один раз. Чек-лист в начале промпта ускоряет prefill всех звонков. <a href="#s-prefix">06</a></li>
+      <li>Для оценки по критериям: низкая температура, фиксированный seed, режим рассуждения выключен до замера, ответ по JSON-схеме. <a href="#s-params">08</a> <a href="#s-json">09</a></li>
+      <li>Скорость меряют четырьмя числами: время до первого токена, время на токен, суммарные токены в секунду и задержка 99% запросов. <a href="#s-bench">10</a></li>
+      <li>Спекулятивное декодирование угадывает несколько токенов вперёд и проверяет их за одно чтение весов. Так скорость обходит потолок из лекции 2. <a href="#s-spec">11</a></li>
+    </ol>
+  </div>
+<p class="library-edition">Учебная версия для публичной библиотеки. Рабочие сведения исключены, примеры обобщены. Версии и измерения сохранены на дату исходной лекции.</p></header>
+
+
+<section id="s-known">
+  <span class="num">01</span>
+  <h2>Что уже знаешь</h2>
+  <p>Лекция 3 опирается на факты лекций 1 и 2. Перечитай таблицу 1 перед началом: каждый факт дальше превращается в флаг сервера или в число замера.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Факт</th><th>Откуда</th><th>Во что превратится здесь</th></tr></thead>
+    <tbody>
+      <tr><td>Память = веса + KV-кэш + запас</td><td><a href="local-llm-1-start.html#s-fit">лекция 1, раздел 05</a></td><td>флаги <code>--gpu-memory-utilization</code> и <code>--max-model-len</code></td></tr>
+      <tr><td>Генерация упирается в память, prefill в вычисления</td><td><a href="local-llm-1-start.html#s-speed">лекция 1, раздел 06</a></td><td>метрики TTFT (время до первого токена) и TPOT (время на токен), раздел 10</td></tr>
+      <tr><td>Потолок: ток/с не больше чем ГБ/с / ГБ весов</td><td><a href="local-llm-2-hardware.html#s-axes">лекция 2, раздел 02</a></td><td>проверка замера на здравый смысл</td></tr>
+      <tr><td>FP8 считается аппаратно с Ada и Hopper</td><td><a href="local-llm-2-hardware.html#s-gen">лекция 2, раздел 04</a></td><td>FP8-веса и <code>--kv-cache-dtype fp8</code></td></tr>
+      <tr><td>Для условной задачи обработки текста нужен класс 80-96 ГБ</td><td><a href="local-llm-2-hardware.html#s-pick">лекция 2, раздел 11</a></td><td>расчёт числа одновременных звонков</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 1 - Опорные факты лекций 1 и 2.</p>
+  <details class="recall"><summary>Проверь себя: почему Q8 на Mac из примера печатает медленнее Q4 той же модели?</summary><p>На каждый токен модель читает из памяти все веса. Файл Q8 в 1,6 раза больше, поэтому при тех же 120 ГБ/с токенов в секунду меньше.</p></details>
+  <details class="recall"><summary>Проверь себя: что дала карта A100 FP8-модели и чего не дала?</summary><p>Веса стали вдвое меньше, и генерация ускорилась. Аппаратного FP8 у Ampere нет, поэтому prefill считается в 16 битах.</p></details>
+  <h3>Как проходить лекцию</h3>
+  <div class="ex">
+    <div><span><b>Вечер 1: память и параллельность.</b> Разделы 01-06 и упражнения 1-2 из раздела 13.<small>Главное видео: <a href="https://youtu.be/80bIUggRJf4">The KV Cache: Memory Usage in Transformers</a> - Efficient NLP, 9 мин, на английском.</small></span></div>
+    <div><span><b>Вечер 2: запуск и ответ по схеме.</b> Разделы 07-09 и упражнения 3-4.<small>Статья: <a href="https://habr.com/ru/post/957748">Внутри vLLM</a> - Хабр, перевод, 34 мин чтения.</small></span></div>
+    <div><span><b>Вечер 3: замер и качество.</b> Разделы 10-14, упражнение 5 и контрольные вопросы.<small>Видео: <a href="https://youtu.be/fvjBXg3ZdaA">Llama vs vllm. Какой llm inference быстрее?</a> - nizamov school, 14 мин, по-русски.</small></span></div>
+  </div>
+  <div class="q"><b>Вывод</b>Формулы лекций 1 и 2 здесь становятся флагами сервера и числами замера.</div>
+</section>
+
+
+<section id="s-server">
+  <span class="num">02</span>
+  <h2>Сервер моделей</h2>
+  <h3>Что это</h3>
+  <p>Сервер моделей (inference server) - это программа, которая держит модель в памяти карты и отвечает на запросы по HTTP. Проще говоря, это веб-сервер, у которого вместо базы данных нейросеть. Сервер принимает запрос, ставит его в очередь, планировщик собирает из очереди пачку (батч), карта считает prefill и генерацию, а токены уходят клиенту потоком (рис. 1).</p>
+  <figure>
+    <div class="ttl">Рисунок 1 - Путь запроса через сервер моделей</div>
+    <svg class="d" viewBox="0 0 760 150" role="img" aria-label="Клиент отправляет запрос по OpenAI API, сервер ставит его в очередь, планировщик собирает батч, карта считает prefill и генерацию, токены уходят клиенту потоком">
+      <rect class="box" x="6" y="30" width="120" height="56" rx="6"/><text class="b" x="66" y="54" text-anchor="middle">Клиент</text><text class="sm mut" x="66" y="72" text-anchor="middle">openai, curl</text>
+      <line class="ln" x1="126" y1="58" x2="160" y2="58" marker-end="url(#m-fill)"/>
+      <text class="sm mut" x="143" y="22" text-anchor="middle">HTTP</text>
+      <rect class="soft" x="162" y="30" width="130" height="56" rx="6"/><text class="b" x="227" y="54" text-anchor="middle">Очередь</text><text class="sm mut" x="227" y="72" text-anchor="middle">ждущие запросы</text>
+      <line class="ln" x1="292" y1="58" x2="326" y2="58" marker-end="url(#m-fill)"/>
+      <rect class="rs" x="328" y="30" width="130" height="56" rx="6"/><text class="b" x="393" y="54" text-anchor="middle">Планировщик</text><text class="sm" x="393" y="72" text-anchor="middle">собирает батч</text>
+      <line class="ln" x1="458" y1="58" x2="492" y2="58" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="494" y="30" width="130" height="56" rx="6"/><text class="b" x="559" y="54" text-anchor="middle">Карта</text><text class="sm" x="559" y="72" text-anchor="middle">prefill и генерация</text>
+      <line class="ln" x1="624" y1="58" x2="658" y2="58" marker-end="url(#m-fill)"/>
+      <rect class="oks" x="660" y="30" width="94" height="56" rx="6"/><text class="b" x="707" y="54" text-anchor="middle">Поток</text><text class="sm" x="707" y="72" text-anchor="middle">токенов</text>
+      <text class="sm mut" x="393" y="120" text-anchor="middle">разделы 04-06: как планировщик решает, сколько запросов взять в батч</text>
+    </svg>
+    <figcaption>Упрощённая схема по документации vLLM и блогу Hugging Face о батчинге<a class="ref" href="#r1">1</a><a class="ref" href="#r11">11</a>.</figcaption>
+  </figure>
+  <h3>OpenAI-совместимый API</h3>
+  <p>OpenAI-совместимый API - это набор адресов и полей запроса, как у сервиса OpenAI: <code>/v1/chat/completions</code>, поле <code>messages</code>, поле <code>response_format</code>. Его понимают Ollama, llama.cpp, LM Studio, vLLM и SGLang<a class="ref" href="#r9">9</a><a class="ref" href="#r10">10</a>. Поэтому код клиента пишется один раз: при переходе с Ollama на маке на vLLM на сервере меняется только адрес.</p>
+  <pre># один клиент на любой сервер: меняется только base_url
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")   # Ollama на маке
+# client = OpenAI(base_url="http://gpu-server:8000/v1", api_key="...")   # vLLM на сервере</pre>
+  <p>Совместимость неполная. Через OpenAI API Ollama не принимает <code>tool_choice</code> (выбор инструмента), <code>logprobs</code> (вероятности токенов) и <code>n</code> (несколько вариантов ответа). Длину контекста там задать нельзя: только через свой API или Modelfile - файл настроек модели в Ollama<a class="ref" href="#r9">9</a>.</p>
+  <div class="q"><b>Вывод</b>Сервер моделей - это очередь, планировщик и модель на карте за HTTP-адресом. Клиент пишут под OpenAI API и не привязывают к серверу.</div>
+</section>
+
+
+<section id="s-engines">
+  <span class="num">03</span>
+  <h2>Движки</h2>
+  <p>Движок (inference engine) - это программа, которая выполняет модель на железе. Сервер моделей принимает запросы по HTTP, а движок их выполняет; у Ollama, llama-server и vLLM обе роли собраны в одной программе. Шесть движков покрывают почти все случаи (табл. 2).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Движок</th><th>Версия на 14.10.2026</th><th>Где работает</th><th>Формат весов</th><th>Параллельные запросы</th><th>Когда брать</th></tr></thead>
+    <tbody>
+      <tr><td>Ollama</td><td class="n">0.40.4</td><td>Mac, CPU, NVIDIA, AMD</td><td>GGUF</td><td>1 на модель по умолчанию</td><td>прототип, учёба, один пользователь</td></tr>
+      <tr><td>LM Studio</td><td>номер не нашли</td><td>Mac, Windows, Linux</td><td>GGUF, MLX</td><td>немного</td><td>сравнить модели глазами</td></tr>
+      <tr><td>llama.cpp (<code>llama-server</code>)</td><td class="n">b11609</td><td>везде</td><td>GGUF</td><td>слоты <code>-np</code>, батчинг включён</td><td>тонкая настройка, мини-станции</td></tr>
+      <tr><td>vLLM</td><td class="n">0.31.0</td><td>NVIDIA, AMD и другие</td><td>safetensors: BF16, FP8, AWQ, GPTQ, NVFP4</td><td>непрерывный батчинг</td><td>сервис на карте для потока запросов</td></tr>
+      <tr><td>SGLang</td><td class="n">0.5.21</td><td>NVIDIA, AMD</td><td>как у vLLM</td><td>непрерывный батчинг</td><td>альтернатива vLLM</td></tr>
+      <tr><td>TensorRT-LLM</td><td class="n">1.2.1</td><td>только NVIDIA</td><td>свой формат движка</td><td>непрерывный батчинг</td><td>максимум скорости ценой сборки</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 2 - Движки. Версии по страницам релизов<a class="ref" href="#r27">27</a><a class="ref" href="#r28">28</a><a class="ref" href="#r29">29</a><a class="ref" href="#r30">30</a><a class="ref" href="#r31">31</a>. На Mac из примера стоит Ollama 0.34.4, все примеры лекции сняты на ней.</p>
+  <h3>Ollama</h3>
+  <p>Ollama - это обёртка над llama.cpp, которая сама скачивает модели и держит их в памяти. С версии 0.40 на Apple Silicon она работает через MLX<a class="ref" href="#r28">28</a>. Её слабое место - параллельность: по умолчанию одна модель обслуживает один запрос, остальные ждут в очереди до 512 запросов, дальше сервер отвечает ошибкой 503<a class="ref" href="#r7">7</a>.</p>
+  <h3>vLLM</h3>
+  <p>vLLM - это сервер для карт, который держит десятки и сотни одновременных запросов. Он выдаёт KV-кэш блоками по мере надобности (раздел 04) и собирает запросы в непрерывный батч (раздел 05). Цена - он работает с весами в safetensors и требует настройки флагов под карту.</p>
+  <div class="mist">
+    <div><b>GGUF из Ollama не всегда открывается в llama.cpp</b>Файл qwen3.5:4b из папки Ollama llama.cpp сборки 11429 на Mac из примера не загрузил: «key qwen35.rope.dimension_sections has wrong array length». Ollama собирает GGUF по-своему, для llama.cpp бери файл с Hugging Face.</div>
+    <div><b>Документация Ollama расходится</b>FAQ пишет контекст по умолчанию 4096, страница о контексте - 4k до 24 ГиБ памяти, 32k до 48 ГиБ и 256k выше<a class="ref" href="#r7">7</a><a class="ref" href="#r8">8</a>. Проверяй командой <code>ollama ps</code>.</div>
+  </div>
+  <div class="xref"><b>Вспомни лекцию 1</b><p>В лекции 1 эти же программы были «программами запуска», и там ты начинал с LM Studio или Ollama. Здесь граница сдвигается: для сервиса компании нужен движок с непрерывным батчингом.</p></div>
+  <div class="q"><b>Вывод</b>На маке - Ollama, на карте для потока запросов - vLLM. llama.cpp - между ними, когда нужен GGUF и тонкая настройка.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/fvjBXg3ZdaA">Llama vs vllm. Какой llm inference быстрее?</a> - nizamov school, 14 мин, 03.12.2025, по-русски. С <a href="https://www.youtube.com/watch?v=fvjBXg3ZdaA&amp;t=123">2:03</a> движки, с <a href="https://www.youtube.com/watch?v=fvjBXg3ZdaA&amp;t=242">4:02</a> один поток и structured output, с <a href="https://www.youtube.com/watch?v=fvjBXg3ZdaA&amp;t=680">11:20</a> итог.</li>
+    <li><a href="https://youtu.be/0ujh7hfutq0">Llama.cpp vs vLLM: which local LLM engine actually scales?</a> - IBM Technology, 11 мин, на английском; глав нет.</li>
+    <li><a href="https://youtu.be/kj_oP_cknoA">Локальный LLM в 2026: что нужно знать перед запуском</a> - Рома Филонов, 16 мин: LM Studio, Ollama из Python, vLLM.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-kv">
+  <span class="num">04</span>
+  <h2>KV-кэш</h2>
+  <h3>Что это</h3>
+  <p>KV-кэш (KV cache) - это память, где модель хранит ключи и значения всех уже прочитанных токенов запроса. Проще говоря, это рабочая память контекста: без неё модель на каждый новый токен перечитывала бы весь вход заново. Каждый слой внимания добавляет в кэш два вектора на токен, поэтому кэш растёт с длиной запроса и с числом одновременных запросов. Он решает, сколько запросов влезет в карту.</p>
+  <h3>Формула</h3>
+  <p>Размер кэша на один токен считается по трём полям <code>config.json</code> из лекции 1:</p>
+  <pre>KV на токен = 2 * слои * KV-головы * размер головы * байт на число
+
+T-pro-it-2.1:  2 * 64 * 8 * 128 * 2 байта = 262 144 байта = 256 КиБ
+запрос 8 тыс. токенов:  8192 * 256 КиБ = 2 ГиБ
+
+Qwen3.6-27B:   2 * 16 * 4 * 256 * 2 байта = 65 536 байт = 64 КиБ
+запрос 8 тыс. токенов:  8192 * 64 КиБ = 0,5 ГиБ</pre>
+  <p>Двойка в начале - это ключ и значение. У Qwen3.6-27B полное внимание стоит только в 16 слоях из 64, остальные слои линейные и хранят состояние постоянного размера<a class="ref" href="#r26">26</a>. Поэтому её кэш на токен вчетверо меньше, чем у T-pro<a class="ref" href="#r25">25</a>.</p>
+  <h3>Бюджет карты</h3>
+  <p>vLLM по умолчанию забирает 92% памяти карты (<code>--gpu-memory-utilization 0.92</code>)<a class="ref" href="#r1">1</a>. Из них вычитаются веса и служебный запас около 4 ГиБ (допущение). Остаток уходит под KV-кэш, и он задаёт, сколько запросов карта держит одновременно (рис. 2).</p>
+  <figure>
+    <div class="ttl">Рисунок 2 - Как делится память карты при запросах по 8 тыс. токенов</div>
+    <svg class="d" viewBox="0 0 900 230" role="img" aria-label="На 48 ГБ T-pro оставляет под KV 6 ГиБ, это 3 запроса; Qwen3.6-27B оставляет 11 ГиБ, около 22 запросов; на 96 ГБ T-pro оставляет 47 ГиБ, около 23 запросов">
+      <text class="b" x="10" y="45">48 ГБ, T-pro FP8</text>
+      <rect class="hl" x="170" y="28" width="250" height="26"/><text x="295" y="46" text-anchor="middle">веса 31</text>
+      <rect class="oks" x="420" y="28" width="48" height="26"/><text x="444" y="46" text-anchor="middle">6</text>
+      <rect class="rs" x="468" y="28" width="32" height="26"/>
+      <text x="520" y="46">3 запроса</text>
+      <text class="b" x="10" y="95">48 ГБ, Qwen3.6-27B FP8</text>
+      <rect class="hl" x="170" y="78" width="210" height="26"/><text x="275" y="96" text-anchor="middle">веса 26</text>
+      <rect class="oks" x="380" y="78" width="89" height="26"/><text x="424" y="96" text-anchor="middle">KV 11</text>
+      <rect class="rs" x="469" y="78" width="32" height="26"/>
+      <text x="520" y="96">около 22 запросов</text>
+      <text class="b" x="10" y="145">96 ГБ, T-pro FP8</text>
+      <rect class="hl" x="170" y="128" width="250" height="26"/><text x="295" y="146" text-anchor="middle">веса 31</text>
+      <rect class="oks" x="420" y="128" width="376" height="26"/><text x="608" y="146" text-anchor="middle">KV 47</text>
+      <rect class="rs" x="796" y="128" width="32" height="26"/>
+      <text x="836" y="146">23</text>
+      <rect class="hl" x="170" y="185" width="16" height="12"/><text x="192" y="196">веса</text>
+      <rect class="oks" x="250" y="185" width="16" height="12"/><text x="272" y="196">KV-кэш</text>
+      <rect class="rs" x="350" y="185" width="16" height="12"/><text x="372" y="196">запас 4 ГиБ</text>
+      <text class="mut sm" x="10" y="220">Шкала: 8 точек на ГиБ. Объём карты взят консервативно: 48 ГБ = 44,7 ГиБ, 96 ГБ = 89,4 ГиБ, из них 92%.</text>
+    </svg>
+    <figcaption>Расчёт по формуле KV и весам FP8 из карточек моделей. KV-кэш в BF16.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Синяя часть - веса, она одинакова при любой нагрузке.</li>
+      <li>Зелёная часть - KV-кэш, её делят все одновременные запросы.</li>
+      <li>T-pro на 48 ГБ помещается, но на KV-кэш остаётся 6 ГиБ, это 3 запроса по 8 тыс. токенов.</li>
+      <li>С <code>--kv-cache-dtype fp8</code> кэш занимает 1 байт на число вместо 2, и число запросов удваивается<a class="ref" href="#r1">1</a>.</li>
+    </ol>
+  </div>
+  <h3>PagedAttention</h3>
+  <p>PagedAttention - это способ хранить KV-кэш блоками фиксированной длины, как страницы памяти в операционной системе. Старые серверы резервировали под каждый запрос место на максимальную длину и теряли на этом 60-80% памяти. vLLM выдаёт блоки по мере роста запроса и ведёт таблицу блоков, потери падают ниже 4%<a class="ref" href="#r3">3</a> (рис. 3). В ту же память влезает больше одновременных запросов, и по замерам авторов пропускная способность сервера выросла в 2-4 раза<a class="ref" href="#r4">4</a>.</p>
+  <figure>
+    <div class="ttl">Рисунок 3 - Резерв на максимум против выдачи блоками</div>
+    <svg class="d" viewBox="0 0 760 150" role="img" aria-label="Слева: под каждый запрос зарезервирована полоса на максимальную длину, большая часть пустует. Справа: запросы занимают блоки по мере роста, свободные блоки достаются новым запросам">
+      <text class="b" x="10" y="20">Резерв на максимум</text>
+      <rect class="soft" x="10" y="32" width="320" height="22"/><rect class="oks" x="10" y="32" width="90" height="22"/><text class="sm" x="16" y="47">запрос A</text>
+      <rect class="soft" x="10" y="62" width="320" height="22"/><rect class="oks" x="10" y="62" width="150" height="22"/><text class="sm" x="16" y="77">запрос B</text>
+      <text class="sm mut" x="170" y="108" text-anchor="middle">серое зарезервировано, но пустует</text>
+      <text class="b" x="400" y="20">Блоки PagedAttention</text>
+      <rect class="oks" x="400" y="32" width="40" height="22"/><rect class="oks" x="444" y="32" width="40" height="22"/><rect class="hl" x="488" y="32" width="40" height="22"/><rect class="oks" x="532" y="32" width="40" height="22"/><rect class="hl" x="576" y="32" width="40" height="22"/><rect class="hl" x="620" y="32" width="40" height="22"/><rect class="rs" x="664" y="32" width="40" height="22"/>
+      <rect class="hl" x="400" y="62" width="40" height="22"/><rect class="rs" x="444" y="62" width="40" height="22"/><rect class="rs" x="488" y="62" width="40" height="22"/><rect class="soft" x="532" y="62" width="40" height="22"/><rect class="soft" x="576" y="62" width="40" height="22"/><rect class="soft" x="620" y="62" width="40" height="22"/><rect class="soft" x="664" y="62" width="40" height="22"/>
+      <text class="sm mut" x="552" y="108" text-anchor="middle">зелёный A, синий B, коричневый новый C; серое свободно</text>
+      <text class="mut sm" x="380" y="138" text-anchor="middle">справа в той же памяти поместился третий запрос</text>
+    </svg>
+    <figcaption>Схема по блогу и статье vLLM о PagedAttention<a class="ref" href="#r3">3</a><a class="ref" href="#r4">4</a>.</figcaption>
+  </figure>
+  <div class="mist">
+    <div><b>Считать только веса</b>Модель на 31 ГиБ «влезает» в 48 ГБ, но на параллельные запросы памяти не остаётся.</div>
+    <div><b>Контекст на всякий случай</b><code>--max-model-len</code> ставь по реальной длине звонка с запасом, а не по максимуму из карточки.</div>
+    <div><b>ГБ и ГиБ</b>1 ГиБ = 1,074 ГБ. На 96 ГБ разница уже 6 ГиБ, этого хватит на 3 запроса T-pro.</div>
+  </div>
+  <div class="xref"><b>Вспомни лекции 1 и 2</b><p>На Mac из примера контекст 131 тыс. токенов поднял память qwen3.5:4b с 3,2 до 8,2 ГБ - это рост KV-кэша. В лекции 2 из этого расчёта вышел класс карты 80-96 ГБ для T-pro и 48 ГБ для Qwen3.6-27B.</p></div>
+  <div class="q"><b>Вывод</b>KV-кэш считается по config.json и решает, сколько запросов держит карта. PagedAttention и KV в FP8 вмещают больше запросов в ту же память.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://youtu.be/80bIUggRJf4">The KV Cache: Memory Usage in Transformers</a> - Efficient NLP, 9 мин, на английском; смотреть целиком.</li>
+    <li>Статья: <a href="https://habr.com/ru/post/957748">Внутри vLLM: анатомия системы инференса</a> - Хабр, перевод, 2025: PagedAttention, префилл по частям, кэш префикса<a class="ref" href="#r32">32</a>.</li>
+    <li>Статья: <a href="https://blog.vllm.ai/2023/06/20/vllm.html">vLLM: Easy, Fast, and Cheap LLM Serving with PagedAttention</a> - блог vLLM, 2023, на английском<a class="ref" href="#r3">3</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-batch">
+  <span class="num">05</span>
+  <h2>Параллельные запросы</h2>
+  <h3>Непрерывный батчинг</h3>
+  <p>Непрерывный батчинг (continuous batching) - это режим, в котором сервер на каждом шаге генерирует по токену сразу для всех активных запросов. Проще говоря, веса читаются из памяти один раз, а токен получают тридцать запросов. Закончившийся запрос уходит из батча сразу, а ждущий занимает его место на следующем шаге, без ожидания остальных<a class="ref" href="#r11">11</a> (рис. 4).</p>
+  <figure>
+    <div class="ttl">Рисунок 4 - Очередь против непрерывного батча</div>
+    <svg class="d" viewBox="0 0 760 200" role="img" aria-label="Сверху очередь: запросы A, B, C идут по одному друг за другом. Снизу непрерывный батч: A, B, C идут одновременно, D входит, когда A закончился">
+      <text class="b" x="10" y="22">Очередь, один запрос за раз</text>
+      <rect class="oks" x="10" y="32" width="160" height="20"/><text class="sm" x="16" y="46">A</text>
+      <rect class="hl" x="170" y="32" width="200" height="20"/><text class="sm" x="176" y="46">B</text>
+      <rect class="rs" x="370" y="32" width="140" height="20"/><text class="sm" x="376" y="46">C</text>
+      <text class="b" x="10" y="90">Непрерывный батч</text>
+      <rect class="oks" x="10" y="100" width="160" height="16"/><text class="sm" x="16" y="112">A</text>
+      <rect class="soft" x="170" y="100" width="140" height="16"/><text class="sm" x="176" y="112">D входит на место A</text>
+      <rect class="hl" x="10" y="120" width="200" height="16"/><text class="sm" x="16" y="132">B</text>
+      <rect class="rs" x="10" y="140" width="140" height="16"/><text class="sm" x="16" y="152">C</text>
+      <text class="sm mut" x="530" y="40">C ждёт, пока закончатся A и B</text>
+      <text class="sm mut" x="530" y="56">и готов последним</text>
+      <text class="sm mut" x="530" y="122">A, B, C идут вместе, C готов первым;</text>
+      <text class="sm mut" x="530" y="138">D занимает место A без ожидания B</text>
+      <line class="ln" x1="10" y1="178" x2="510" y2="178" marker-end="url(#m-fill)"/>
+      <text class="sm mut" x="10" y="194">время</text>
+    </svg>
+    <figcaption>Схема по блогу Hugging Face о непрерывном батчинге<a class="ref" href="#r11">11</a>.</figcaption>
+  </figure>
+  <h3>Что это даёт на карте</h3>
+  <p>Суммарная скорость карты растёт с числом параллельных запросов, а скорость одного запроса падает. Замер на RTX PRO 6000 показывает это на модели Qwen3-32B (рис. 5).</p>
+  <figure>
+    <div class="ttl">Рисунок 5 - Суммарная скорость Qwen3-32B на одной RTX PRO 6000</div>
+    <svg class="d" viewBox="0 0 720 300" role="img" aria-label="Суммарная скорость растёт с числом параллельных запросов; FP8 от 287 до 1558 токенов в секунду, BF16 от 166 до 1156">
+      <line class="grid" x1="70" y1="40" x2="690" y2="40"/><line class="grid" x1="70" y1="100" x2="690" y2="100"/><line class="grid" x1="70" y1="160" x2="690" y2="160"/><line class="grid" x1="70" y1="220" x2="690" y2="220"/>
+      <line class="ln" x1="70" y1="250" x2="690" y2="250"/><line class="ln" x1="70" y1="30" x2="70" y2="250"/>
+      <text class="mut" x="62" y="254" text-anchor="end">0</text><text class="mut" x="62" y="224" text-anchor="end">250</text><text class="mut" x="62" y="164" text-anchor="end">750</text><text class="mut" x="62" y="104" text-anchor="end">1250</text><text class="mut" x="62" y="44" text-anchor="end">1750</text>
+      <text class="mut" x="100" y="270" text-anchor="middle">8</text><text class="mut" x="245" y="270" text-anchor="middle">16</text><text class="mut" x="390" y="270" text-anchor="middle">32</text><text class="mut" x="535" y="270" text-anchor="middle">64</text><text class="mut" x="660" y="270" text-anchor="middle">128</text>
+      <text class="mut" x="380" y="292" text-anchor="middle">параллельных запросов</text>
+      <text class="mut" x="20" y="20">ток/с суммарно</text>
+      <polyline class="lp" points="100,215.6 245,186.2 390,141 535,89.2 660,63"/>
+      <polyline class="lr" points="100,230.1 245,212.7 390,184.4 535,145.7 660,111.3"/>
+      <circle class="dp" cx="100" cy="215.6" r="4"/><circle class="dp" cx="245" cy="186.2" r="4"/><circle class="dp" cx="390" cy="141" r="4"/><circle class="dp" cx="535" cy="89.2" r="4"/><circle class="dp" cx="660" cy="63" r="4"/>
+      <circle class="dr" cx="100" cy="230.1" r="4"/><circle class="dr" cx="245" cy="212.7" r="4"/><circle class="dr" cx="390" cy="184.4" r="4"/><circle class="dr" cx="535" cy="145.7" r="4"/><circle class="dr" cx="660" cy="111.3" r="4"/>
+      <text class="lbl" x="100" y="205" text-anchor="middle">287</text><text class="lbl" x="390" y="130" text-anchor="middle">908</text><text class="lbl" x="660" y="52" text-anchor="middle">1558</text>
+      <text class="lbl" x="390" y="200" text-anchor="middle">547</text><text class="lbl" x="660" y="128" text-anchor="middle">1156</text>
+      <rect x="90" y="40" width="14" height="4" style="fill:var(--proc)"/><text x="110" y="46">FP8</text>
+      <rect x="160" y="40" width="14" height="4" style="fill:var(--res)"/><text x="180" y="46">BF16</text>
+    </svg>
+    <figcaption>Замер JarvisLabs: vLLM, набор реальных диалогов ShareGPT, 1000 запросов, RTX PRO 6000 Server Edition<a class="ref" href="#r13">13</a>. Перепроверено по первоисточнику 12.10.2026.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Синяя линия FP8 везде выше коричневой BF16: меньше байт на чтение, больше токенов.</li>
+      <li>От 8 до 128 запросов суммарная скорость FP8 выросла в 5,4 раза.</li>
+      <li>Скорость одного запроса при этом упала: 36 ток/с при 8 запросах и 12 при 128 (расчёт).</li>
+    </ol>
+  </div>
+  <h3>Ollama и vLLM под нагрузкой</h3>
+  <p>Red Hat сравнил оба сервера на A100 40 ГБ с Llama 3.1 8B при 1-256 одновременных запросах. vLLM дошёл до 793 ток/с суммарно, Ollama - до 41 ток/с. Задержка между токенами у 99% запросов составила 80 мс у vLLM и 673 мс у Ollama. С <code>OLLAMA_NUM_PARALLEL=32</code> суммарная скорость Ollama перестала расти, а задержка между токенами стала скакать<a class="ref" href="#r12">12</a>. Замер 2025 года, свежее независимого сравнения разведка не нашла.</p>
+  <p>Тот же эффект виден на Mac из примера. Четыре запроса к Ollama с настройками по умолчанию ушли одновременно, а закончились по очереди (раздел 13, упражнение 2):</p>
+  <pre>запросов 1: готовы через, с: [4.4]; токенов 100; суммарно 22.6 ток/с
+запросов 4: готовы через, с: [4.0, 7.8, 11.7, 15.6]; токенов 400; суммарно 25.6 ток/с</pre>
+  <p>Из вывода видно, что суммарная скорость не выросла, а последний запрос ждал вчетверо дольше первого. Это очередь из верхней половины рисунка 4.</p>
+  <div class="xref"><b>Вспомни лекцию 2</b><p>Таблица 10 лекции 2 считала потолок одного запроса: 64 ток/с для Qwen3.6-27B на RTX PRO 6000. С батчингом карта выдаёт в разы больше суммарно, а каждый запрос получает меньше 64.</p></div>
+  <div class="q"><b>Вывод</b>Батчинг превращает одно чтение весов в токены для многих запросов. Для потока звонков нужен сервер с непрерывным батчингом и параллельная отправка запросов из кода.</div>
+  <div class="watch"><b>Смотреть и читать к разделу</b><ul>
+    <li><a href="https://www.youtube.com/watch?v=2AZJP_vjPEs&amp;t=539">Почему батчинг помогает</a> - DevOps 2 AI, с 8:59, на английском.</li>
+    <li><a href="https://youtu.be/hMs8VNRy5Ys">Deep dive: optimizing LLM inference</a> - Julien Simon, 36 мин, на английском; глав нет, русского видео разведка не нашла.</li>
+    <li>Статья: <a href="https://huggingface.co/blog/continuous_batching">Continuous batching</a> - блог Hugging Face, 25.11.2025, на английском<a class="ref" href="#r11">11</a>.</li>
+    <li>Статья: <a href="https://developers.redhat.com/articles/2025/08/08/ollama-vs-vllm-deep-dive-performance-benchmarking">Ollama vs vLLM: deep dive</a> - Red Hat, 08.08.2025<a class="ref" href="#r12">12</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-prefix">
+  <span class="num">06</span>
+  <h2>Кэш префикса</h2>
+  <p>Кэш префикса (prefix caching) - это режим, в котором сервер хранит KV-кэш начала промпта и переиспользует его в следующих запросах с тем же началом. Проще говоря, общий текст считается один раз. vLLM делит промпт на блоки, считает хеш каждого блока вместе с хешем предыдущего и находит готовые блоки по хешу; старые блоки вытесняются по давности использования<a class="ref" href="#r5">5</a>.</p>
+  <p>Кэш префикса ускоряет prefill, а не генерацию. В vLLM он включён по умолчанию: в исходниках <code>enable_prefix_caching: bool = True</code><a class="ref" href="#r6">6</a>. Флаг <code>--enable-prefix-caching</code> из старых инструкций больше не нужен.</p>
+  <h3>Что это значит для звонков</h3>
+  <p>Чек-лист и инструкция одинаковы для всех звонков, а расшифровка у каждого своя. Поэтому порядок частей промпта решает, сработает ли кэш:</p>
+  <p>Правильно:</p>
+  <pre>[инструкция + чек-лист, общие для всех звонков] [расшифровка звонка]</pre>
+  <p>Общий блок одинаков в начале каждого запроса, сервер считает его KV-кэш один раз.</p>
+  <p>Неправильно:</p>
+  <pre>[расшифровка звонка] [инструкция + чек-лист]</pre>
+  <p>Начало у каждого звонка своё, поэтому хеш первого блока не совпадает, и кэш не срабатывает даже для одинакового чек-листа.</p>
+  <p>Хеш блока зависит от всех предыдущих токенов. Если начало промпта отличается хоть одним токеном, например датой или номером звонка, кэш всех следующих блоков не найдётся.</p>
+  <div class="q"><b>Вывод</b>Общий текст промпта ставь в начало и не меняй его между запросами: сервер посчитает его один раз.</div>
+  <div class="watch"><b>Читать к разделу</b><ul>
+    <li>Статья: <a href="https://habr.com/ru/post/984434">Как работает кэширование промптов</a> - Хабр, перевод, 2026: блоки, таблицы и хеши префикса<a class="ref" href="#r33">33</a>.</li>
+    <li>Документация: <a href="https://docs.vllm.ai/en/latest/design/prefix_caching.html">vLLM, automatic prefix caching</a><a class="ref" href="#r5">5</a>.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-run">
+  <span class="num">07</span>
+  <h2>Запуск сервера</h2>
+  <h3>vLLM</h3>
+  <p>Команда ниже поднимает T-pro-it-2.1 в FP8 с OpenAI-совместимым API на порту 8000. Значения флагов - стартовые для условной задачи обработки текста, их уточняет пилот.</p>
+  <pre>vllm serve t-tech/T-pro-it-2.1-FP8 \
+  --max-model-len 16384 \
+  --gpu-memory-utilization 0.92 \
+  --kv-cache-dtype fp8 \
+  --max-num-seqs 32</pre>
+  <p>Что делает каждый флаг:</p>
+  <ol class="plain">
+    <li><code>--max-model-len 16384</code> ограничивает контекст одного запроса. Звонок с чек-листом и ответом занимает до 8 тыс. токенов, остальное - запас.</li>
+    <li><code>--gpu-memory-utilization 0.92</code> отдаёт vLLM 92% памяти карты, это значение по умолчанию<a class="ref" href="#r1">1</a>.</li>
+    <li><code>--kv-cache-dtype fp8</code> хранит KV-кэш в 1 байте на число и вдвое увеличивает число одновременных запросов. Есть также <code>nvfp4</code> для Blackwell<a class="ref" href="#r1">1</a>.</li>
+    <li><code>--max-num-seqs 32</code> пускает в батч не больше 32 запросов. Документация не называет значение по умолчанию, поэтому его задают явно. Число 32 взято вдвое выше 16 звонков из расчёта лекции 2: на карте 96 ГБ с KV в FP8 у T-pro 47 ГиБ кэша хватает примерно на 47 запросов по 8 тыс. токенов (рис. 2).</li>
+  </ol>
+  <p>Для моделей Qwen с режимом рассуждения добавь <code>--reasoning-parser qwen3</code>: без него рассуждение смешается с ответом, а ответ по схеме может отключиться<a class="ref" href="#r14">14</a><a class="ref" href="#r16">16</a>.</p>
+  <h3>llama.cpp</h3>
+  <p><code>llama-server</code> поднимает тот же OpenAI API для GGUF-файла, непрерывный батчинг в нём включён по умолчанию<a class="ref" href="#r10">10</a>. Слот (slot) - это место для одного одновременного запроса: флаг <code>-np</code> задаёт число слотов, флаг <code>-c</code> - общий контекст на все слоты.</p>
+  <pre># 4 слота делят 32768 токенов контекста: по 8192 на запрос
+llama-server -m Qwen3.8-27B-Q4_K_M.gguf -c 32768 -np 4 --port 8080</pre>
+  <p>Деление проверено на Mac из примера: сервер с <code>-c 4096 -np 4</code> напечатал <code>n_slots = 4, n_ctx_slot = 1024</code><a class="ref" href="#r34">34</a>.</p>
+  <h3>Ollama</h3>
+  <p>Ollama настраивают переменными окружения сервера: <code>OLLAMA_NUM_PARALLEL</code> - число одновременных запросов на модель, <code>OLLAMA_KV_CACHE_TYPE=q8_0</code> - KV-кэш в 8 битах. Память растёт пропорционально числу параллельных запросов, умноженному на контекст<a class="ref" href="#r7">7</a>.</p>
+  <h3>Две модели на одной карте</h3>
+  <p>Один процесс vLLM обслуживает одну модель. Для двух моделей нужно два процесса, каждому своя доля памяти, например по 0,45. На форуме vLLM пишут, что второй процесс на той же карте часто не стартует<a class="ref" href="#r35">35</a>. Надёжнее две карты или модели по очереди.</p>
+  <div class="q"><b>Вывод</b>Флаги vLLM прямо следуют из расчёта памяти: предел контекста, доля памяти, формат KV-кэша и число запросов в батче.</div>
+  <p class="links">Читать: <a href="https://docs.vllm.ai/en/latest/configuration/engine_args/">vLLM, engine arguments</a>; <a href="https://habr.com/ru/articles/1035478/">Selectel: vLLM на GPU-сервере, Хабр</a>.</p>
+</section>
+
+
+<section id="s-params">
+  <span class="num">08</span>
+  <h2>Параметры генерации</h2>
+  <p>Параметры генерации (sampling parameters) - это настройки, с которыми модель выбирает следующий токен (табл. 3). На каждом шаге модель выдаёт вероятности всех токенов словаря, а параметры решают, как из них выбрать один. Пример с условными числами: после слова «Добрый» модель даёт «день» 0,7, «вечер» 0,2, «утро» 0,1. При <code>temperature</code> 0 она всегда выберет «день». При <code>top_p</code> 0,8 она выбирает только из «день» и «вечер»: их сумма первой дошла до 0,8. Их передают в каждом запросе, а значения по умолчанию vLLM берёт из файла <code>generation_config.json</code> модели<a class="ref" href="#r1">1</a>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Параметр</th><th>Что делает</th><th>Для оценки по чек-листу</th></tr></thead>
+    <tbody>
+      <tr><td><code>temperature</code></td><td>0 - всегда самый вероятный токен; выше - разнообразнее и случайнее</td><td class="n">0 или около 0</td></tr>
+      <tr><td><code>top_k</code></td><td>выбор только из k самых вероятных токенов, например 20</td><td>по карточке модели</td></tr>
+      <tr><td><code>top_p</code></td><td>выбор из самых вероятных токенов, пока их сумма не дойдёт до p</td><td>по карточке модели</td></tr>
+      <tr><td><code>min_p</code></td><td>отброс токенов с вероятностью ниже доли от лучшего</td><td>по карточке модели</td></tr>
+      <tr><td><code>presence_penalty</code></td><td>штрафует повтор уже сказанного</td><td>0: в JSON повторы нормальны</td></tr>
+      <tr><td><code>max_tokens</code></td><td>предел длины ответа</td><td>с запасом над размером ответа</td></tr>
+      <tr><td><code>seed</code></td><td>фиксирует случайность для повтора</td><td>фиксировать в замерах</td></tr>
+      <tr><td>режим рассуждения</td><td>модель пишет рассуждение до ответа</td><td>выключен до замера качества</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 3 - Параметры генерации. Значения третьей колонки - стартовые, их проверяет пилот.</p>
+  <h3>Что советует автор модели</h3>
+  <p>Авторы Qwen дают значения для двух режимов (табл. 4).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Qwen3.6-27B, Qwen3.8-27B</th><th>temperature</th><th>top_p</th><th>top_k</th><th>presence_penalty</th></tr></thead>
+    <tbody>
+      <tr><td>с рассуждением</td><td class="n">1,0</td><td class="n">0,95</td><td class="n">20</td><td class="n">0</td></tr>
+      <tr><td>без рассуждения</td><td class="n">0,7</td><td class="n">0,80</td><td class="n">20</td><td class="n">1,5</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 4 - Рекомендации из карточек моделей<a class="ref" href="#r18">18</a><a class="ref" href="#r19">19</a>; min_p 0 в обоих режимах.</p>
+  <p>Рекомендации автора рассчитаны на чат и задачи с творчеством. Для оценки по критериям нужна повторяемость: одинаковый звонок должен получать одинаковую оценку. Поэтому температуру опускают к нулю и проверяют замером, не стало ли хуже.</p>
+  <h3>Режим рассуждения</h3>
+  <p>Режим рассуждения (thinking) - это режим, в котором модель сначала пишет скрытое рассуждение, а потом ответ. Он тратит токены и время, а качество на простых критериях может не вырасти. У Qwen3.8-27B по карточке уровень рассуждения по умолчанию xhigh<a class="ref" href="#r19">19</a>. Каждый сервер выключает его по-своему (табл. 5).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Сервер</th><th>Как выключить</th></tr></thead>
+    <tbody>
+      <tr><td>vLLM</td><td>в запросе <code>extra_body={"chat_template_kwargs": {"enable_thinking": False}}</code> или <code>reasoning_effort="none"</code>; на весь сервер <code>--default-chat-template-kwargs '{"enable_thinking": false}'</code><a class="ref" href="#r16">16</a></td></tr>
+      <tr><td>Ollama</td><td>в своём API поле <code>think: false</code><a class="ref" href="#r17">17</a>; через OpenAI API <code>reasoning_effort="none"</code> - проверено на Mac из примера</td></tr>
+      <tr><td>llama.cpp</td><td>флаг <code>-rea off</code> или <code>--reasoning-budget 0</code><a class="ref" href="#r10">10</a></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 5 - Выключение режима рассуждения. Команды <code>/think</code> и <code>/no_think</code> в тексте промпта описаны только для Qwen3, в карточках 3.6 и 3.8 их нет.</p>
+  <div class="q"><b>Вывод</b>Для оценки: температура около 0, фиксированный seed, рассуждение выключено. Включай рассуждение, только если замер показал рост качества.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://youtu.be/5IKtLiOxvBc">Твоя нейронка выдаёт мусор? 3 параметра LLM</a> - RixAI, 23 мин, по-русски; глав нет.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-json">
+  <span class="num">09</span>
+  <h2>Ответ по схеме</h2>
+  <h3>Как это работает</h3>
+  <p>Структурированный вывод (structured output) - это режим, в котором сервер разрешает модели только токены, подходящие под JSON-схему. На каждом шаге сервер по схеме вычисляет, какие токены допустимы дальше, и обнуляет вероятность остальных. Поэтому модель физически не может вернуть лишнее поле или значение вне списка. В vLLM эту работу делают бэкенды - библиотеки, которые переводят схему в правила выбора токенов: <code>xgrammar</code> или <code>guidance</code>, по умолчанию выбор автоматический<a class="ref" href="#r14">14</a>.</p>
+  <h3>Минимальный пример</h3>
+  <p>Схему удобно описать моделью Pydantic, а клиент <code>openai</code> передаст её в поле <code>response_format</code>. Код ниже работает и с Ollama, и с vLLM:</p>
+  <pre>from typing import Literal
+from pydantic import BaseModel
+
+class Verdict(BaseModel):                                   # схема ответа
+    criterion: str
+    answer: Literal["yes", "no", "partial", "na"]          # только эти четыре значения
+    quote: str                                              # цитата из расшифровки
+    utterance: int                                          # номер реплики
+
+resp = client.chat.completions.create(
+    model="qwen3.5:4b",
+    temperature=0, seed=42,                                 # повторяемость
+    reasoning_effort="none",                                # без рассуждения
+    response_format={"type": "json_schema",
+                     "json_schema": {"name": "verdict", "schema": Verdict.model_json_schema()}},
+    messages=[{"role": "user", "content": prompt}],
+)
+verdict = Verdict.model_validate_json(resp.choices[0].message.content)  # проверка в коде</pre>
+  <p>Настоящий ответ Ollama на Mac из примера на синтетический звонок 14.10.2026<a class="ref" href="#r34">34</a>:</p>
+  <pre>{
+  "criterion": "оператор поздоровался и назвал компанию",
+  "answer": "yes",
+  "quote": "Добрый день, компания Ромашка, меня зовут Анна.",
+  "utterance": 1
+}
+prompt_tokens 85 completion_tokens 61 seconds 7.2</pre>
+  <p>Из вывода видно, что ответ прошёл проверку Pydantic, а цитата взята из реплики 1 дословно. 7,2 с включают загрузку модели в память: это был первый запрос после паузы. Схема гарантирует форму ответа, но не правильность: цитату код всё равно сверяет с расшифровкой.</p>
+  <h3>Ограничения</h3>
+  <ol class="plain">
+    <li>Старые параметры vLLM <code>guided_json</code> и <code>guided_decoding_backend</code> удалены в версии 0.12.0: инструкции с ними устарели<a class="ref" href="#r14">14</a>.</li>
+    <li>С моделью-рассуждателем vLLM нужен <code>--reasoning-parser</code>, иначе схема может не применяться к ответу<a class="ref" href="#r14">14</a>.</li>
+    <li>Документация vLLM и Ollama советует продублировать схему словами в промпте: модель с понятной задачей реже упирается в ограничения<a class="ref" href="#r15">15</a>.</li>
+  </ol>
+  <div class="q"><b>Вывод</b>Ответ по схеме - это ограничение токенов на сервере. Схему пишут моделью Pydantic, ответ проверяют в коде.</div>
+  <div class="watch"><b>Смотреть к разделу</b><ul>
+    <li><a href="https://youtu.be/xpvFinvqRCA">Structured output from LLMs: grammars, regex and state machines</a> - Efficient NLP, 17 мин, на английском; отдельного русского видео разведка не нашла.</li>
+    <li><a href="https://www.youtube.com/watch?v=fvjBXg3ZdaA&amp;t=242">Structured output в нагрузочном тесте</a> - nizamov school, с 4:02, по-русски.</li>
+  </ul></div>
+</section>
+
+
+<section id="s-bench">
+  <span class="num">10</span>
+  <h2>Замер скорости</h2>
+  <h3>Четыре метрики</h3>
+  <p>Скорость сервера описывают четыре числа:</p>
+  <ol class="plain">
+    <li>TTFT (time to first token): время от запроса до первого токена. Это prefill плюс ожидание в очереди.</li>
+    <li>TPOT (time per output token): среднее время на один токен ответа после первого. Это генерация.</li>
+    <li>Throughput: суммарные токены в секунду по всем запросам. Это то, что растёт от батчинга.</li>
+    <li>ITL (inter-token latency): время между соседними токенами одного ответа, по смыслу близко к TPOT.</li>
+    <li>P99: значение, которое не превышают 99% запросов. Оно показывает самые медленные запросы, которые среднее значение прячет.</li>
+  </ol>
+  <p>TPOT считается так: время всего запроса минус TTFT, делённое на число токенов ответа минус один<a class="ref" href="#r20">20</a>.</p>
+  <h3>vllm bench serve</h3>
+  <p><code>vllm bench serve</code> - встроенный инструмент vLLM, который шлёт на запущенный сервер поток запросов и печатает метрики. Для условной задачи обработки текста профиль запроса стоит взять как у звонка:</p>
+  <pre>vllm bench serve \
+  --model t-tech/T-pro-it-2.1-FP8 \
+  --dataset-name random \
+  --random-input-len 6000 \
+  --random-output-len 1000 \
+  --num-prompts 200 \
+  --max-concurrency 16 \
+  --percentile-metrics ttft,tpot,itl \
+  --metric-percentiles 99</pre>
+  <p>Длины входа и выхода здесь - оценка по звонку на 6 тыс. токенов и ответу до тысячи, их уточняют по реальным расшифровкам. Пример вывода из документации vLLM на 10 запросах к модели 8B<a class="ref" href="#r21">21</a>:</p>
+  <pre>Output token throughput (tok/s):   382.89
+Mean TTFT (ms):                    71.54
+Mean TPOT (ms):                    7.91
+Mean ITL (ms):                     7.74</pre>
+  <p>Из вывода видно, что один токен уходил за 8 мс, то есть около 126 ток/с на запрос. Первый токен пришёл через 72 мс. Пример запускали без процентилей, поэтому строк P99 в нём нет; с флагом <code>--metric-percentiles 99</code> vLLM добавит их к каждой метрике.</p>
+  <h3>Ollama и llama.cpp</h3>
+  <p>У Ollama своего бенчмарка нет. Флаг <code>--verbose</code> печатает скорость одного запроса: <code>prompt eval rate</code> - это prefill, <code>eval rate</code> - генерация (лекция 1, раздел 15). У llama.cpp есть <code>llama-bench</code>: команда <code>llama-bench -m model.gguf -p 1024 -n 128</code> печатает скорость prefill (pp, prompt processing) и генерации (tg, text generation)<a class="ref" href="#r22">22</a>. По ней собраны таблицы карт в лекции 2.</p>
+  <div class="mist">
+    <div><b>Мерить на чужом профиле</b>Замер на коротких запросах чата не говорит о звонках на 6 тыс. токенов: у них другой баланс prefill и генерации.</div>
+    <div><b>Первый запрос</b>Первый запрос после старта грузит модель в память. В замере он медленнее остальных, его отбрасывают.</div>
+  </div>
+  <div class="q"><b>Вывод</b>Мерь TTFT, TPOT, суммарные токены и P99 на профиле своего запроса и при своей параллельности.</div>
+  <p class="links">Читать: <a href="https://docs.vllm.ai/en/latest/cli/bench/serve/">vLLM, bench serve</a>; <a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/llama-bench/README.md">llama-bench README</a>. Видео про <code>vllm bench serve</code> разведка не нашла.</p>
+</section>
+
+
+<section id="s-spec">
+  <span class="num">11</span>
+  <h2>Спекулятивное декодирование</h2>
+  <p>Спекулятивное декодирование (speculative decoding) - это приём, при котором быстрый помощник угадывает несколько следующих токенов, а большая модель проверяет их все за одно чтение весов. Проще говоря, модель не пишет каждое слово сама, а проверяет черновик. Угаданные токены принимаются, на первом неугаданном модель ставит свой токен, и шаг повторяется (рис. 6).</p>
+  <figure>
+    <div class="ttl">Рисунок 6 - Один шаг спекулятивного декодирования</div>
+    <svg class="d" viewBox="0 0 760 140" role="img" aria-label="Помощник предлагает четыре токена, большая модель проверяет их за одно чтение весов, три принимает, четвёртый заменяет своим">
+      <rect class="soft" x="10" y="30" width="150" height="50" rx="6"/><text class="b" x="85" y="52" text-anchor="middle">Помощник</text><text class="sm mut" x="85" y="70" text-anchor="middle">черновик 4 токена</text>
+      <line class="ln" x1="160" y1="55" x2="198" y2="55" marker-end="url(#m-fill)"/>
+      <rect class="hl" x="200" y="30" width="170" height="50" rx="6"/><text class="b" x="285" y="52" text-anchor="middle">Большая модель</text><text class="sm" x="285" y="70" text-anchor="middle">проверка за одно чтение</text>
+      <line class="ln" x1="370" y1="55" x2="408" y2="55" marker-end="url(#m-fill)"/>
+      <rect class="oks" x="410" y="38" width="60" height="34"/><text class="sm" x="440" y="60" text-anchor="middle">принят</text>
+      <rect class="oks" x="474" y="38" width="60" height="34"/><text class="sm" x="504" y="60" text-anchor="middle">принят</text>
+      <rect class="oks" x="538" y="38" width="60" height="34"/><text class="sm" x="568" y="60" text-anchor="middle">принят</text>
+      <rect class="rs" x="602" y="38" width="80" height="34"/><text class="sm" x="642" y="60" text-anchor="middle">свой токен</text>
+      <text class="sm mut" x="545" y="104" text-anchor="middle">4 токена за одно чтение весов вместо одного</text>
+    </svg>
+    <figcaption>Схема по документации vLLM о спекулятивном декодировании<a class="ref" href="#r23">23</a>.</figcaption>
+  </figure>
+  <h3>Виды помощников</h3>
+  <ol class="plain">
+    <li>Draft model: помощником работает отдельная маленькая модель того же семейства.</li>
+    <li>EAGLE: помощником работает небольшой дополнительный слой поверх большой модели, обученный угадывать следующие токены.</li>
+    <li>MTP (multi-token prediction): модель обучена сама предсказывать несколько токенов вперёд, помощник встроен в неё.</li>
+    <li>N-gram: помощник угадывает по повторам текста из промпта, без модели.</li>
+  </ol>
+  <p>vLLM поддерживает все эти виды через флаг <code>--speculative-config</code>, llama.cpp - через <code>--spec-type</code><a class="ref" href="#r23">23</a><a class="ref" href="#r10">10</a>. Приём сокращает задержку между токенами, когда генерация упирается в память и запросов немного. При большом батче карта и так загружена, и выигрыш меньше.</p>
+  <div class="xref"><b>Вспомни лекцию 2</b><p>Замер Qwen3.6-27B на RTX PRO 6000 дал 97,5 ток/с в FP8 при потолке 64 из таблицы 10 лекции 2. Автор включил MTP с двумя токенами вперёд и не больше двух запросов одновременно<a class="ref" href="#r24">24</a>. Формула потолка считает одно чтение весов на токен, а здесь одно чтение даёт несколько токенов.</p></div>
+  <div class="q"><b>Вывод</b>Спекулятивное декодирование поднимает скорость одного запроса выше потолка формулы. На звонках с батчем на 16 запросов выигрыш нужно мерить.</div>
+</section>
+
+
+<section id="s-quality">
+  <span class="num">12</span>
+  <h2>Проверка качества</h2>
+  <p>Скорость меряет инструмент из раздела 10. Качество оценки звонков меряют сравнением с человеком: эталон - ручная оценка руководителя по тем же критериям. Порядок проверки модели такой:</p>
+  <ol class="plain">
+    <li>Отсеять модели по лицензии, языку и памяти (лекция 1, раздел 14; лекция 2, раздел 11).</li>
+    <li>Собрать золотой набор - звонки с эталонной ручной оценкой руководителя. Персональные данные в репозиторий не попадают.</li>
+    <li>Прогнать кандидатов с одинаковыми параметрами генерации и схемой ответа.</li>
+    <li>Посчитать согласие с руководителем по каждому критерию. Мера согласия - каппа Коэна: она учитывает совпадения, которые случились бы и наугад.</li>
+  </ol>
+  <p>Каппа считается по двум числам: доле совпадений и доле совпадений, ожидаемых наугад. Пример с условными числами:</p>
+  <pre>каппа = (совпало - совпало бы наугад) / (1 - совпало бы наугад)
+модель и руководитель совпали в 90% звонков, наугад совпали бы в 60%:
+каппа = (0,90 - 0,60) / (1 - 0,60) = 0,75</pre>
+  <p>Из расчёта видно, что 90% совпадений дают каппу 0,75: часть совпадений случилась бы и без модели.</p>
+  <ol class="plain" start="5">
+    <li>Замерить скорость на профиле звонка (раздел 10).</li>
+    <li>Взять самую маленькую модель, которая прошла порог качества.</li>
+  </ol>
+  <p>Подробно оценка качества, трейсы и метрики разобраны в лекции «Стек LLM», разделы «Оценка качества» и «Трейсы и метрики».</p>
+  <div class="q"><b>Вывод</b>Для чек-листа бери модель, которая чаще совпадает с руководителем и помещается в железо.</div>
+</section>
+
+
+<section id="s-mac">
+  <span class="num">13</span>
+  <h2>Практика на Mac</h2><p>Для упражнений нужны Mac, локальный сервер Ollama и модели из примеров. Код Python использует пакеты openai и pydantic в отдельном учебном окружении. Приведённые измерения относятся к конфигурации и дате из списка источников. На другой версии результат может отличаться. Тексты примеров синтетические.</p>
+  <div class="ex">
+    <div><span><b>Карточка модели в Ollama.</b> Посмотри размер, квантование, контекст и параметры генерации по умолчанию.
+<pre>ollama show qwen3.5:4b</pre>
+<pre>parameters          4.7B
+context length      262144
+quantization        Q4_K_M
+temperature         1
+top_k               20
+top_p               0.95
+presence_penalty    1.5</pre>
+<small>Из вывода видно, что температура по умолчанию 1: для оценки по критериям её нужно задавать в запросе (раздел 08).</small></span></div>
+
+    <div><span><b>Очередь Ollama.</b> Отправь четыре запроса одновременно и посмотри, когда закончится каждый.
+<pre>import asyncio, time
+from openai import AsyncOpenAI
+
+client = AsyncOpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+
+async def ask(i, t0):
+    resp = await client.chat.completions.create(
+        model="qwen3.5:4b", temperature=0, seed=i, reasoning_effort="none", max_tokens=100,
+        messages=[{"role": "user", "content": f"Напиши 5 предложений о видеокартах, вариант {i}."}])
+    return round(time.time() - t0, 1)                 # когда закончился этот запрос
+
+async def main():
+    t0 = time.time()
+    print(await asyncio.gather(*(ask(i, t0) for i in range(4))))   # четыре запроса разом
+
+asyncio.run(main())</pre>
+<pre>[4.0, 7.8, 11.7, 15.6]</pre>
+<small>Запросы закончились по очереди с шагом 4 секунды: Ollama по умолчанию обслуживает один запрос на модель (разделы 03 и 05). Попробуй перезапустить Ollama с <code>OLLAMA_NUM_PARALLEL=4</code> и сравни; результат этого опыта лекция не приводит, его сделаешь сам.</small></span></div>
+
+    <div><span><b>Ответ по схеме.</b> Возьми код раздела 09 и запусти его на <code>qwen3.5:4b</code>. Затем убери <code>response_format</code> и сравни, насколько свободнее станет ответ.<small>Ответ со схемой из раздела 09 получен на Mac из примера 14.10.2026 за 7,2 с, включая загрузку модели.</small></span></div>
+
+    <div><span><b>Молчаливое обрезание контекста.</b> Отправь текст на 13 тыс. токенов из 600 пронумерованных реплик с вопросом «какой номер у первой реплики?». Сначала с <code>num_ctx</code> 2048, потом с 16384. Через OpenAI API контекст не задать, поэтому запрос идёт в собственный API Ollama.
+<pre>import json, urllib.request
+
+text = "\n".join(f"{i} [оператор] Реплика номер {i} о доставке заказа." for i in range(600))
+for num_ctx in (2048, 16384):
+    body = {"model": "qwen3.5:4b", "stream": False, "think": False,
+            "options": {"num_ctx": num_ctx, "temperature": 0},     # окно контекста
+            "prompt": text + "\nКакой номер у первой реплики? Ответь числом."}
+    req = urllib.request.Request("http://localhost:11434/api/generate",
+                                 data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    r = json.load(urllib.request.urlopen(req))
+    print(num_ctx, r["prompt_eval_count"], r["response"].strip())  # сколько прочитано и ответ</pre>
+<pre>2048 1026 0554
+16384 13006 0</pre>
+<small>Вывод на Mac из примера 14.10.2026: окно, прочитанные токены, ответ. При окне 2048 Ollama оставила только конец текста и не выдала ошибки, а модель уверенно назвала первой реплику 554. При окне 16384 модель прочитала все 13 006 токенов и ответила верно. Поле <code>prompt_eval_count</code> в ответе API (<code>usage.prompt_tokens</code> в OpenAI API) показывает, сколько токенов модель реально прочитала. Проверяй его в коде.</small></span></div>
+
+    <div><span><b>Лимит памяти Mac.</b> Запусти llama.cpp с любым GGUF-файлом и найди в выводе строку про рабочую память Metal.
+<pre>llama-bench -m &lt;файл.gguf&gt; 2&gt;&amp;1 | grep recommendedMaxWorkingSetSize</pre>
+<pre>ggml_metal_device_init: recommendedMaxWorkingSetSize  = 12713.12 MB</pre>
+<small>Из вывода видно, что на Mac из примера под модель и KV-кэш Metal отдаёт около 12,7 ГБ из 16. Остальное держит система.</small></span></div>
+  </div>
+  <p>После практики выгрузи модели из памяти: <code>ollama stop qwen3.5:4b</code>.</p>
+</section>
+
+
+
+
+
+<section id="s-words">
+  <span class="num">15</span>
+  <h2>Словарь</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Термин</th><th>Что значит</th><th>Раздел</th></tr></thead>
+    <tbody>
+      <tr><td>сервер моделей</td><td>программа, которая держит модель в памяти и отвечает по HTTP</td><td>02</td></tr>
+      <tr><td>OpenAI-совместимый API</td><td>адреса и поля запроса как у OpenAI; один клиент на разные серверы</td><td>02</td></tr>
+      <tr><td>движок</td><td>программа, которая выполняет модель: Ollama, llama.cpp, vLLM</td><td>03</td></tr>
+      <tr><td>KV-кэш</td><td>ключи и значения прочитанных токенов; растёт с длиной и числом запросов</td><td>04</td></tr>
+      <tr><td>PagedAttention</td><td>хранение KV-кэша блоками по мере роста запроса</td><td>04</td></tr>
+      <tr><td>батч, непрерывный батчинг</td><td>пачка запросов на один шаг; запросы входят и выходят из пачки на каждом шаге</td><td>05</td></tr>
+      <tr><td>кэш префикса</td><td>переиспользование KV-кэша общего начала промпта</td><td>06</td></tr>
+      <tr><td>параметры генерации</td><td>temperature, top_p, top_k, seed и другие настройки выбора токена</td><td>08</td></tr>
+      <tr><td>режим рассуждения</td><td>модель пишет рассуждение до ответа</td><td>08</td></tr>
+      <tr><td>структурированный вывод</td><td>сервер разрешает только токены, подходящие под JSON-схему</td><td>09</td></tr>
+      <tr><td>TTFT, TPOT, ITL, P99</td><td>время до первого токена, на токен, между токенами; значение для 99% запросов</td><td>10</td></tr>
+      <tr><td>спекулятивное декодирование, MTP</td><td>угадывание нескольких токенов и проверка их за одно чтение весов</td><td>11</td></tr>
+      <tr><td>каппа Коэна</td><td>мера согласия двух оценщиков с поправкой на случайные совпадения</td><td>12</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 7 - Термины лекции. Термины лекций 1 и 2 - в их словарях.</p>
+</section>
+
+
+<section id="s-watch">
+  <span class="num">16</span>
+  <h2>Что смотреть и читать</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Материал</th><th>Автор</th><th>Длит.</th><th>Язык</th><th>Зачем</th></tr></thead>
+    <tbody>
+      <tr><td class="n">1</td><td><a href="https://youtu.be/fvjBXg3ZdaA">Llama vs vllm. Какой llm inference быстрее?</a></td><td>nizamov school</td><td class="n">13:56</td><td>ru</td><td>движки под нагрузкой</td></tr>
+      <tr><td class="n">2</td><td><a href="https://youtu.be/80bIUggRJf4">The KV Cache: memory usage in transformers</a></td><td>Efficient NLP</td><td class="n">8:33</td><td>en</td><td>KV-кэш</td></tr>
+      <tr><td class="n">3</td><td><a href="https://habr.com/ru/post/957748">Внутри vLLM</a></td><td>Хабр, перевод</td><td>статья</td><td>ru</td><td>PagedAttention, батчинг, кэш префикса</td></tr>
+      <tr><td class="n">4</td><td><a href="https://habr.com/ru/post/984434">Как работает кэширование промптов</a></td><td>Хабр, перевод</td><td>статья</td><td>ru</td><td>кэш префикса</td></tr>
+      <tr><td class="n">5</td><td><a href="https://youtu.be/xpvFinvqRCA">Structured output from LLMs</a></td><td>Efficient NLP</td><td class="n">17:20</td><td>en</td><td>ответ по схеме</td></tr>
+      <tr><td class="n">6</td><td><a href="https://developers.redhat.com/articles/2025/08/08/ollama-vs-vllm-deep-dive-performance-benchmarking">Ollama vs vLLM: deep dive</a></td><td>Red Hat</td><td>статья</td><td>en</td><td>замер под нагрузкой</td></tr>
+      <tr><td class="n">7</td><td><a href="https://youtu.be/hMs8VNRy5Ys">Deep dive: optimizing LLM inference</a></td><td>Julien Simon</td><td class="n">36:12</td><td>en</td><td>батчинг и ускорение целиком</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 8 - Основной маршрут. Названия и каналы сверены через YouTube 14.10.2026. Главы с таймкодами есть у видео nizamov school и DevOps 2 AI; у остальных глав нет или их не удалось получить: YouTube ограничил разведку.</p>
+  <p>Пробелы: отдельных русских видео про KV-кэш, батчинг и структурированный вывод разведка не нашла; видео про <code>vllm bench serve</code> нет совсем. Их заменяют разделы 04-10 и статьи на Хабре.</p>
+</section>
+
+
+<section id="s-check">
+  <span class="num">17</span>
+  <h2>Контрольные вопросы</h2>
+  <h3>По этой лекции</h3>
+  <ol class="plain">
+    <li>Почему код клиента не меняется при переходе с Ollama на vLLM?</li>
+    <li>Посчитай KV-кэш на один токен для T-pro-it-2.1 и для Qwen3.6-27B. Откуда разница в 4 раза?</li>
+    <li>Сколько запросов по 8 тыс. токенов T-pro держит на карте 96 ГБ с KV в BF16 и в FP8?</li>
+    <li>Почему на Mac из примера четыре одновременных запроса закончились через 4, 8, 12 и 16 секунд?</li>
+    <li>Почему чек-лист нужно ставить в начало промпта, а не в конец?</li>
+    <li>Какие параметры генерации ставить для оценки по критериям и почему не те, что в карточке Qwen?</li>
+    <li>Что гарантирует ответ по JSON-схеме и чего не гарантирует?</li>
+    <li>Чем TTFT отличается от TPOT и какая из них упирается в память карты?</li>
+    <li>Почему спекулятивное декодирование помогает при двух запросах и меньше помогает при тридцати?</li>
+  </ol>
+  <h3>Повторение лекций 1 и 2</h3>
+  <ol class="plain" start="10">
+    <li>Какой потолок генерации у Qwen3.6-27B в FP8 на H100 SXM?</li>
+    <li>Почему A100 не ускоряет prefill FP8-модели?</li>
+    <li>Что означает каждая часть имени <code>Qwen3.8-27B-UD-Q4_K_XL.gguf</code>?</li>
+  </ol>
+  <p>Ответы присылай агенту: он проверит их и допишет в лекцию то, что осталось непонятным.</p>
+</section>
+
+
+<section id="sources">
+  <span class="num">18</span>
+  <h2>Источники</h2>
+  <ol class="srclist">
+    <li id="r1"><span class="i">1</span><span><a href="https://docs.vllm.ai/en/latest/configuration/engine_args/">vLLM, Engine Arguments</a>. <span class="w">Первоисточник: 0.92, <code>--kv-cache-dtype</code>, <code>--generation-config</code>.</span></span></li>
+    <li id="r3"><span class="i">3</span><span><a href="https://blog.vllm.ai/2023/06/20/vllm.html">vLLM: Easy, Fast, and Cheap LLM Serving with PagedAttention</a>, 2023. <span class="w">Первоисточник: потери 60-80% против менее 4%.</span></span></li>
+    <li id="r4"><span class="i">4</span><span><a href="https://arxiv.org/abs/2309.06180">Efficient Memory Management for LLM Serving with PagedAttention</a>, arXiv 2309.06180. <span class="w">Первоисточник: рост пропускной способности в 2-4 раза.</span></span></li>
+    <li id="r5"><span class="i">5</span><span><a href="https://docs.vllm.ai/en/latest/design/prefix_caching.html">vLLM, Automatic Prefix Caching</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r6"><span class="i">6</span><span><a href="https://github.com/vllm-project/vllm/blob/main/vllm/config/cache.py">vLLM, config/cache.py</a>. <span class="w">Первоисточник, перепроверено 14.10.2026: строка 141, <code>enable_prefix_caching: bool = True</code>.</span></span></li>
+    <li id="r7"><span class="i">7</span><span><a href="https://docs.ollama.com/faq">Ollama FAQ</a>. <span class="w">Первоисточник: OLLAMA_NUM_PARALLEL 1, очередь 512, KV-кэш q8_0.</span></span></li>
+    <li id="r8"><span class="i">8</span><span><a href="https://docs.ollama.com/context-length">Ollama, Context length</a>. <span class="w">Первоисточник; расходится с FAQ.</span></span></li>
+    <li id="r9"><span class="i">9</span><span><a href="https://docs.ollama.com/api/openai-compatibility">Ollama, OpenAI compatibility</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r10"><span class="i">10</span><span><a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md">llama.cpp, llama-server README</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r11"><span class="i">11</span><span><a href="https://huggingface.co/blog/continuous_batching">Continuous batching</a>, блог Hugging Face, 25.11.2025. <span class="w">Пересказ разведки.</span></span></li>
+    <li id="r12"><span class="i">12</span><span><a href="https://developers.redhat.com/articles/2025/08/08/ollama-vs-vllm-deep-dive-performance-benchmarking">Ollama vs vLLM: a deep dive into performance benchmarking</a>, Red Hat, 08.08.2025. <span class="w">Пересказ разведки; 14.10.2026 сайт ответил 403 автоматической проверке, ссылка не подтверждена.</span></span></li>
+    <li id="r13"><span class="i">13</span><span><a href="https://jarvislabs.ai/blog/nvfp4-rtxpro-6000">What NVFP4 gets you on the RTX PRO 6000 Blackwell</a>, JarvisLabs. <span class="w">Перепроверено 12.10.2026.</span></span></li>
+    <li id="r14"><span class="i">14</span><span><a href="https://docs.vllm.ai/en/latest/features/structured_outputs/">vLLM, Structured Outputs</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r15"><span class="i">15</span><span><a href="https://docs.ollama.com/capabilities/structured-outputs">Ollama, Structured Outputs</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r16"><span class="i">16</span><span><a href="https://docs.vllm.ai/en/latest/features/reasoning_outputs/">vLLM, Reasoning Outputs</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r17"><span class="i">17</span><span><a href="https://docs.ollama.com/capabilities/thinking">Ollama, Thinking</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r18"><span class="i">18</span><span><a href="https://huggingface.co/Qwen/Qwen3.6-27B">Qwen3.6-27B, карточка</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r19"><span class="i">19</span><span><a href="https://huggingface.co/Qwen/Qwen3.8-27B">Qwen3.8-27B, карточка</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r20"><span class="i">20</span><span><a href="https://docs.vllm.ai/en/latest/cli/bench/serve/">vLLM, bench serve</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r21"><span class="i">21</span><span><a href="https://docs.vllm.ai/en/latest/benchmarking/cli/">vLLM, Benchmark CLI</a>. <span class="w">Первоисточник: пример вывода.</span></span></li>
+    <li id="r22"><span class="i">22</span><span><a href="https://github.com/ggml-org/llama.cpp/blob/master/tools/llama-bench/README.md">llama-bench README</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r23"><span class="i">23</span><span><a href="https://docs.vllm.ai/en/latest/features/spec_decode/">vLLM, Speculative Decoding</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r24"><span class="i">24</span><span><a href="https://prismix.dev/news/d238dab26aa7">Qwen3.6-27B на RTX PRO 6000 Max-Q</a>, Prismix, 05.07.2026. <span class="w">Пересказ поста r/LocalLLaMA.</span></span></li>
+    <li id="r25"><span class="i">25</span><span><a href="https://huggingface.co/t-tech/T-pro-it-2.1/resolve/main/config.json">T-pro-it-2.1, config.json</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r26"><span class="i">26</span><span><a href="https://huggingface.co/Qwen/Qwen3.6-27B/resolve/main/config.json">Qwen3.6-27B, config.json</a>. <span class="w">Первоисточник: 16 слоёв полного внимания из 64, 4 KV-головы, head_dim 256.</span></span></li>
+    <li id="r27"><span class="i">27</span><span><a href="https://github.com/vllm-project/vllm/releases/tag/v0.31.0">vLLM v0.31.0</a>, 05.10.2026. <span class="w">Первоисточник, перепроверено через API GitHub.</span></span></li>
+    <li id="r28"><span class="i">28</span><span><a href="https://github.com/ollama/ollama/releases">Ollama releases</a>: v0.40.4 от 12.10.2026, MLX с v0.40.0. <span class="w">Первоисточник, перепроверено через API GitHub.</span></span></li>
+    <li id="r29"><span class="i">29</span><span><a href="https://github.com/sgl-project/sglang/releases/tag/v0.5.21">SGLang v0.5.21</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r30"><span class="i">30</span><span><a href="https://github.com/ggml-org/llama.cpp/releases">llama.cpp releases</a>. <span class="w">Первоисточник, b11609 на 14.10.2026.</span></span></li>
+    <li id="r31"><span class="i">31</span><span><a href="https://github.com/NVIDIA/TensorRT-LLM/releases">TensorRT-LLM releases</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="r32"><span class="i">32</span><span><a href="https://habr.com/ru/post/957748">Внутри vLLM</a>, Хабр, перевод, 2025. <span class="w">Пересказ.</span></span></li>
+    <li id="r33"><span class="i">33</span><span><a href="https://habr.com/ru/post/984434">Как работает кэширование промптов</a>, Хабр, перевод. <span class="w">Пересказ.</span></span></li>
+    <li id="r34"><span class="i">34</span><span>Замеры на MacBook Air M4 16 ГБ, Ollama 0.34.4, 14.10.2026: ответ по схеме, очередь из четырёх запросов, вывод Metal. <span class="w">Собственный замер, один прогон.</span></span></li>
+    <li id="r35"><span class="i">35</span><span><a href="https://discuss.vllm.ai/t/2-vllm-containers-on-a-single-gpu/608/2">Форум vLLM: два контейнера на одной карте</a>. <span class="w">Пересказ, форум.</span></span></li>
+  </ol>
+</section>
+</main>
+</div>
+
+</body>
+</html>

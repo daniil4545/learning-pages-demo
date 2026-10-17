@@ -1,0 +1,25 @@
+# Шаблон для нового Python-проекта: лимиты из ~/.claude/rules/python.md держит линтер.
+# В pyproject.toml каждая секция получает префикс tool.ruff: [tool.ruff.lint] и так далее.
+line-length = 100
+
+[lint]
+select = [
+  "E", "F", "W", # pycodestyle, pyflakes
+  "I", # порядок импортов
+  "UP", # современный синтаксис
+  "B", # вероятные ошибки
+  "ANN", # type hints везде
+  "BLE", # except Exception
+  "S", # bandit: опасные вызовы, секреты в коде, subprocess, pickle
+  "C901", # сложность функции
+  "PLR0913", # слишком много аргументов
+  "PLR0915", # слишком много операторов
+  "RUF",
+]
+
+[lint.mccabe]
+max-complexity = 10
+
+[lint.per-file-ignores]
+"tests/**" = ["ANN", "PLR0915", "S101", "S105", "S106", "S311"]
+"**/test_*.py" = ["ANN", "PLR0915", "S101", "S105", "S106", "S311"]

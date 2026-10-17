@@ -1,0 +1,194 @@
+<!doctype html>
+
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Как собирается библиотека лекций</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+.wrap.solo{grid-template-columns:minmax(0,1fr);max-width:900px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:16px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static}}
+
+/* callout: question, conclusion, how to say */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:middle;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.ic{width:76px}
+td.ic svg{display:block;width:64px;height:32px}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+
+/* numbers: stat tiles */
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:18px 0}
+.kpi div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.kpi b{display:block;font:700 30px/1.1 var(--display);color:var(--accent)}
+.kpi span{display:block;font-size:13.5px;color:var(--muted);margin-top:6px}
+
+/* figure with inline svg */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .dash{stroke-dasharray:6 4}
+svg .dot{stroke-dasharray:2 3}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .fillc{fill:currentColor}
+
+/* walkthrough: how to read */
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+.read p{font-size:14.5px;color:var(--muted);margin:0 0 8px}
+
+/* cards: mistakes or risks (.mist), numbered steps or exercises (.ex) */
+.mist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:14px 0}
+.mist div{background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:14px}
+.mist b{display:block;color:var(--warn);font-size:13px;margin-bottom:3px}
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px 1fr;gap:6px}
+.ex div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+
+/* deck: one section per screen, page break in print */
+body.deck nav.toc{display:none}
+body.deck .wrap{grid-template-columns:minmax(0,1fr);max-width:1000px;padding-block:0}
+body.deck header.top,body.deck section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;margin:0;padding-block:48px}
+body.deck section{border-top:0}
+body.deck h2{font-size:clamp(26px,3.4vw,36px)}
+html:has(body.deck){scroll-snap-type:y proximity}
+body.deck header.top,body.deck section{scroll-snap-align:start}
+@media print{
+  body{background:#fff}
+  nav.toc{display:none}
+  .wrap{display:block}
+  section{break-inside:avoid-page}
+  body.deck section{break-before:page;min-height:auto}
+}
+</style>
+
+<style>pre{overflow-x:auto;max-width:100%;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px;font:13px/1.6 var(--mono)}section{scroll-margin-top:110px}nav.toc{top:110px}figure svg.d{max-width:480px;margin-inline:auto}figure svg.d text{font-size:13px}.library-player~.wrap{padding-top:28px}@media(max-width:860px){.wrap{grid-template-columns:minmax(0,1fr)}} </style><!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><div class="library-player" role="region" aria-label="Аудиолекция"><audio id="lecture-audio" controls preload="metadata" src="../audio/lecture-library.mp3"></audio><p id="audio-status" aria-live="polite">Позиция сохраняется в этом браузере.</p></div><!-- library-body:end -->
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><defs><marker id="lecture-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs></svg>
+<div class="wrap"><nav class="toc" aria-label="Оглавление"><p>В этой лекции</p><ol><li><a href="#problem">Проблема</a></li><li><a href="#idea">Идея</a></li><li><a href="#algorithm">Как готовится лекция</a></li><li><a href="#formats">Текст и аудио</a></li><li><a href="#publish">Как работает публикация</a></li><li><a href="#boundaries">Границы</a></li><li><a href="#practice">Проверить на себе</a></li><li><a href="#sources">Источники</a></li></ol></nav><main>
+<header class="top"><p class="eyebrow">Инструменты обучения</p><h1>Как собирается библиотека лекций</h1>
+<p class="lead">В работе приходится читать код, требования и спецификации. На ещё одну текстовую лекцию часто не остаётся сил. Библиотека даёт другой способ изучения: слушать объяснение и смотреть схемы. Материал готовится на Mac и публикуется как обычный сайт. Одна ссылка открывает его на телефоне и компьютере.</p>
+<p>После лекции ты сможешь объяснить весь путь материала: от вопроса до страницы. Подкаст раскрывает ту же идею без необходимости смотреть на экран.</p></header>
+<section id="problem"><span class="num">01</span><h2>Материалы есть, общего пути нет</h2>
+<p>Разрозненное обучение требует помнить, где лежит каждый материал. Одна лекция хранится локально, другая пришла ссылкой, аудио находится в отдельной папке. Даже готовый материал требует усилий, прежде чем начнётся обучение.</p>
+<div class="tbl"><table><thead><tr><th>Затруднение</th><th>Что меняется</th></tr></thead><tbody><tr><td>Лекция доступна только на Mac</td><td>Открывается по постоянной ссылке</td></tr><tr><td>Нет сил читать длинный текст</td><td>Для выбранной темы можно подготовить аудио</td></tr><tr><td>Аудио трудно представить мысленно</td><td>Рядом есть схема и пример</td></tr><tr><td>Материалы теряются между проектами</td><td>Они перечислены в общей библиотеке</td></tr></tbody></table></div>
+<p class="cap">Таблица 1 - библиотека сокращает усилия доступа и выбора формата.</p>
+<p>Например, ты увидел новость о проверке больших объёмов кода. Новость даёт повод для лекции о проверках. Подготовка такой лекции остаётся отдельным явным запросом.</p></section>
+<section id="idea"><span class="num">02</span><h2>Генерация локально, чтение через сайт</h2>
+<p>Статический сайт состоит из готовых файлов. Сервер отдаёт HTML, изображения и аудио, а браузер показывает страницу. База данных и постоянно работающий генератор здесь не нужны.<a class="ref" href="#source-pages">2</a></p><figure><div class="ttl">Где готовится и где читается лекция</div><svg class="d" viewBox="0 0 420 400" role="img" aria-label="Где готовится и где читается лекция"><rect class="hl" x="80" y="10" width="260" height="60" rx="5"/><text class="b" x="210.0" y="35" text-anchor="middle">Mac: подготовка</text><text class="mut" x="210.0" y="54" text-anchor="middle">Источники, текст, схемы</text><path class="ln" d="M210 70 L210 120" marker-end="url(#lecture-arrow)"/><text class="lbl" x="219.0" y="90.0">сохраняет</text><rect class="box" x="80" y="125" width="260" height="60" rx="5"/><text class="b" x="210.0" y="150" text-anchor="middle">GitHub: репозиторий</text><text class="mut" x="210.0" y="169" text-anchor="middle">HTML и выбранное аудио</text><path class="ln" d="M210 185 L210 235" marker-end="url(#lecture-arrow)"/><text class="lbl" x="219.0" y="205.0">публикует</text><rect class="box" x="80" y="240" width="260" height="60" rx="5"/><text class="b" x="210.0" y="265" text-anchor="middle">GitHub Pages</text><text class="mut" x="210.0" y="284" text-anchor="middle">Готовые файлы сайта</text><path class="ln" d="M210 300 L210 345" marker-end="url(#lecture-arrow)"/><text class="lbl" x="219.0" y="317.5">отдаёт по HTTPS</text><rect class="box" x="80" y="350" width="260" height="45" rx="5"/><text class="b" x="210.0" y="375" text-anchor="middle">Браузер телефона или ПК</text></svg><figcaption>Рисунок 1 - подготовка выполняется на Mac. Pages раздаёт готовые файлы. Источники: код проекта и GitHub Pages [1, 2].</figcaption></figure>
+<div class="read"><h3>Как читать схему</h3><ol><li>Верхний блок создаёт материал и проверяет его.</li><li>Репозиторий хранит опубликованные версии.</li><li>Pages выдаёт файлы по ссылке.</li><li>Браузер читает страницу и воспроизводит аудио.</li></ol><p>Подготовка и просмотр разделены. Для просмотра не нужен запущенный Mac.</p></div></section>
+<section id="algorithm"><span class="num">03</span><h2>Как вопрос становится лекцией</h2>
+<p>Единица подготовки - явный вопрос обучения. Например: «Как сервер моделей обслуживает несколько запросов?». Сначала нужно понять механизм, затем подобрать источники, примеры и схемы.</p><figure><div class="ttl">От вопроса до страницы</div><svg class="d" viewBox="0 0 420 620" role="img" aria-label="От вопроса до страницы"><rect class="hl" x="80" y="10" width="260" height="60" rx="5"/><text class="b" x="210.0" y="35" text-anchor="middle">Вопрос обучения</text><text class="mut" x="210.0" y="54" text-anchor="middle">Что хочется понять</text><path class="ln" d="M210 70 L210 105" marker-end="url(#lecture-arrow)"/><rect class="box" x="80" y="110" width="260" height="60" rx="5"/><text class="b" x="210.0" y="135" text-anchor="middle">Проверенные источники</text><text class="mut" x="210.0" y="154" text-anchor="middle">Статьи, обсуждения, субтитры</text><path class="ln" d="M210 170 L210 205" marker-end="url(#lecture-arrow)"/><rect class="box" x="80" y="210" width="260" height="60" rx="5"/><text class="b" x="210.0" y="235" text-anchor="middle">План объяснения</text><text class="mut" x="210.0" y="254" text-anchor="middle">Механизм, пример, схема</text><path class="ln" d="M210 270 L210 305" marker-end="url(#lecture-arrow)"/><rect class="box" x="80" y="310" width="260" height="60" rx="5"/><text class="b" x="210.0" y="335" text-anchor="middle">HTML-лекция</text><text class="mut" x="210.0" y="354" text-anchor="middle">По существующему стандарту</text><path class="ln" d="M210 370 L210 405" marker-end="url(#lecture-arrow)"/><rect class="box" x="80" y="410" width="260" height="60" rx="5"/><text class="b" x="210.0" y="435" text-anchor="middle">Аудио по запросу</text><text class="mut" x="210.0" y="454" text-anchor="middle">Отдельный сценарий для слуха</text><path class="ln" d="M210 470 L210 505" marker-end="url(#lecture-arrow)"/><rect class="hl" x="80" y="510" width="260" height="60" rx="5"/><text class="b" x="210.0" y="535" text-anchor="middle">Проверка и публикация</text><text class="mut" x="210.0" y="554" text-anchor="middle">Каталог, ссылки, браузер</text></svg><figcaption>Рисунок 2 - аудио является необязательным шагом. По умолчанию публикуется текст со схемами. Источник: правила проекта [1].</figcaption></figure>
+<div class="read"><h3>Как читать схему</h3><ol><li>Сформулируй, что должно стать понятно после лекции.</li><li>Прочитай подходящие первоисточники.</li><li>Для видео получи субтитры и сохрани таймкоды.</li><li>Собери объяснение по существующему HTML-стандарту.</li><li>Согласуй аудио отдельно, если его ещё не запросили.</li><li>Проверь материал и опубликуй страницу.</li></ol><p>Сборщик не ищет источники и не пишет объяснение. Эту работу выполняет агент.</p></div>
+<p>Статья, обсуждение и субтитры служат разными видами доказательств. Документация объясняет поведение инструмента. Обсуждение показывает практический опыт, но не заменяет проверку утверждений.</p></section>
+<section id="formats"><span class="num">04</span><h2>Аудио объясняет, страница показывает</h2>
+<p>Аудиолекция - самостоятельный сценарий для слуха. Она объясняет идею и механизм словами. Ссылка на схему может дополнять рассказ, но не должна быть условием понимания.</p><figure><div class="ttl">Один материал, два способа изучения</div><svg class="d" viewBox="0 0 420 290" role="img" aria-label="Один материал, два способа изучения"><rect class="hl" x="80" y="10" width="260" height="60" rx="5"/><text class="b" x="210.0" y="35" text-anchor="middle">План лекции</text><text class="mut" x="210.0" y="54" text-anchor="middle">Одна тема и проверенные факты</text><path class="ln" d="M155 70 L105 130" marker-end="url(#lecture-arrow)"/><path class="ln" d="M265 70 L315 130" marker-end="url(#lecture-arrow)"/><rect class="box" x="5" y="135" width="195" height="65" rx="5"/><text class="b" x="102.5" y="160" text-anchor="middle">HTML</text><text class="mut" x="102.5" y="179" text-anchor="middle">Схемы, код, источники</text><rect class="box" x="220" y="135" width="195" height="65" rx="5"/><text class="b" x="317.5" y="160" text-anchor="middle">Аудио</text><text class="mut" x="317.5" y="179" text-anchor="middle">Объяснение без экрана</text><path class="ln" d="M105 200 L155 240" marker-end="url(#lecture-arrow)"/><path class="ln" d="M315 200 L265 240" marker-end="url(#lecture-arrow)"/><rect class="box" x="80" y="245" width="260" height="40" rx="5"/><text class="b" x="210.0" y="270" text-anchor="middle">Одна страница лекции</text></svg><figcaption>Рисунок 3 - аудио и HTML раскрывают одну тему разными средствами. Источник: модель проекта [1].</figcaption></figure>
+<div class="read"><p>Начни сверху с общего плана. Левая ветка даёт визуальные детали, правая объясняет их словами. Обе доступны на одной странице.</p></div>
+<p>Встроенный элемент audio даёт браузерные кнопки запуска, паузы и перемотки.<a class="ref" href="#source-audio">4</a> Отдельного переключателя скорости в интерфейсе библиотеки нет. Доступные дополнительные кнопки зависят от браузера.</p>
+<p>Небольшой скрипт сохраняет позицию в хранилище браузера. После возвращения можно продолжить прослушивание. Хранилище относится к конкретному браузеру: телефон и компьютер не обмениваются этой позицией.<a class="ref" href="#source-storage">5</a></p></section>
+<section id="publish"><span class="num">05</span><h2>Каталог связывает готовые страницы</h2>
+<p>Каталог - явный список лекций. У каждой записи есть название, тема, описание и путь к HTML. Путь к аудио добавляется только при наличии согласованной записи. Отсутствие аудио означает отсутствие плеера.</p><figure><div class="ttl">Что делает публикация</div><svg class="d" viewBox="0 0 420 400" role="img" aria-label="Что делает публикация"><rect class="box" x="80" y="10" width="260" height="60" rx="5"/><text class="b" x="210.0" y="35" text-anchor="middle">Каталог library.json</text><text class="mut" x="210.0" y="54" text-anchor="middle">Явный список учебных страниц</text><path class="ln" d="M210 70 L210 115" marker-end="url(#lecture-arrow)"/><rect class="hl" x="80" y="120" width="260" height="60" rx="5"/><text class="b" x="210.0" y="145" text-anchor="middle">Локальная сборка</text><text class="mut" x="210.0" y="164" text-anchor="middle">Оглавление и общая навигация</text><path class="ln" d="M210 180 L210 225" marker-end="url(#lecture-arrow)"/><rect class="box" x="80" y="230" width="260" height="60" rx="5"/><text class="b" x="210.0" y="255" text-anchor="middle">Проверки GitHub Actions</text><text class="mut" x="210.0" y="274" text-anchor="middle">Тесты и локальные ссылки</text><path class="ln" d="M210 290 L210 335" marker-end="url(#lecture-arrow)"/><rect class="box" x="80" y="340" width="260" height="50" rx="5"/><text class="b" x="210.0" y="365" text-anchor="middle">Публикация папки site</text><text class="mut" x="210.0" y="384" text-anchor="middle">Только файлы библиотеки</text></svg><figcaption>Рисунок 4 - код проверяет файлы и ссылки, а содержание проверяет человек или агент. Источники: сборщик и документация публикации [1, 3].</figcaption></figure>
+<div class="read"><p>Читай сверху вниз. Каталог определяет состав, сборка создаёт навигацию, проверки ищут ошибки. Последний шаг отправляет папку сайта на Pages.</p></div>
+<p>Например, запись этой лекции указывает страницу и MP3 подкаста. Сборщик добавляет ссылку в библиотеку и плеер на страницу. Если удалить поле аудио, страница останется доступной для чтения.</p>
+<p>Минимальная запись этой лекции в каталоге:</p><pre><code>{
+  "path": "lectures/lecture-library.html",
+  "title": "Как собирается библиотека лекций",
+  "description": "Идея, алгоритм и примеры.",
+  "group": "Об устройстве библиотеки",
+  "audio": "audio/lecture-library.mp3"
+}</code></pre><p>Путь audio связывает страницу с MP3. Остальные поля задают запись оглавления.</p><div class="q">Проверка ссылки подтверждает наличие файла или раздела. Она не подтверждает правильность объяснения.</div></section>
+<section id="boundaries"><span class="num">06</span><h2>Что не попадает в библиотеку</h2>
+<div class="tbl"><table><thead><tr><th>Материал</th><th>Правило</th></tr></thead><tbody><tr><td>Явно заказанная лекция</td><td>Сбор материала и публикация входят в запрос</td></tr><tr><td>HTML-спецификация заказчику</td><td>Остаётся документом проекта</td></tr><tr><td>Отчёт или материал к решению</td><td>Не становится лекцией из-за формата HTML</td></tr><tr><td>Аудио</td><td>Нужен отдельный запрос или согласие</td></tr><tr><td>Рабочие адреса и персональные данные</td><td>Исключаются из публичной копии</td></tr></tbody></table></div>
+<p class="cap">Таблица 2 - назначение материала определяет место публикации.</p>
+<p>Библиотека публичная. Непопулярный адрес не создаёт защиты доступа. Поэтому учебный пример использует вымышленные имена и адреса, а полная рабочая версия остаётся в своём проекте.</p></section>
+<section id="practice"><span class="num">07</span><h2>Проверить формат на себе</h2>
+<ol><li>Запусти подкаст и прокрути страницу к схеме.</li><li>Поставь паузу и обнови страницу.</li><li>Открой библиотеку на другом устройстве.</li><li>Попробуй объяснить путь лекции без подсказки.</li></ol>
+<p>Контрольные вопросы:</p><ol><li>Почему для просмотра не нужен постоянно работающий Mac?</li><li>Чем проверка ссылок отличается от проверки содержания?</li><li>Что делает аудио самостоятельным объяснением?</li><li>Почему HTML-спецификация не должна автоматически попадать в библиотеку?</li></ol>
+<div class="q">Следующая корректировка зависит от опыта: достаточно ли схем и понятен ли рассказ на слух.</div></section>
+<section id="sources"><span class="num">08</span><h2>Источники</h2>
+<ol class="srclist"><li id="source-project"><span class="i">1</span><span><a href="https://github.com/daniil4545/learning-pages-demo">Исходный код библиотеки</a>: правила, каталог, сборщик и плеер. <span class="w">Первоисточник устройства проекта.</span></span></li>
+<li id="source-pages"><span class="i">2</span><span><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages">GitHub: что такое Pages</a>. <span class="w">Официальная документация, прочитана при подготовке.</span></span></li>
+<li id="source-actions"><span class="i">3</span><span><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages">GitHub: публикация через Actions</a>. <span class="w">Официальная документация, прочитана при подготовке.</span></span></li>
+<li id="source-audio"><span class="i">4</span><span><a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/audio">MDN: элемент audio</a>. <span class="w">Справочник браузерного API, прочитан при подготовке.</span></span></li>
+<li id="source-storage"><span class="i">5</span><span><a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">MDN: localStorage</a>. <span class="w">Справочник браузерного API, прочитан при подготовке.</span></span></li></ol></section></main></div></body></html>

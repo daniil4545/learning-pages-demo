@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Понимание системы</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+.wrap.solo{grid-template-columns:minmax(0,1fr);max-width:900px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:16px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+pre{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:14px 0}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static}}
+
+/* callout: question, conclusion, how to say */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:middle;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+
+/* numbers: stat tiles */
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:18px 0}
+.kpi div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.kpi b{display:block;font:700 30px/1.1 var(--display);color:var(--accent)}
+.kpi span{display:block;font-size:13.5px;color:var(--muted);margin-top:6px}
+
+/* figure with inline svg */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .dash{stroke-dasharray:6 4}
+svg .dot{stroke-dasharray:2 3}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .fillc{fill:currentColor}
+
+/* walkthrough: how to read */
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+.read p{font-size:14.5px;color:var(--muted);margin:0 0 8px}
+
+/* cards: mistakes or risks (.mist), numbered steps or exercises (.ex) */
+.mist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:14px 0}
+.mist div{background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:14px}
+.mist b{display:block;color:var(--warn);font-size:13px;margin-bottom:3px}
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px 1fr;gap:6px}
+.ex div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+
+@media print{
+  body{background:#fff}
+  nav.toc{display:none}
+  .wrap{display:block}
+  section{break-inside:avoid-page}
+}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+    <marker id="m-open" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </marker>
+    <marker id="m-circ" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7">
+      <circle cx="5" cy="5" r="4" style="fill:var(--paper)" stroke="currentColor" stroke-width="1.5"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Оглавление</p>
+  <ol>
+    <li><a href="#s-map">Карта темы</a></li>
+    <li><a href="#s-theory">Теория программы</a></li>
+    <li><a href="#s-memory">Как мозг читает код</a></li>
+    <li><a href="#s-models">Сверху вниз и снизу вверх</a></li>
+    <li><a href="#s-ai">Когда код пишет агент</a></li>
+    <li><a href="#s-docs">Документы о системе</a></li>
+    <li><a href="#s-git">Карта по истории git</a></li>
+    <li><a href="#s-steps">Порядок входа в систему</a></li>
+
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <span class="eyebrow">Лекция · 05.10.2026</span>
+  <h1>Как понимать систему, которую пишешь не ты</h1>
+  <p class="lead">Понимать систему - значит держать в голове её теорию: зачем каждая часть, почему она так устроена и куда ляжет следующее изменение. Код пишет агент, поэтому теорию строишь ты сам: чтением, документами и вопросами.</p>
+<p class="library-edition">Учебная версия для публичной библиотеки. Рабочие сведения исключены, примеры обобщены. Версии и измерения сохранены на дату исходной лекции.</p></header>
+
+<section id="s-map">
+  <span class="num">01</span>
+  <h2>Карта темы</h2>
+  <figure>
+    <div class="ttl">Из чего строится понимание системы</div>
+    <svg class="d" viewBox="0 0 880 300" role="img" aria-label="Чтение кода, документы о системе и история git питают теорию системы в голове; теория позволяет объяснить, обосновать и изменить систему; агент пишет код, но теорию не хранит">
+      <rect class="soft" x="10" y="20" width="230" height="56" rx="4"/>
+      <text class="b" x="125" y="44" text-anchor="middle">Чтение кода</text>
+      <text class="mut" x="125" y="63" text-anchor="middle">сверху вниз и снизу вверх</text>
+      <rect class="soft" x="10" y="112" width="230" height="56" rx="4"/>
+      <text class="b" x="125" y="136" text-anchor="middle">Документы о системе</text>
+      <text class="mut" x="125" y="155" text-anchor="middle">карта, ADR, design doc</text>
+      <rect class="soft" x="10" y="204" width="230" height="56" rx="4"/>
+      <text class="b" x="125" y="228" text-anchor="middle">История git</text>
+      <text class="mut" x="125" y="247" text-anchor="middle">горячие точки, связи</text>
+
+      <rect class="hl" x="320" y="100" width="220" height="80" rx="4"/>
+      <text class="b" x="430" y="134" text-anchor="middle">Теория системы</text>
+      <text class="mut" x="430" y="154" text-anchor="middle">в твоей голове</text>
+      <line class="ln" x1="240" y1="48" x2="318" y2="120" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="240" y1="140" x2="318" y2="140" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="240" y1="232" x2="318" y2="162" marker-end="url(#m-fill)"/>
+
+      <rect class="box" x="640" y="20" width="230" height="56" rx="4"/>
+      <text class="b" x="755" y="44" text-anchor="middle">Объяснить</text>
+      <text class="mut" x="755" y="63" text-anchor="middle">какую задачу решает часть</text>
+      <rect class="box" x="640" y="112" width="230" height="56" rx="4"/>
+      <text class="b" x="755" y="136" text-anchor="middle">Обосновать</text>
+      <text class="mut" x="755" y="155" text-anchor="middle">почему так, что отброшено</text>
+      <rect class="box" x="640" y="204" width="230" height="56" rx="4"/>
+      <text class="b" x="755" y="228" text-anchor="middle">Изменить</text>
+      <text class="mut" x="755" y="247" text-anchor="middle">куда ляжет новое требование</text>
+      <line class="ln" x1="540" y1="120" x2="638" y2="48" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="540" y1="140" x2="638" y2="140" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="540" y1="162" x2="638" y2="232" marker-end="url(#m-fill)"/>
+      <text class="lbl mut" x="430" y="285" text-anchor="middle">агент пишет код, но теорию между запусками не хранит</text>
+      <path class="ln dash" d="M430,262 V182" marker-end="url(#m-fill)"/>
+    </svg>
+    <figcaption>Серые - откуда приходит понимание, синий - теория, белые - что она даёт. Три умения справа - признаки теории по Науру<a class="ref" href="#s2">2</a>.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Слева три источника понимания. Каждому посвящён свой раздел лекции: 03-04, 06, 07.</li>
+      <li>В центре теория. Её нельзя скачать или прочитать целиком, её строят.</li>
+      <li>Справа проверка: умеешь ли ты объяснить, обосновать и изменить. Это и спрашивают на ревью.</li>
+      <li>Снизу риск: агент строит теорию заново в каждом запуске и не хранит её. Держишь её ты.</li>
+    </ol>
+  </div>
+  <div class="q"><b>Вывод</b>Цель - не прочитать весь код, а уметь ответить на три вопроса о любой части системы.</div>
+</section>
+
+<section id="s-theory">
+  <span class="num">02</span>
+  <h2>Теория программы</h2>
+  <p>Теория программы - это знание, как программа обслуживает задачи реального мира. Это знание позволяет её объяснять, менять и отвечать на вопросы о ней. Понятие ввёл Питер Наур в 1985 году. По его мысли, программирование - это построение теории, а текст программы и документация вторичны<a class="ref" href="#s2">2</a>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Что знает владелец теории</th><th>Вопрос к себе перед приёмом изменения</th></tr></thead>
+    <tbody>
+      <tr><td>какой части мира соответствует каждая часть кода</td><td>какую задачу решает этот модуль?</td></tr>
+      <tr><td>почему каждая часть устроена именно так</td><td>почему выбран этот вариант и что отброшено?</td></tr>
+      <tr><td>как встроить новое требование по сходству с тем, что программа уже умеет</td><td>куда ляжет следующая правка и что она сломает?</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Смерть программы</h3>
+  <p>Наур описывает случай с компилятором. Другая группа получила его с полной документацией, но её расширения оказались заплатками, которые ломали структуру. Авторы видели решение внутри структуры сразу<a class="ref" href="#s2">2</a>. Отсюда вывод Наура: программа живёт, пока ею занимается команда с её теорией. Когда команду распускают, программа ещё работает, но осмысленно менять её уже некому.</p>
+  <h3>Что меняет агент</h3>
+  <p>Агент строит теорию заново при каждом запуске и между сессиями её не хранит<a class="ref" href="#s6">6</a>. В проекте с одним разработчиком теорию держишь только ты. Твоя модель может быть грубее кода: компоненты и потоки без деталей. Граница допустимого - три вопроса из таблицы.</p>
+  <div class="q"><b>Вывод</b>Код без теории в голове - мёртвая программа, даже если она работает. С агентом ты единственный держатель теории.</div>
+  <p class="links">Читать: Naur, <a href="https://pages.cs.wisc.edu/~remzi/Naur.pdf">Programming as Theory Building</a><a class="ref" href="#s2">2</a>; конспект <code>growth/notes/program-comprehension.md</code>.</p>
+</section>
+
+<section id="s-memory">
+  <span class="num">03</span>
+  <h2>Как мозг читает код</h2>
+  <p>При чтении работают три вида памяти. Кратковременная держит то, что видят глаза, примерно 5-9 элементов. Рабочая обрабатывает. Долговременная подсказывает то, что ты уже знаешь. Поэтому эксперт видит в коде понятия, а новичок видит символы<a class="ref" href="#s1">1</a>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Путаница</th><th>Чего не хватает</th><th>Приём</th></tr></thead>
+    <tbody>
+      <tr><td>незнакомое слово, символ, понятие домена</td><td>долговременной памяти</td><td>карточки с повторением</td></tr>
+      <tr><td>слишком много элементов в одной строке</td><td>кратковременной памяти</td><td>когнитивный рефакторинг: переписать во временной ветке в привычную форму</td></tr>
+      <tr><td>части понятны, связь между ними нет</td><td>рабочей памяти</td><td>таблица состояний или схема связей на бумаге</td></tr>
+    </tbody>
+  </table></div>
+  <p>Для системы то же самое работает на уровень выше. Незнакомое понятие домена - это пробел долговременной памяти. Пять сервисов сразу - перегрузка кратковременной. Непонятно, как данные идут между частями, - перегрузка рабочей. Схему, которую ты рисуешь сам, мозг использует как внешнюю рабочую память.</p>
+  <div class="q"><b>Вывод</b>Сначала назови вид путаницы, потом бери приём. Схема на бумаге разгружает рабочую память.</div>
+  <p class="links">Читать: Hermans, <a href="https://www.infoq.com/presentations/reading-code/">The Programmer's Brain</a>, 42 мин, транскрипт на странице<a class="ref" href="#s1">1</a>.</p>
+</section>
+
+<section id="s-models">
+  <span class="num">04</span>
+  <h2>Сверху вниз и снизу вверх</h2>
+  <figure>
+    <div class="ttl">Смешанная модель понимания</div>
+    <svg class="d" viewBox="0 0 880 210" role="img" aria-label="Если домен знаком, строится гипотеза о назначении и проверяется по маякам; если нет, код читается по операторам и собирается в чанки, из которых рождается гипотеза">
+      <rect class="soft" x="10" y="80" width="150" height="50" rx="4"/>
+      <text class="b" x="85" y="110" text-anchor="middle">Знаешь домен?</text>
+      <rect class="hl" x="230" y="20" width="190" height="50" rx="4"/>
+      <text class="b" x="325" y="50" text-anchor="middle">Гипотеза о назначении</text>
+      <rect class="box" x="230" y="140" width="190" height="50" rx="4"/>
+      <text class="b" x="325" y="170" text-anchor="middle">Чтение по операторам</text>
+      <rect class="box" x="490" y="140" width="160" height="50" rx="4"/>
+      <text class="b" x="570" y="170" text-anchor="middle">Чанки</text>
+      <rect class="hl" x="490" y="20" width="200" height="50" rx="4"/>
+      <text class="b" x="590" y="50" text-anchor="middle">Проверка по маякам</text>
+      <rect class="soft" x="740" y="20" width="130" height="50" rx="4"/>
+      <text class="b" x="805" y="50" text-anchor="middle">Теория части</text>
+      <path class="ln" d="M160,95 L228,52" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="180" y="62">да</text>
+      <path class="ln" d="M160,115 L228,160" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="178" y="156">нет</text>
+      <line class="ln" x1="420" y1="165" x2="488" y2="165" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="570" y1="140" x2="570" y2="72" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="420" y1="45" x2="488" y2="45" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="690" y1="45" x2="738" y2="45" marker-end="url(#m-fill)"/>
+      <path class="ln dash" d="M640,70 Q700,110 652,150" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="700" y="118">не сходится</text>
+    </svg>
+    <figcaption>Синие - путь сверху вниз, белые - снизу вверх. Пунктир: гипотеза не подтвердилась, читаешь детали. Источник: обзор Siegmund<a class="ref" href="#s3">3</a>.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Сверху вниз: ты знаешь домен и сразу предполагаешь назначение части. Проверяешь по маякам - именам и типовым приёмам, которые выдают назначение.</li>
+      <li>Снизу вверх: домен незнаком. Читаешь операторы и собираешь их в чанки - куски с общим смыслом.</li>
+      <li>Программист переключается между путями. Сверху вниз он идёт везде, где может, потому что так быстрее.</li>
+    </ol>
+  </div>
+  <h3>Сначала система, потом строки</h3>
+  <p>В исследованиях поиска ошибок программисты идут от системы к строкам. Сначала они получают обзор архитектуры. Потом разбираются в компонентах и связях. Затем идут к иерархии типов и вызовов. Застряв, ищут человека, который отвечает за компонент<a class="ref" href="#s3">3</a>.</p>
+  <p>Опытные программисты опираются на соглашения об именах. Когда имена нарушают соглашения, эксперты читают так же медленно, как новички<a class="ref" href="#s3">3</a>. Для кода агента это довод требовать имена из домена: имя - главный маяк.</p>
+  <div class="q"><b>Вывод</b>Знание домена и обзор архитектуры дают путь сверху вниз, а он быстрее. Начинай с назначения и карты, а не с файла.</div>
+  <p class="links">Читать: Siegmund, <a href="https://www.se.cs.uni-saarland.de/publications/docs/FoSE16.pdf">Program Comprehension: Past, Present, and Future</a>, 8 стр.<a class="ref" href="#s3">3</a></p>
+</section>
+
+<section id="s-ai">
+  <span class="num">05</span>
+  <h2>Когда код пишет агент</h2>
+  <div class="kpi">
+    <div><b>50%</b><span>тест на понимание, группа с ИИ<a class="ref" href="#s4">4</a></span></div>
+    <div><b>67%</b><span>тест на понимание, группа без ИИ</span></div>
+    <div><b>~2 мин</b><span>выигрыш группы с ИИ, статистически незначим</span></div>
+    <div><b>10%</b><span>вывода агентов доходит до PR у Goedecke<a class="ref" href="#s6">6</a></span></div>
+  </div>
+  <p>Anthropic провела эксперимент на 52 инженерах, в основном junior. Они осваивали незнакомую async-библиотеку Python Trio. Сильнее всего группа с ИИ просела в вопросах на отладку<a class="ref" href="#s4">4</a>. Важнее средних цифр то, как люди работали с ИИ.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Приём работы с ИИ</th><th>Что делал участник</th><th>Балл группы приёмов</th></tr></thead>
+    <tbody>
+      <tr><td>полное делегирование</td><td>отдавал ИИ весь код</td><td><span class="tag no">ниже 40%</span></td></tr>
+      <tr><td>нарастающая зависимость</td><td>начал с вопросов, потом отдал всё</td><td><span class="tag no">ниже 40%</span></td></tr>
+      <tr><td>отладка через ИИ</td><td>просил ИИ чинить и проверять</td><td><span class="tag no">ниже 40%</span></td></tr>
+      <tr><td>генерация, затем понимание</td><td>брал код и расспрашивал о нём</td><td><span class="tag ok">65% и выше</span></td></tr>
+      <tr><td>код с объяснением</td><td>просил код и объяснение вместе</td><td><span class="tag ok">65% и выше</span></td></tr>
+      <tr><td>вопросы о концепциях</td><td>спрашивал о понятиях, код писал сам</td><td><span class="tag ok">65% и выше</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="mist">
+    <div><b>Ограничение</b>52 человека, в основном junior. Это освоение новой библиотеки, а не работа в знакомой системе.</div>
+    <div><b>Ограничение</b>Тест шёл сразу после задачи. Долгий навык не измеряли, причинность приёмов не доказана.</div>
+    <div><b>Ограничение</b>Ассистент был чатом. По сноске статьи, у агентов эффект, вероятно, сильнее<a class="ref" href="#s5">5</a>.</div>
+  </div>
+  <h3>Фильтр по своей модели</h3>
+  <p>Sean Goedecke запускает несколько агентов параллельно. Большую часть их вывода он отбрасывает, потому что ответ не сходится с его моделью системы. До PR доходит около 10%<a class="ref" href="#s6">6</a>. Если ты принимаешь почти всё, теория принадлежит агенту.</p>
+  <h3>Доказать, что работает</h3>
+  <p>Simon Willison называет работой инженера код, который доказанно работает. Доказательство - ручная проверка с командами и выводом плюс автотест, который падает без реализации<a class="ref" href="#s7">7</a>. В твоих правилах это уже есть: «готово» только после запуска с выводом и правило мутации в <code>testing.md</code>.</p>
+  <div class="q"><b>Вывод</b>Понимание сохраняют вопросы «почему» к коду агента. Разрушают его полное делегирование и починка ошибок руками агента.</div>
+  <p class="links">Читать: <a href="https://www.anthropic.com/research/AI-assistance-coding-skills">Anthropic, How AI assistance impacts the formation of coding skills</a><a class="ref" href="#s4">4</a>; <a href="https://www.seangoedecke.com/programming-with-ai-agents-as-theory-building">Goedecke</a><a class="ref" href="#s6">6</a>; конспект <code>growth/notes/ai-code-ownership.md</code>.</p>
+</section>
+
+<section id="s-docs">
+  <span class="num">06</span>
+  <h2>Документы о системе</h2>
+  <p>Каждый документ отвечает на свой вопрос читателя. Смешанный документ отвечает плохо на все.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Вопрос читателя</th><th>Документ</th><th>Как устроен</th></tr></thead>
+    <tbody>
+      <tr><td>где то, что делает X?</td><td>карта кода, ARCHITECTURE.md<a class="ref" href="#s8">8</a></td><td>обзор задачи, крупные модули и связи, инварианты, границы. Имена без ссылок, правка пару раз в год</td></tr>
+      <tr><td>почему решили так?</td><td>ADR, запись решения<a class="ref" href="#s9">9</a></td><td>одно решение на 1-2 страницы: контекст, решение, статус, последствия. Отменённую запись не удаляют, а помечают «заменено»</td></tr>
+      <tr><td>что строим и что отбросили?</td><td>design doc<a class="ref" href="#s10">10</a></td><td>до кода: контекст, цели и не-цели, дизайн, рассмотренные альтернативы. Нет альтернатив - документ не нужен</td></tr>
+      <tr><td>как устроена тема и почему?</td><td>объяснение по Diátaxis<a class="ref" href="#s11">11</a></td><td>начинается с «почему», даёт контекст и взвешивает альтернативы, без инструкций</td></tr>
+      <tr><td>как устроено на уровне контейнеров?</td><td>C4</td><td>разобрана в лекции <code>diagram-notations.html</code></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Карта кода</h3>
+  <p>Новичок пишет патч примерно в 2 раза дольше постоянного участника, а ищет место правки в 10 раз дольше<a class="ref" href="#s8">8</a>. Карта закрывает именно поиск места. Главное в ней - инварианты, особенно выраженные отсутствием: «модуль A не импортирует B». Такое правило в коде не увидеть.</p>
+  <h3>Не-цель</h3>
+  <p>Не-цель - это то, что могло быть целью, но его сознательно не выбрали. Пример из источника - ACID для базы. «Система не падает» - не не-цель, а отрицание цели<a class="ref" href="#s10">10</a>. Не-цели отвечают на вопрос ревьюера «а почему не сделали X?».</p>
+  <div class="q"><b>Вывод</b>Карта кода отвечает «где», ADR и design doc отвечают «почему». Без записи «почему» новичок может решение только слепо принять или слепо отменить<a class="ref" href="#s9">9</a>.</div>
+  <p class="links">Читать: <a href="https://matklad.github.io/2021/02/06/ARCHITECTURE.md.html">matklad, ARCHITECTURE.md</a><a class="ref" href="#s8">8</a>, 5 мин; <a href="https://www.industrialempathy.com/posts/design-docs-at-google/">Design Docs at Google</a><a class="ref" href="#s10">10</a>; конспект <code>growth/notes/architecture-maps.md</code>.</p>
+</section>
+
+<section id="s-git">
+  <span class="num">07</span>
+  <h2>Карта по истории git</h2>
+  <div class="kpi">
+    <div><b>2-4%</b><span>кода в горячих точках<a class="ref" href="#s12">12</a></span></div>
+    <div><b>20-70%</b><span>всей разработки идёт в них</span></div>
+    <div><b>+93%</b><span>времени на большую задачу в нездоровом коде у неосновного разработчика<a class="ref" href="#s13">13</a></span></div>
+  </div>
+  <p>Горячая точка - это файл, который меняют чаще остальных. Adam Tornhill предлагает смотреть на код вместе с историей коммитов<a class="ref" href="#s12">12</a>. История показывает, где система живёт и болит. Это видно быстрее, чем из чтения кода. В незнакомом репозитории горячие точки подсказывают, с чего начать.</p>
+  <pre><code>git log --since="1 year ago" --format= --name-only | grep -v '^$' | sort | uniq -c | sort -rn | head</code></pre>
+  <p>Команда считает, сколько раз менялся каждый файл за год. В слайдах её нет, это стандартный приём. Связанные изменения - файлы, которые раз за разом меняются в одних коммитах. Они выдают скрытую зависимость, которой не видно в коде. Для такого анализа есть code-maat и CodeScene.</p>
+  <div class="q"><b>Вывод</b>Читать весь код не нужно. Горячие точки показывают, какие 2-4% кода стоит понять первыми.</div>
+  <p class="links">Читать: Tornhill, <a href="https://www.usenix.org/system/files/srecon24emea_slides-tornhill.pdf">Treat Your Code as a Crime Scene</a>, 38 слайдов<a class="ref" href="#s12">12</a>.</p>
+</section>
+
+<section id="s-steps">
+  <span class="num">08</span>
+  <h2>Порядок входа в систему</h2>
+  <p>Порядок собран из источников выше: он не взят целиком из одного. Подходит и для кода компании, и для проверки большого изменения агента.</p>
+  <div class="ex">
+    <div><span><b>Назначение и домен.</b> Какую задачу система решает, кто пользователь, какие понятия домена.<small>Даёт путь сверху вниз<a class="ref" href="#s3">3</a>.</small></span></div>
+    <div><span><b>Карта.</b> Крупные модули, связи, инварианты, границы. Нет карты - нарисуй сам по README и структуре папок.<small>Схема на бумаге разгружает рабочую память<a class="ref" href="#s1">1</a>.</small></span></div>
+    <div><span><b>Горячие точки.</b> Какие файлы меняются чаще всего и что меняется вместе.<small>Команда в разделе 07.</small></span></div>
+    <div><span><b>Один поток насквозь.</b> Проследи один запрос или одну запись от входа до выхода.<small>Связь частей - главная нагрузка на рабочую память.</small></span></div>
+    <div><span><b>Решения.</b> ADR, design doc, описания PR: почему так и что отброшено.<small>Иначе решение можно только слепо принять или слепо отменить<a class="ref" href="#s9">9</a>.</small></span></div>
+    <div><span><b>Проверка теории.</b> Ответь без подсказок на три вопроса Наура о каждой крупной части.<small>Не ответил - вопрос владельцу компонента или агенту<a class="ref" href="#s3">3</a>.</small></span></div>
+  </div>
+  <div class="q"><b>Вывод</b>Порядок идёт от «зачем» к «где» и только потом к «как». Строки кода - последний шаг, и нужны они не везде.</div>
+</section>
+
+
+
+<section id="sources">
+  <span class="num">10</span>
+  <h2>Источники</h2>
+  <p>Все ссылки открыты 05.10.2026. Цифры сверены с исходными текстами.</p>
+  <ol class="srclist">
+    <li id="s1"><span class="i">1</span><span>Felienne Hermans, <a href="https://www.infoq.com/presentations/reading-code/">The Programmer's Brain</a>, QCon Plus, 2022. <span class="w">Первоисточник, транскрипт.</span></span></li>
+    <li id="s2"><span class="i">2</span><span>Peter Naur, <a href="https://pages.cs.wisc.edu/~remzi/Naur.pdf">Programming as Theory Building</a>, 1985. <span class="w">Первоисточник, скан перепечатки, текст получен OCR.</span></span></li>
+    <li id="s3"><span class="i">3</span><span>Janet Siegmund, <a href="https://www.se.cs.uni-saarland.de/publications/docs/FoSE16.pdf">Program Comprehension: Past, Present, and Future</a>, 2016. <span class="w">Первоисточник, обзор исследований.</span></span></li>
+    <li id="s4"><span class="i">4</span><span>Anthropic, <a href="https://www.anthropic.com/research/AI-assistance-coding-skills">How AI assistance impacts the formation of coding skills</a>, 29.01.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s5"><span class="i">5</span><span><a href="https://arxiv.org/abs/2601.20245">arXiv:2601.20245</a>, статья к исследованию 4. <span class="w">Первоисточник, прочитана аннотация.</span></span></li>
+    <li id="s6"><span class="i">6</span><span>Sean Goedecke, <a href="https://www.seangoedecke.com/programming-with-ai-agents-as-theory-building">Programming (with AI agents) as theory building</a>, 2026. <span class="w">Мнение практика.</span></span></li>
+    <li id="s7"><span class="i">7</span><span>Simon Willison, <a href="https://simonwillison.net/2025/Dec/18/code-proven-to-work/">Your job is to deliver code you have proven to work</a>, 18.12.2025. <span class="w">Мнение практика.</span></span></li>
+    <li id="s8"><span class="i">8</span><span>matklad, <a href="https://matklad.github.io/2021/02/06/ARCHITECTURE.md.html">ARCHITECTURE.md</a>, 2021. <span class="w">Мнение практика.</span></span></li>
+    <li id="s9"><span class="i">9</span><span>Michael Nygard, <a href="https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions">Documenting Architecture Decisions</a>, 2011. <span class="w">Первоисточник формата ADR.</span></span></li>
+    <li id="s10"><span class="i">10</span><span>Malte Ubl, <a href="https://www.industrialempathy.com/posts/design-docs-at-google/">Design Docs at Google</a>. <span class="w">Мнение практика.</span></span></li>
+    <li id="s11"><span class="i">11</span><span><a href="https://diataxis.fr/explanation/">Diátaxis: Explanation</a>. <span class="w">Первоисточник подхода.</span></span></li>
+    <li id="s12"><span class="i">12</span><span>Adam Tornhill, <a href="https://www.usenix.org/system/files/srecon24emea_slides-tornhill.pdf">Treat Your Code as a Crime Scene</a>, SREcon24 EMEA. <span class="w">Слайды; прочитан текст, без картинок.</span></span></li>
+    <li id="s13"><span class="i">13</span><span>Borg, Tornhill, Mones, <a href="https://arxiv.org/abs/2304.11636">U Owns the Code That Changes...</a>, 2023. <span class="w">Статья открыта, цифра взята из слайдов 12.</span></span></li>
+  </ol>
+</section>
+</main>
+</div>
+</body>
+</html>

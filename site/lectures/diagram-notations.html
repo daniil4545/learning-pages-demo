@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Нотации схем</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --c4-person:#08427B; --c4-sys:#1168BD; --c4-cont:#438DD5; --c4-ext:#7A7A7A;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:16px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+code{font-family:var(--mono);font-size:.86em}
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:middle;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.ic{width:76px}
+td.ic svg{display:block;width:64px;height:32px}
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+.mist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:14px 0}
+.mist div{background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:14px}
+.mist b{display:block;color:var(--warn);font-size:13px;margin-bottom:3px}
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+.read p{font-size:14.5px;color:var(--muted);margin:0 0 8px}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px 1fr;gap:6px}
+.ex div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+/* svg */
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .dash{stroke-dasharray:6 4}
+svg .dot{stroke-dasharray:2 3}
+svg .life{stroke:var(--muted);stroke-dasharray:4 4;stroke-width:1}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .w{fill:#fff}
+svg .wm{fill:#fff;opacity:.85;font-size:11px}
+svg .p{fill:var(--c4-person)} svg .s{fill:var(--c4-sys)} svg .c{fill:var(--c4-cont)} svg .e{fill:var(--c4-ext)}
+svg .fillc{fill:currentColor}
+svg .bnd{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:7 5}
+@media (max-width:860px){
+  .wrap{grid-template-columns:1fr;gap:24px}
+  nav.toc{position:static}
+}
+</style><!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+    <marker id="m-open" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </marker>
+    <marker id="m-circ" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7">
+      <circle cx="5" cy="5" r="4" style="fill:var(--paper)" stroke="currentColor" stroke-width="1.5"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Оглавление</p>
+  <ol>
+    <li><a href="#map">Карта нотаций</a></li>
+    <li><a href="#common">Общий язык: фигуры, линии, цвет</a></li>
+    <li><a href="#c4ctx">C4: контекст системы</a></li>
+    <li><a href="#c4cont">C4: контейнеры</a></li>
+    <li><a href="#seq">UML: последовательность</a></li>
+    <li><a href="#state">UML: состояния</a></li>
+    <li><a href="#erd">ERD: данные</a></li>
+    <li><a href="#bpmn">BPMN и flowchart: процесс</a></li>
+    <li><a href="#tools">В draw.io, Excalidraw, mermaid</a></li>
+
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <span class="eyebrow">Лекция · 04.10.2026</span>
+  <h1>Нотации схем: что рисовать и как это читается</h1>
+  <p class="lead">Пять нотаций отвечают на разные вопросы о системе. Примеры показывают условного бота продаж и планировщик публикаций.</p>
+<p class="library-edition">Учебная версия для публичной библиотеки. Рабочие сведения исключены, примеры обобщены. Версии и измерения сохранены на дату исходной лекции.</p></header>
+
+
+<section id="map">
+  <span class="num">01</span>
+  <h2>Карта нотаций</h2>
+  <p>Нотация - договорённость, что значит каждая фигура и линия. Схему по нотации читают без пояснений автора.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Вопрос о сервисе</th><th>Нотация</th><th>Ось схемы</th><th>Пример учебный проект</th></tr></thead>
+    <tbody>
+      <tr><td>Кто пользуется и с какими системами связан</td><td><b>C4 Context</b></td><td>границы</td><td>бот продаж: лид, менеджер, Telegram, amoCRM</td></tr>
+      <tr><td>Из каких процессов и баз состоит</td><td><b>C4 Container</b></td><td>устройство</td><td>бот продаж: app, postgres, migrate, backup</td></tr>
+      <tr><td>Кто кому что шлёт и в каком порядке</td><td><b>UML Sequence</b></td><td>время сверху вниз</td><td>лид пишет боту, итог в CRM</td></tr>
+      <tr><td>Какие статусы есть и что их меняет</td><td><b>UML State Machine</b></td><td>события</td><td>статусы кейса квалификации</td></tr>
+      <tr><td>Какие данные и как связаны</td><td><b>ERD</b></td><td>связи и кратность</td><td>лид, кейс, сообщения, встречи</td></tr>
+      <tr><td>Кто что делает по шагам, где развилки</td><td><b>BPMN</b> или flowchart</td><td>роли и шаги</td><td>f01: вычитка расписания месяца</td></tr>
+    </tbody>
+  </table></div>
+  <p>Правило выбора: сначала вопрос, потом нотация. Одна схема отвечает на один вопрос. Смешанная схема («тут сервисы, тут статусы, тут порядок») не читается ни по одной нотации.</p>
+</section>
+
+
+<section id="common">
+  <span class="num">02</span>
+  <h2>Общий язык: фигуры, линии, цвет</h2>
+  <p>У нотаций свои словари, но часть значений совпадает почти везде.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Знак</th><th>Обычно значит</th><th>Где иначе</th></tr></thead>
+    <tbody>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="box" x="6" y="6" width="52" height="20" rx="2"/></svg></td><td>вещь: система, процесс, таблица</td><td>в BPMN задача - со скруглёнными углами</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="box" x="6" y="6" width="52" height="20" rx="9"/></svg></td><td>состояние или действие</td><td>-</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><path class="box" d="M14,9 a18,4 0 0 1 36,0 v14 a18,4 0 0 1 -36,0 z M14,9 a18,4 0 0 0 36,0"/></svg></td><td>база данных, хранилище</td><td>-</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><path class="box" d="M32,4 L46,16 L32,28 L18,16 z"/></svg></td><td>развилка, решение</td><td>-</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="6" y1="16" x2="56" y2="16" marker-end="url(#m-fill)"/></svg></td><td>вызов, переход, поток</td><td>-</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln dash" x1="6" y1="16" x2="56" y2="16" marker-end="url(#m-open)"/></svg></td><td>ответ, косвенная связь</td><td>в BPMN - сообщение между участниками</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="bnd" x="6" y="5" width="52" height="22" rx="2"/></svg></td><td>граница: что внутри одной системы</td><td>-</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Цвет</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Нотация</th><th>Что говорит стандарт о цвете</th><th>Как принято</th></tr></thead>
+    <tbody>
+      <tr><td>C4</td><td>цвет не задан, нужна легенда и единообразие<a class="ref" href="#s1">1</a></td><td>тёмно-синий - люди, синий - наша система, серый - чужие системы</td></tr>
+      <tr><td>UML</td><td>цвет смысла не несёт<a class="ref" href="#s3">3</a></td><td>чёрно-белые схемы, цвет только как пометка</td></tr>
+      <tr><td>BPMN</td><td>цвет смысла не несёт<a class="ref" href="#s5">5</a></td><td>цветом выделяют автоматические шаги или проблемные места</td></tr>
+      <tr><td>ERD</td><td>цвет не задан</td><td>цветом группируют таблицы по доменам</td></tr>
+    </tbody>
+  </table></div>
+  <p>Правило для наших схем: цвет только со смыслом, и смысл подписан в легенде. Схема должна читаться и в чёрно-белой печати.</p>
+</section>
+
+
+<section id="c4ctx">
+  <span class="num">03</span>
+  <h2>C4: контекст системы</h2>
+  <div class="q"><b>Отвечает на вопрос</b>Что это за система, кто ей пользуется, с какими чужими системами она говорит.</div>
+  <p>C4 - четыре уровня масштаба, как карта: контекст, контейнеры, компоненты, код<a class="ref" href="#s1">1</a>. Для сервисов учебный проект хватает первых двух. Контекст - самая полезная схема для заказчика: на ней нет технологий.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Знак</th><th>Элемент</th><th>Что подписать</th></tr></thead>
+    <tbody>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><circle class="p" cx="32" cy="8" r="6"/><rect class="p" x="14" y="13" width="36" height="16" rx="5"/></svg></td><td>Персона: человек или роль</td><td>роль и что ей нужно</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="s" x="8" y="6" width="48" height="20" rx="3"/></svg></td><td>Наша система</td><td>имя, тип <code>[Система]</code>, одна строка назначения</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="e" x="8" y="6" width="48" height="20" rx="3"/></svg></td><td>Внешняя система: не наша, не правим</td><td>имя и роль для нас</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="6" y1="16" x2="56" y2="16" marker-end="url(#m-fill)"/></svg></td><td>Связь: кто инициирует</td><td>глагол и, если важно, протокол в скобках</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="ttl">бот продаж: контекст</div>
+    <svg class="d" viewBox="0 0 790 470" role="img" aria-label="Контекст бот продаж: лид пишет в Telegram, бот продаж читает Telegram, спрашивает OpenRouter, бронирует в Google Calendar и пишет в amoCRM, где сделку ведёт менеджер">
+
+      <line class="ln" x1="170" y1="70" x2="298" y2="70" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="234" y="62" text-anchor="middle">пишет в личку</text>
+      <line class="ln" x1="390" y1="190" x2="390" y2="112" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="398" y="148">читает, отвечает</text>
+      <text class="lbl mut" x="398" y="163">[MTProto]</text>
+      <line class="ln" x1="490" y1="215" x2="598" y2="160" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="544" y="186" text-anchor="middle">ход диалога</text>
+      <line class="ln" x1="490" y1="265" x2="598" y2="305" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="544" y="292" text-anchor="middle">бронь встречи</text>
+      <line class="ln" x1="390" y1="290" x2="390" y2="378" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="398" y="330">ищет карточку,</text>
+      <text class="lbl" x="398" y="345">пишет заметку</text>
+      <line class="ln" x1="170" y1="420" x2="298" y2="420" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="234" y="412" text-anchor="middle">ведёт сделку</text>
+
+      <circle class="p" cx="95" cy="24" r="14"/>
+      <rect class="p" x="20" y="34" width="150" height="76" rx="10"/>
+      <text class="w b" x="95" y="62" text-anchor="middle">Лид</text>
+      <text class="wm" x="95" y="78" text-anchor="middle">[Персона]</text>
+      <text class="wm" x="95" y="94" text-anchor="middle">хочет в клуб</text>
+      <circle class="p" cx="95" cy="374" r="14"/>
+      <rect class="p" x="20" y="384" width="150" height="76" rx="10"/>
+      <text class="w b" x="95" y="412" text-anchor="middle">Менеджер</text>
+      <text class="wm" x="95" y="428" text-anchor="middle">[Персона]</text>
+      <text class="wm" x="95" y="444" text-anchor="middle">проводит встречу</text>
+
+      <rect class="s" x="290" y="190" width="200" height="100" rx="4"/>
+      <text class="w b" x="390" y="222" text-anchor="middle">бот продаж</text>
+      <text class="wm" x="390" y="240" text-anchor="middle">[Система]</text>
+      <text class="wm" x="390" y="258" text-anchor="middle">квалифицирует лида</text>
+      <text class="wm" x="390" y="273" text-anchor="middle">и бронирует встречу</text>
+
+      <rect class="e" x="300" y="30" width="180" height="80" rx="4"/>
+      <text class="w b" x="390" y="64" text-anchor="middle">Telegram</text>
+      <text class="wm" x="390" y="82" text-anchor="middle">[Внешняя система]</text>
+      <rect class="e" x="600" y="115" width="170" height="80" rx="4"/>
+      <text class="w b" x="685" y="149" text-anchor="middle">OpenRouter</text>
+      <text class="wm" x="685" y="167" text-anchor="middle">[LLM, внешняя]</text>
+      <rect class="e" x="600" y="270" width="170" height="80" rx="4"/>
+      <text class="w b" x="685" y="304" text-anchor="middle">Google Calendar</text>
+      <text class="wm" x="685" y="322" text-anchor="middle">[Внешняя система]</text>
+      <rect class="e" x="300" y="380" width="180" height="80" rx="4"/>
+      <text class="w b" x="390" y="414" text-anchor="middle">amoCRM</text>
+      <text class="wm" x="390" y="432" text-anchor="middle">[CRM]</text>
+    </svg>
+    <figcaption>Легенда: тёмно-синий - люди, синий - наша система, серый - чужие системы. Стрелка идёт от того, кто начинает разговор. Учебные примеры взаимодействия сервисов.</figcaption>
+  </figure>
+
+  <div class="read">
+    <h3>Как читать пример</h3>
+    <ol>
+<li>Найдите синий блок: это система, о которой схема. Здесь бот продаж.</li>
+<li>Слева люди. Лид сам в бота продаж не заходит: он пишет в Telegram, а бот продаж читает Telegram. Так видно, что своего интерфейса у сервиса нет.</li>
+<li>Справа и снизу чужие системы. Каждая стрелка из бота продаж - зависимость. Спека должна сказать, что будет при её отказе. Для календаря это уже решено: сервис работает и без него.</li>
+<li>Менеджер с ботом продаж напрямую не связан. Работу бота он видит только через amoCRM. Это главный вывод схемы для заказчика.</li>
+    </ol>
+    <p><b>Когда брать:</b> старт новой функции, разговор с заказчиком, ввод нового человека в проект. <b>Когда не брать:</b> разбор бага внутри сервиса: там нужна последовательность или контейнеры.</p>
+  </div>
+  <div class="mist">
+    <div><b>Ошибка</b>Внутренности системы на контексте: база, очереди. Они живут уровнем ниже.</div>
+    <div><b>Ошибка</b>Стрелка без подписи. «Связано» не информация, «пишет заметку» - информация.</div>
+    <div><b>Ошибка</b>Нет легенды. C4 прямо требует ключ к цветам и линиям<a class="ref" href="#s1">1</a>.</div>
+  </div>
+  <p class="links">Читать: <a href="https://c4model.com/diagrams/system-context">c4model.com, System context</a>; <a href="https://c4model.com/diagrams/notation">c4model.com, Notation</a>.</p>
+</section>
+
+
+<section id="c4cont">
+  <span class="num">04</span>
+  <h2>C4: контейнеры</h2>
+  <div class="q"><b>Отвечает на вопрос</b>Из каких запускаемых частей состоит система и как они говорят между собой.</div>
+  <p>Контейнер в C4 - не Docker-контейнер, а всё, что запускается отдельно: процесс, база, фронтенд, скрипт<a class="ref" href="#s2">2</a>. У бота продаж они совпадают с сервисами compose-файла.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Знак</th><th>Элемент</th><th>Что подписать</th></tr></thead>
+    <tbody>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="c" x="8" y="6" width="48" height="20" rx="3"/></svg></td><td>Контейнер: процесс или приложение</td><td>имя, <code>[Контейнер: технология]</code>, назначение</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><path class="c" d="M14,9 a18,4 0 0 1 36,0 v14 a18,4 0 0 1 -36,0 z"/><path d="M14,9 a18,4 0 0 0 36,0" fill="none" stroke="#fff" stroke-width="1"/></svg></td><td>Хранилище данных</td><td>имя, СУБД и версия, что хранит</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="bnd" x="6" y="5" width="52" height="22" rx="2"/></svg></td><td>Граница системы</td><td>имя системы снизу</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="ttl">бот продаж: контейнеры</div>
+    <svg class="d" viewBox="0 0 790 440" role="img" aria-label="Контейнеры бот продаж: app на Go пишет в PostgreSQL и ходит в четыре внешние системы, migrate и backup работают с базой">
+      <rect class="bnd" x="20" y="20" width="520" height="400" rx="6"/>
+      <text class="b mut" x="34" y="404">бот продаж</text>
+      <text class="mut" x="104" y="404">[Система]</text>
+
+      <line class="ln" x1="380" y1="170" x2="380" y2="248" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="388" y="205">читает, пишет</text>
+      <text class="lbl mut" x="388" y="220">[SQL]</text>
+      <line class="ln" x1="180" y1="268" x2="258" y2="268" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="219" y="260" text-anchor="middle">схема</text>
+      <line class="ln" x1="180" y1="350" x2="258" y2="350" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="219" y="342" text-anchor="middle">дамп</text>
+      <line class="ln" x1="500" y1="85" x2="608" y2="60" marker-end="url(#m-fill)"/>
+      <text class="lbl mut" x="578" y="64" text-anchor="middle">[MTProto]</text>
+      <line class="ln" x1="500" y1="105" x2="608" y2="140" marker-end="url(#m-fill)"/>
+      <text class="lbl mut" x="578" y="127" text-anchor="middle">[HTTPS]</text>
+      <line class="ln" x1="500" y1="125" x2="608" y2="220" marker-end="url(#m-fill)"/>
+      <text class="lbl mut" x="578" y="191" text-anchor="middle">[HTTPS]</text>
+      <line class="ln" x1="500" y1="145" x2="608" y2="300" marker-end="url(#m-fill)"/>
+      <text class="lbl mut" x="578" y="254" text-anchor="middle">[REST]</text>
+
+      <rect class="c" x="260" y="60" width="240" height="110" rx="4"/>
+      <text class="w b" x="380" y="94" text-anchor="middle">app</text>
+      <text class="wm" x="380" y="112" text-anchor="middle">[Контейнер: Go 1.25]</text>
+      <text class="wm" x="380" y="130" text-anchor="middle">диалог, решения, очереди,</text>
+      <text class="wm" x="380" y="145" text-anchor="middle">таймеры сверки</text>
+      <path class="c" d="M260,262 a120,12 0 0 1 240,0 v86 a120,12 0 0 1 -240,0 z"/>
+      <path d="M260,262 a120,12 0 0 0 240,0" fill="none" stroke="#fff" stroke-width="1.2"/>
+      <text class="w b" x="380" y="304" text-anchor="middle">postgres</text>
+      <text class="wm" x="380" y="322" text-anchor="middle">[PostgreSQL 16]</text>
+      <text class="wm" x="380" y="338" text-anchor="middle">кейсы, аудит, outbox</text>
+      <rect class="c" x="40" y="240" width="140" height="56" rx="4"/>
+      <text class="w b" x="110" y="264" text-anchor="middle">migrate</text>
+      <text class="wm" x="110" y="281" text-anchor="middle">[goose, разово]</text>
+      <rect class="c" x="40" y="322" width="140" height="56" rx="4"/>
+      <text class="w b" x="110" y="346" text-anchor="middle">backup</text>
+      <text class="wm" x="110" y="363" text-anchor="middle">[pg_dump]</text>
+
+      <rect class="e" x="610" y="30" width="160" height="60" rx="4"/>
+      <text class="w b" x="690" y="65" text-anchor="middle">Telegram</text>
+      <rect class="e" x="610" y="110" width="160" height="60" rx="4"/>
+      <text class="w b" x="690" y="145" text-anchor="middle">OpenRouter</text>
+      <rect class="e" x="610" y="190" width="160" height="60" rx="4"/>
+      <text class="w b" x="690" y="225" text-anchor="middle">Google Calendar</text>
+      <rect class="e" x="610" y="270" width="160" height="60" rx="4"/>
+      <text class="w b" x="690" y="305" text-anchor="middle">amoCRM</text>
+    </svg>
+    <figcaption>Пунктирная рамка - граница системы: всё внутри деплоится вместе. Люди опущены ради места, на настоящей схеме они остаются. Учебная схема взаимодействия сервисов.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать пример</h3>
+    <ol>
+<li>Пунктирная рамка: всё внутри деплоится одним compose-файлом.</li>
+<li>Стрелки наружу идут только из app. Значит, вся логика и все внешние вызовы живут в одном процессе.</li>
+<li>migrate и backup работают с той же базой, но запускаются отдельно: migrate разово перед стартом, backup снимает дампы.</li>
+<li>Вывод для эксплуатации: без app и postgres сервис стоит, без migrate и backup работает.</li>
+    </ol>
+    <p><b>Когда брать:</b> деплой, разбор отказов, перенос на другой сервер. <b>Когда не брать:</b> обсуждение бизнес-правил: технологии там лишние.</p>
+  </div>
+  <div class="mist">
+    <div><b>Ошибка</b>Пакеты Go как контейнеры. Пакет не запускается отдельно, это уровень Component.</div>
+    <div><b>Ошибка</b>Нет технологии в подписи. На этом уровне она и есть главная информация.</div>
+  </div>
+  <p class="links">Читать: <a href="https://c4model.com/diagrams/container">c4model.com, Container diagram</a>; <a href="https://www.drawio.com/blog/c4-modelling">draw.io, C4 modelling</a>.</p>
+</section>
+
+
+<section id="seq">
+  <span class="num">05</span>
+  <h2>UML: последовательность</h2>
+  <div class="q"><b>Отвечает на вопрос</b>В каком порядке участники обмениваются сообщениями в одном сценарии.</div>
+  <p>Время идёт сверху вниз. Каждый участник - вертикальная линия жизни. Схема показывает один сценарий, а не все сразу<a class="ref" href="#s3">3</a><a class="ref" href="#s4">4</a>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Знак</th><th>Элемент</th><th>Значит</th></tr></thead>
+    <tbody>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="box" x="14" y="2" width="36" height="12"/><line class="life" x1="32" y1="14" x2="32" y2="31"/></svg></td><td>Участник и линия жизни</td><td>процесс, система или человек</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="life" x1="32" y1="0" x2="32" y2="32"/><rect class="box" x="27" y="6" width="10" height="20"/></svg></td><td>Активация</td><td>участник сейчас занят работой</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="6" y1="16" x2="56" y2="16" marker-end="url(#m-fill)"/></svg></td><td>Синхронный вызов</td><td>отправитель ждёт ответа</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="6" y1="16" x2="56" y2="16" marker-end="url(#m-open)"/></svg></td><td>Асинхронное сообщение</td><td>отправил и пошёл дальше</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln dash" x1="56" y1="16" x2="8" y2="16" marker-end="url(#m-open)"/></svg></td><td>Ответ</td><td>возврат результата вызова</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="box" x="4" y="4" width="56" height="24" style="fill:none"/><path class="ln" d="M4,4 H24 V10 L20,14 H4"/><text x="7" y="12" style="font-size:7px">opt</text></svg></td><td>Фрагмент <code>opt</code>, <code>alt</code>, <code>loop</code></td><td>шаги только при условии, выбор ветки, повтор</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="ttl">бот продаж: лид пишет боту, итог в CRM</div>
+    <svg class="d" viewBox="0 0 800 560" role="img" aria-label="Последовательность: сообщение лида идёт через Telegram в app, app сохраняет кейс, при необходимости ищет карточку в amoCRM, спрашивает OpenRouter, пишет решение и outbox одной транзакцией, отвечает лиду и после брони пишет заметку в amoCRM">
+
+      <rect class="box" x="15" y="16" width="110" height="34"/><text class="b" x="70" y="38" text-anchor="middle">Лид</text>
+      <rect class="box" x="145" y="16" width="110" height="34"/><text class="b" x="200" y="38" text-anchor="middle">Telegram</text>
+      <rect class="box" x="285" y="16" width="110" height="34"/><text class="b" x="340" y="38" text-anchor="middle">app</text>
+      <rect class="box" x="425" y="16" width="110" height="34"/><text class="b" x="480" y="38" text-anchor="middle">PostgreSQL</text>
+      <rect class="box" x="555" y="16" width="110" height="34"/><text class="b" x="610" y="38" text-anchor="middle">amoCRM</text>
+      <rect class="box" x="675" y="16" width="110" height="34"/><text class="b" x="730" y="38" text-anchor="middle">OpenRouter</text>
+      <line class="life" x1="70" y1="50" x2="70" y2="545"/>
+      <line class="life" x1="200" y1="50" x2="200" y2="545"/>
+      <line class="life" x1="340" y1="50" x2="340" y2="545"/>
+      <line class="life" x1="480" y1="50" x2="480" y2="545"/>
+      <line class="life" x1="610" y1="50" x2="610" y2="545"/>
+      <line class="life" x1="730" y1="50" x2="730" y2="545"/>
+      <rect class="box" x="335" y="118" width="10" height="404"/>
+
+      <rect x="290" y="203" width="350" height="78" fill="none" stroke="currentColor" stroke-width="1"/>
+      <path d="M290,203 H328 V213 L320,221 H290" fill="none" stroke="currentColor" stroke-width="1"/>
+      <text class="b" x="296" y="217" style="font-size:11px">opt</text>
+      <text class="mut" x="340" y="217" style="font-size:11px">[у лида нет связи с CRM]</text>
+      <rect x="290" y="470" width="350" height="62" fill="none" stroke="currentColor" stroke-width="1"/>
+      <path d="M290,470 H328 V480 L320,488 H290" fill="none" stroke="currentColor" stroke-width="1"/>
+      <text class="b" x="296" y="484" style="font-size:11px">opt</text>
+      <text class="mut" x="340" y="484" style="font-size:11px">[встреча забронирована]</text>
+
+      <line class="ln" x1="70" y1="95" x2="198" y2="95" marker-end="url(#m-open)"/>
+      <text class="lbl" x="134" y="88" text-anchor="middle">1 сообщение</text>
+      <line class="ln" x1="200" y1="125" x2="333" y2="125" marker-end="url(#m-open)"/>
+      <text class="lbl" x="266" y="118" text-anchor="middle">2 update</text>
+      <line class="ln" x1="345" y1="160" x2="478" y2="160" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="412" y="153" text-anchor="middle">3 сохранить, взять кейс</text>
+      <line class="ln dash" x1="480" y1="185" x2="347" y2="185" marker-end="url(#m-open)"/>
+      <text class="lbl" x="412" y="179" text-anchor="middle">4 кейс</text>
+      <line class="ln" x1="345" y1="242" x2="608" y2="242" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="530" y="236" text-anchor="middle">5 найти карточку</text>
+      <line class="ln dash" x1="610" y1="267" x2="347" y2="267" marker-end="url(#m-open)"/>
+      <text class="lbl" x="530" y="261" text-anchor="middle">6 link / not_lead / manual_review</text>
+      <line class="ln" x1="345" y1="312" x2="728" y2="312" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="560" y="305" text-anchor="middle">7 ход диалога + инструменты</text>
+      <line class="ln dash" x1="730" y1="337" x2="347" y2="337" marker-end="url(#m-open)"/>
+      <text class="lbl" x="560" y="331" text-anchor="middle">8 AgentTurn (недоверенный)</text>
+      <line class="ln" x1="345" y1="377" x2="478" y2="377" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="412" y="370" text-anchor="middle">9 решение + outbox</text>
+      <text class="lbl mut" x="412" y="393" text-anchor="middle" style="font-size:11px">одной транзакцией</text>
+      <line class="ln" x1="335" y1="420" x2="202" y2="420" marker-end="url(#m-open)"/>
+      <text class="lbl" x="268" y="413" text-anchor="middle">10 ответ из outbox</text>
+      <line class="ln" x1="200" y1="448" x2="72" y2="448" marker-end="url(#m-open)"/>
+      <text class="lbl" x="136" y="441" text-anchor="middle">11 ответ</text>
+      <line class="ln" x1="345" y1="512" x2="608" y2="512" marker-end="url(#m-open)"/>
+      <text class="lbl" x="476" y="506" text-anchor="middle">12 заметка, этап сделки</text>
+    </svg>
+    <figcaption>Сплошная стрелка с залитым концом: app ждёт ответа. Открытый наконечник: отправил и не ждёт. Пунктир: ответ. Рамка <code>opt</code>: шаги только при условии в скобках. Упрощено до основного пути. Учебная схема взаимодействия сервисов.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать пример</h3>
+    <ol>
+<li>Читайте сверху вниз, номер - порядок шага.</li>
+<li>Шаги 1-2 асинхронные: Telegram не ждёт, пока app обработает сообщение.</li>
+<li>Шаги 5-6 в рамке <code>opt</code>: поиск в amoCRM идёт только для лида без связи с CRM.</li>
+<li>Ответ OpenRouter (шаг 8) недоверенный. Из OpenRouter нет стрелок ни в базу, ни в Telegram: пишет только app после проверки.</li>
+<li>Решение (шаг 9) и доставка (шаг 10) разделены. Упал Telegram между ними - ответ не потерян, он лежит в outbox.</li>
+    </ol>
+    <p><b>Когда брать:</b> интеграция с внешней системой, повторы и таймауты, баг «пошло не в том порядке». <b>Когда не брать:</b> структура данных или статусы: для них свои схемы.</p>
+  </div>
+  <div class="mist">
+    <div><b>Ошибка</b>Все сценарии на одной схеме. Ошибка, повтор и успех - разные схемы или фрагмент <code>alt</code>.</div>
+    <div><b>Ошибка</b>Нет ответов. Без пунктира не видно, где участник ждёт.</div>
+    <div><b>Ошибка</b>Больше 6-7 участников. Схему пора делить на два сценария.</div>
+  </div>
+  <p class="links">Читать: <a href="https://www.uml-diagrams.org/sequence-diagrams.html">uml-diagrams.org, Sequence diagrams</a>; <a href="https://www.drawio.com/blog/sequence-diagrams">draw.io, Sequence diagrams</a>; <a href="https://mermaid.js.org/syntax/sequenceDiagram.html">mermaid, sequenceDiagram</a>; по-русски: <a href="https://practicum.yandex.ru/blog/sequence-diagram/">Практикум, диаграмма последовательности</a><a class="ref" href="#s12">12</a>.</p>
+</section>
+
+
+<section id="state">
+  <span class="num">06</span>
+  <h2>UML: состояния</h2>
+  <div class="q"><b>Отвечает на вопрос</b>Какие статусы есть у одного объекта и какое событие переводит из одного в другой.</div>
+  <p>Схема рисуется для одного объекта: кейса, тикета, поста. Подпись перехода имеет формат <code>событие [условие] / действие</code>, любая часть может отсутствовать<a class="ref" href="#s6">6</a>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Знак</th><th>Элемент</th><th>Значит</th></tr></thead>
+    <tbody>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><circle class="fillc" cx="32" cy="16" r="8"/></svg></td><td>Начальное состояние</td><td>откуда объект появляется</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="box" x="8" y="6" width="48" height="20" rx="9"/></svg></td><td>Состояние</td><td>статус, в котором объект ждёт</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="6" y1="16" x2="56" y2="16" marker-end="url(#m-open)"/></svg></td><td>Переход</td><td>событие и условие на подписи</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><path class="box" d="M32,6 L42,16 L32,26 L22,16 z"/></svg></td><td>Выбор</td><td>ветвление по условию</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><circle class="ln" cx="32" cy="16" r="10"/><circle class="fillc" cx="32" cy="16" r="6"/></svg></td><td>Конечное состояние</td><td>объект закончил жизнь</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="ttl">бот продаж: статусы кейса квалификации (основные)</div>
+    <svg class="d" viewBox="0 0 790 400" role="img" aria-label="Автомат кейса: из начального состояния в collecting_info или contacted; collecting_info обменивается переходами с waiting_reply и postponed; complete ведёт в ready_to_decide или rejected; встреча ведёт в handed_off">
+
+      <line class="ln" x1="49" y1="222" x2="268" y2="222" marker-end="url(#m-open)"/>
+      <text class="lbl" x="158" y="214" text-anchor="middle">лид написал сам</text>
+      <polyline class="ln" points="40,231 40,352 58,352" marker-end="url(#m-open)"/>
+      <text class="lbl" x="48" y="292">поллер заявок</text>
+      <line class="ln" x1="190" y1="330" x2="283" y2="248" marker-end="url(#m-open)"/>
+      <text class="lbl" x="226" y="282" text-anchor="middle">входящее</text>
+      <line class="ln" x1="320" y1="198" x2="320" y2="106" marker-end="url(#m-open)"/>
+      <text class="lbl" x="312" y="155" text-anchor="end">ответ доставлен</text>
+      <line class="ln" x1="390" y1="104" x2="390" y2="196" marker-end="url(#m-open)"/>
+      <text class="lbl" x="398" y="155">входящее</text>
+      <line class="ln" x1="390" y1="246" x2="390" y2="338" marker-end="url(#m-open)"/>
+      <text class="lbl" x="398" y="297">просит позже</text>
+      <line class="ln" x1="320" y1="340" x2="320" y2="248" marker-end="url(#m-open)"/>
+      <text class="lbl" x="312" y="300" text-anchor="end">входящее</text>
+      <line class="ln" x1="440" y1="208" x2="558" y2="74" marker-end="url(#m-open)"/>
+      <text class="lbl" x="497" y="134" text-anchor="middle">complete [5 фактов]</text>
+      <line class="ln" x1="440" y1="236" x2="558" y2="342" marker-end="url(#m-open)"/>
+      <text class="lbl" x="470" y="272" text-anchor="middle">complete [не профиль]</text>
+      <line class="ln" x1="645" y1="84" x2="645" y2="178" marker-end="url(#m-open)"/>
+      <text class="lbl" x="653" y="135">встреча</text>
+      <text class="lbl" x="653" y="150">состоялась</text>
+      <line class="ln" x1="730" y1="202" x2="748" y2="202" marker-end="url(#m-open)"/>
+
+      <circle class="fillc" cx="40" cy="222" r="9"/>
+      <rect class="box" x="60" y="330" width="150" height="44" rx="14"/><text class="b" x="135" y="357" text-anchor="middle">contacted</text>
+      <rect class="box" x="270" y="60" width="170" height="44" rx="14"/><text class="b" x="355" y="87" text-anchor="middle">waiting_reply</text>
+      <rect class="box" x="270" y="198" width="170" height="48" rx="14" style="stroke-width:2.5"/><text class="b" x="355" y="227" text-anchor="middle">collecting_info</text>
+      <rect class="box" x="270" y="340" width="170" height="44" rx="14"/><text class="b" x="355" y="367" text-anchor="middle">postponed</text>
+      <rect class="box" x="560" y="40" width="170" height="44" rx="14"/><text class="b" x="645" y="67" text-anchor="middle">ready_to_decide</text>
+      <rect class="box" x="560" y="180" width="170" height="44" rx="14"/><text class="b" x="645" y="207" text-anchor="middle">handed_off</text>
+      <rect class="box" x="560" y="320" width="170" height="44" rx="14"/><text class="b" x="645" y="347" text-anchor="middle">rejected</text>
+      <circle class="ln" cx="762" cy="202" r="12"/><circle class="fillc" cx="762" cy="202" r="7"/>
+    </svg>
+    <figcaption>Жирная рамка - центральное состояние, в котором идёт диалог. Опущены: <code>refused</code>, <code>manual_review</code>, <code>not_lead</code>, выход из <code>rejected</code> по новому входящему. Учебная схема взаимодействия сервисов.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать пример</h3>
+    <ol>
+<li>Начните с чёрной точки: у кейса два входа, реактивный и через поллер заявок.</li>
+<li><code>collecting_info</code> в центре: почти все переходы проходят через него.</li>
+<li>Пары стрелок туда и обратно (<code>waiting_reply</code>, <code>postponed</code>) - это ожидание лида.</li>
+<li>Текст в квадратных скобках - условие. Одно событие <code>complete</code> ведёт в разные статусы.</li>
+<li>Проверка полноты: у каждого статуса есть выход, или он конечный. <code>rejected</code> здесь выглядит тупиком: выход есть, но опущен. Так схема находит дыры в спеке.</li>
+    </ol>
+    <p><b>Когда брать:</b> любой объект со статусами: кейс, тикет, пост, бронь. <b>Когда не брать:</b> процесс с несколькими людьми: это BPMN.</p>
+  </div>
+  <div class="mist">
+    <div><b>Ошибка</b>Действия как состояния: «отправить ответ» - это действие на переходе, а не статус.</div>
+    <div><b>Ошибка</b>Переход без события. Непонятно, что двигает объект дальше.</div>
+    <div><b>Ошибка</b>Нет выхода из состояния. Такой статус - тупик, его надо пометить конечным или найти забытый переход.</div>
+  </div>
+  <p class="links">Читать: <a href="https://www.uml-diagrams.org/state-machine-diagrams.html">uml-diagrams.org, State machine diagrams</a>; <a href="https://www.drawio.com/blog/uml-state-diagrams">draw.io, UML state diagrams</a>; <a href="https://mermaid.js.org/syntax/stateDiagram.html">mermaid, stateDiagram</a>; по-русски: <a href="https://practicum.yandex.ru/blog/uml-diagrammy/">Практикум, что такое UML</a><a class="ref" href="#s12">12</a>.</p>
+</section>
+
+
+<section id="erd">
+  <span class="num">07</span>
+  <h2>ERD: данные</h2>
+  <div class="q"><b>Отвечает на вопрос</b>Какие сущности хранятся, как они связаны и сколько одних приходится на другие.</div>
+  <p>Сущность - таблица с ключевыми полями. Главное на схеме - концы линий: они показывают кратность связи. Самая распространённая запись - «вороньи лапки» (crow's foot)<a class="ref" href="#s7">7</a>.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Конец линии</th><th>Читается</th><th>Пример</th></tr></thead>
+    <tbody>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="4" y1="16" x2="56" y2="16"/><line class="ln" x1="44" y1="9" x2="44" y2="23"/><line class="ln" x1="50" y1="9" x2="50" y2="23"/><line class="ln" x1="56" y1="4" x2="56" y2="28"/></svg></td><td>ровно один</td><td>у кейса ровно один лид</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="4" y1="16" x2="56" y2="16"/><circle class="box" cx="40" cy="16" r="5"/><line class="ln" x1="50" y1="9" x2="50" y2="23"/><line class="ln" x1="56" y1="4" x2="56" y2="28"/></svg></td><td>ноль или один</td><td>у встречи может не быть менеджера</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="4" y1="16" x2="56" y2="16"/><line class="ln" x1="40" y1="9" x2="40" y2="23"/><path class="ln" d="M46,16 L56,8 M46,16 L56,24"/><line class="ln" x1="56" y1="4" x2="56" y2="28"/></svg></td><td>один или много</td><td>-</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="4" y1="16" x2="56" y2="16"/><circle class="box" cx="38" cy="16" r="5"/><path class="ln" d="M46,16 L56,8 M46,16 L56,24"/><line class="ln" x1="56" y1="4" x2="56" y2="28"/></svg></td><td>ноль или много</td><td>у кейса ноль или много сообщений</td></tr>
+    </tbody>
+  </table></div>
+  <p>Вертикальная черта у самого края - это край таблицы на схеме. Знак читается от противоположной сущности: «у кейса <i>ноль или много</i> сообщений».</p>
+
+  <figure>
+    <div class="ttl">бот продаж: ядро данных лида</div>
+    <svg class="d" viewBox="0 0 790 390" role="img" aria-label="ERD бот продаж: у лида ноль или много внешних ссылок и кейсов; у кейса ноль или много сообщений и встреч; у встречи ноль или один менеджер">
+
+      <rect class="box" x="30" y="40" width="180" height="94"/>
+      <rect class="soft" x="30" y="40" width="180" height="28"/>
+      <text class="b" x="42" y="59">leads</text>
+      <text x="42" y="88"><tspan class="b" style="font-size:12px">id</tspan><tspan class="mut" dx="8">PK</tspan></text>
+      <text x="42" y="106">offer</text>
+      <text x="42" y="124">no_contact</text>
+
+      <rect class="box" x="30" y="232" width="180" height="112"/>
+      <rect class="soft" x="30" y="232" width="180" height="28"/>
+      <text class="b" x="42" y="251">lead_external_refs</text>
+      <text x="42" y="280"><tspan class="b" style="font-size:12px">id</tspan><tspan class="mut" dx="8">PK</tspan></text>
+      <text x="42" y="298">lead_id <tspan class="mut">FK</tspan></text>
+      <text x="42" y="316">system</text>
+      <text x="42" y="334">external_id</text>
+
+      <rect class="box" x="300" y="40" width="200" height="94"/>
+      <rect class="soft" x="300" y="40" width="200" height="28"/>
+      <text class="b" x="312" y="59">qualification_cases</text>
+      <text x="312" y="88"><tspan class="b" style="font-size:12px">id</tspan><tspan class="mut" dx="8">PK</tspan></text>
+      <text x="312" y="106">lead_id <tspan class="mut">FK</tspan></text>
+      <text x="312" y="124">status</text>
+
+      <rect class="box" x="590" y="20" width="170" height="76"/>
+      <rect class="soft" x="590" y="20" width="170" height="28"/>
+      <text class="b" x="602" y="39">messages</text>
+      <text x="602" y="68"><tspan class="b" style="font-size:12px">id</tspan><tspan class="mut" dx="8">PK</tspan></text>
+      <text x="602" y="86">case_id <tspan class="mut">FK</tspan></text>
+
+      <rect class="box" x="590" y="190" width="170" height="112"/>
+      <rect class="soft" x="590" y="190" width="170" height="28"/>
+      <text class="b" x="602" y="209">meetings</text>
+      <text x="602" y="238"><tspan class="b" style="font-size:12px">id</tspan><tspan class="mut" dx="8">PK</tspan></text>
+      <text x="602" y="256">case_id <tspan class="mut">FK</tspan></text>
+      <text x="602" y="274">manager_id <tspan class="mut">FK</tspan></text>
+      <text x="602" y="292">status</text>
+
+      <rect class="box" x="300" y="262" width="200" height="58"/>
+      <rect class="soft" x="300" y="262" width="200" height="28"/>
+      <text class="b" x="312" y="281">managers</text>
+      <text x="312" y="310"><tspan class="b" style="font-size:12px">id</tspan><tspan class="mut" dx="8">PK</tspan></text>
+
+
+      <line class="ln" x1="210" y1="95" x2="300" y2="95"/>
+      <line class="ln" x1="218" y1="88" x2="218" y2="102"/><line class="ln" x1="224" y1="88" x2="224" y2="102"/>
+      <circle class="box" cx="280" cy="95" r="5"/><path class="ln" d="M288,95 L300,87 M288,95 L300,103"/>
+
+      <line class="ln" x1="120" y1="134" x2="120" y2="232"/>
+      <line class="ln" x1="113" y1="142" x2="127" y2="142"/><line class="ln" x1="113" y1="148" x2="127" y2="148"/>
+      <circle class="box" cx="120" cy="212" r="5"/><path class="ln" d="M120,220 L112,232 M120,220 L128,232"/>
+
+      <line class="ln" x1="500" y1="74" x2="590" y2="74"/>
+      <line class="ln" x1="508" y1="67" x2="508" y2="81"/><line class="ln" x1="514" y1="67" x2="514" y2="81"/>
+      <circle class="box" cx="570" cy="74" r="5"/><path class="ln" d="M578,74 L590,66 M578,74 L590,82"/>
+
+      <polyline class="ln" points="500,118 545,118 545,250 590,250"/>
+      <line class="ln" x1="508" y1="111" x2="508" y2="125"/><line class="ln" x1="514" y1="111" x2="514" y2="125"/>
+      <circle class="box" cx="570" cy="250" r="5"/><path class="ln" d="M578,250 L590,242 M578,250 L590,258"/>
+
+      <line class="ln" x1="500" y1="290" x2="590" y2="290"/>
+      <line class="ln" x1="508" y1="283" x2="508" y2="297"/><circle class="box" cx="520" cy="290" r="5"/>
+      <circle class="box" cx="570" cy="290" r="5"/><path class="ln" d="M578,290 L590,282 M578,290 L590,298"/>
+    </svg>
+    <figcaption>Читается так: у лида ноль или много кейсов, у кейса ровно один лид; у встречи ноль или один менеджер, потому что <code>manager_id</code> может быть пуст. Показано ядро из 6 таблиц. Учебная схема взаимодействия сервисов.</figcaption>
+  </figure>
+  <div class="read">
+    <h3>Как читать пример</h3>
+    <ol>
+<li>Найдите таблицу с наибольшим числом линий - центр модели. Здесь <code>qualification_cases</code>.</li>
+<li>Читайте каждую линию с обоих концов: у лида ноль или много кейсов; у кейса ровно один лид.</li>
+<li>Кружок значит «может не быть». У встречи может не быть менеджера: так схема отвечает, какие поля обязательны.</li>
+<li>Связь с amoCRM вынесена в <code>lead_external_refs</code>, а не полем в <code>leads</code>. Пара <code>(system, external_id)</code> уникальна, и у лида может быть несколько внешних ссылок.</li>
+    </ol>
+    <p><b>Когда брать:</b> новая таблица, миграция, отчёт по данным. <b>Когда не брать:</b> порядок действий: в ERD нет времени.</p>
+  </div>
+  <div class="mist">
+    <div><b>Ошибка</b>Все колонки всех таблиц. На схеме нужны ключи и поля, о которых идёт речь.</div>
+    <div><b>Ошибка</b>Линия без концов. Без кратности ERD теряет главный смысл.</div>
+  </div>
+  <p class="links">Читать: <a href="https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model">Wikipedia, Entity-relationship model, раздел Crow's foot notation</a>; <a href="https://mermaid.js.org/syntax/entityRelationshipDiagram.html">mermaid, erDiagram</a>; по-русски: <a href="https://practicum.yandex.ru/blog/chto-takoe-er-diagramma/">Практикум, ER-диаграммы</a><a class="ref" href="#s12">12</a>.</p>
+</section>
+
+
+<section id="bpmn">
+  <span class="num">08</span>
+  <h2>BPMN и flowchart: процесс</h2>
+  <div class="q"><b>Отвечает на вопрос</b>Кто что делает по шагам, где ждём, где развилка.</div>
+  <p>BPMN - стандарт OMG для бизнес-процессов<a class="ref" href="#s5">5</a>. В нём около сотни элементов, в работе хватает восьми. Главная сила - дорожки: видно, кто отвечает за шаг. Flowchart - упрощённая версия без дорожек и типов событий, для алгоритма внутри одного исполнителя.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Знак</th><th>Элемент</th><th>Значит</th></tr></thead>
+    <tbody>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><circle class="box" cx="32" cy="16" r="11"/></svg></td><td>Начальное событие</td><td>тонкий круг: процесс стартует</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><circle class="box" cx="32" cy="16" r="11"/><circle class="ln" cx="32" cy="16" r="8"/><path class="ln" d="M32,11 V16 L35,18" style="stroke-width:1.2"/></svg></td><td>Событие таймера</td><td>часы: старт или ожидание по времени</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><circle class="box" cx="32" cy="16" r="11" style="stroke-width:3.5"/></svg></td><td>Конечное событие</td><td>толстый круг: процесс закончен</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="box" x="6" y="5" width="52" height="22" rx="7"/></svg></td><td>Задача</td><td>действие, глагол в подписи</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><path class="box" d="M32,3 L45,16 L32,29 L19,16 z"/><path class="ln" d="M27,11 L37,21 M37,11 L27,21"/></svg></td><td>Исключающий шлюз</td><td>ровно одна ветка из нескольких</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln" x1="6" y1="16" x2="56" y2="16" marker-end="url(#m-fill)"/></svg></td><td>Поток управления</td><td>порядок шагов внутри одного пула</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><line class="ln dash" x1="8" y1="16" x2="56" y2="16" marker-start="url(#m-circ)" marker-end="url(#m-open)"/></svg></td><td>Поток сообщений</td><td>сигнал другому участнику, между пулами</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><path class="box" d="M22,3 H38 L44,9 V29 H22 z M38,3 V9 H44"/></svg></td><td>Объект данных</td><td>документ, лист, файл</td></tr>
+      <tr><td class="ic"><svg viewBox="0 0 64 32"><rect class="box" x="4" y="3" width="56" height="26" style="fill:none"/><line class="ln" x1="14" y1="3" x2="14" y2="29"/><line class="ln" x1="14" y1="16" x2="60" y2="16"/></svg></td><td>Пул и дорожки</td><td>пул - участник, дорожка - роль внутри него</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="ttl">планировщик: вычитка и публикация расписания месяца</div>
+    <svg class="d" viewBox="0 0 820 410" role="img" aria-label="BPMN: клуб ведёт лист; 23-го числа ассистент собирает черновики и показывает в группе; контролёры вычитывают; при да ассистент публикует и закрепляет пост в каналах, при нет черновик снят">
+
+      <rect class="box" x="20" y="20" width="780" height="310" style="fill:none"/>
+      <line class="ln" x1="50" y1="20" x2="50" y2="330"/>
+      <line class="ln" x1="20" y1="110" x2="800" y2="110" style="stroke-width:1"/>
+      <line class="ln" x1="20" y1="230" x2="800" y2="230" style="stroke-width:1"/>
+      <text class="b" transform="translate(40 65) rotate(-90)" text-anchor="middle" style="font-size:12px">Клуб</text>
+      <text class="b" transform="translate(40 170) rotate(-90)" text-anchor="middle" style="font-size:12px">Ассистент</text>
+      <text class="b" transform="translate(40 280) rotate(-90)" text-anchor="middle" style="font-size:12px">Контролёры</text>
+      <rect class="box" x="20" y="350" width="780" height="46" style="fill:none"/>
+      <text class="b" x="410" y="378" text-anchor="middle">Каналы Telegram</text>
+
+      <rect class="box" x="80" y="42" width="120" height="46" rx="10"/>
+      <text x="140" y="62" text-anchor="middle">Ведёт лист</text>
+      <text x="140" y="77" text-anchor="middle">месяца</text>
+      <path class="box" d="M240,36 H264 L274,46 V80 H240 z M264,36 V46 H274"/>
+      <text class="mut" x="285" y="62" style="font-size:11px">Лист</text>
+      <text class="mut" x="285" y="76" style="font-size:11px">Google Sheets</text>
+      <line class="ln dot" x1="200" y1="62" x2="238" y2="58" marker-end="url(#m-open)"/>
+      <line class="ln dot" x1="252" y1="80" x2="216" y2="145" marker-end="url(#m-open)"/>
+
+      <circle class="box" cx="95" cy="170" r="15"/>
+      <circle class="ln" cx="95" cy="170" r="11"/>
+      <path class="ln" d="M95,163 V170 L100,173" style="stroke-width:1.2"/>
+      <text class="mut" x="95" y="201" text-anchor="middle" style="font-size:11px">23-е число</text>
+      <line class="ln" x1="110" y1="170" x2="138" y2="170" marker-end="url(#m-fill)"/>
+      <rect class="box" x="140" y="147" width="130" height="46" rx="10"/>
+      <text x="205" y="167" text-anchor="middle">Собирает</text>
+      <text x="205" y="182" text-anchor="middle">черновики</text>
+      <line class="ln" x1="270" y1="170" x2="308" y2="170" marker-end="url(#m-fill)"/>
+      <rect class="box" x="310" y="147" width="130" height="46" rx="10"/>
+      <text x="375" y="167" text-anchor="middle">Показывает</text>
+      <text x="375" y="182" text-anchor="middle">в группе</text>
+      <rect class="box" x="560" y="147" width="140" height="46" rx="10"/>
+      <text x="630" y="167" text-anchor="middle">Публикует</text>
+      <text x="630" y="182" text-anchor="middle">и закрепляет</text>
+      <line class="ln" x1="700" y1="170" x2="743" y2="170" marker-end="url(#m-fill)"/>
+      <circle class="box" cx="760" cy="170" r="15" style="stroke-width:3.5"/>
+
+      <line class="ln" x1="375" y1="193" x2="375" y2="255" marker-end="url(#m-fill)"/>
+      <rect class="box" x="310" y="257" width="130" height="46" rx="10"/>
+      <text x="375" y="284" text-anchor="middle">Вычитывают</text>
+      <line class="ln" x1="440" y1="280" x2="478" y2="280" marker-end="url(#m-fill)"/>
+      <path class="box" d="M500,258 L522,280 L500,302 L478,280 z"/>
+      <path class="ln" d="M493,273 L507,287 M507,273 L493,287"/>
+      <text class="mut" x="500" y="318" text-anchor="middle" style="font-size:11px">решение</text>
+      <polyline class="ln" points="500,258 500,170 558,170" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="508" y="218">публикуем</text>
+      <line class="ln" x1="522" y1="280" x2="574" y2="280" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="548" y="272" text-anchor="middle">нет</text>
+      <circle class="box" cx="590" cy="280" r="15" style="stroke-width:3.5"/>
+      <text class="mut" x="590" y="311" text-anchor="middle" style="font-size:11px">черновик снят</text>
+
+      <line class="ln dash" x1="660" y1="196" x2="660" y2="348" marker-start="url(#m-circ)" marker-end="url(#m-open)"/>
+      <text class="lbl" x="668" y="300">пост</text>
+    </svg>
+    <figcaption>Пул «учебный проект» с тремя дорожками сверху, каналы - отдельный пул: туда идёт только поток сообщений (пунктир с кружком). Пунктир точками - связь с объектом данных. Опущены: напоминание через 2 дня, свой текст контролёра, правка живого поста. Учебная схема взаимодействия сервисов.</figcaption>
+  </figure>
+
+  <h3>Flowchart: когда хватает его</h3>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Flowchart</th><th>BPMN</th></tr></thead>
+    <tbody>
+      <tr><td>Исполнитель</td><td>один</td><td>несколько, по дорожкам</td></tr>
+      <tr><td>Ожидание и таймеры</td><td>нет отдельного знака</td><td>события таймера и сообщения</td></tr>
+      <tr><td>Пример учебный проект</td><td>правило отсева в рассылке</td><td>рассылка целиком: заказчик, владелец, агент, сервис доставки</td></tr>
+    </tbody>
+  </table></div>
+  <div class="read">
+    <h3>Как читать пример</h3>
+    <ol>
+<li>Слева названия дорожек: кто отвечает за шаг.</li>
+<li>Старт - событие таймера 23-го числа: процесс запускает календарь, а не человек.</li>
+<li>Переход между дорожками - передача работы. Ассистент показал, контролёры вычитывают: здесь процесс ждёт людей.</li>
+<li>Ромб с крестом - ровно одна ветка из двух.</li>
+<li>Каналы - отдельный пул. Туда уходит сообщение, а не шаг: внутрь каналов процесс не заглядывает.</li>
+    </ol>
+    <p><b>Когда брать:</b> процесс с людьми, ожиданиями и сроками, согласование с клубом. <b>Когда не брать:</b> обмен сообщениями между сервисами: это последовательность.</p>
+  </div>
+  <div class="mist">
+    <div><b>Ошибка</b>Задача без глагола: «Черновики» вместо «Собирает черновики».</div>
+    <div><b>Ошибка</b>Ромб без подписей на выходах. Неясно, какая ветка какая.</div>
+    <div><b>Ошибка</b>Поток управления между пулами. Между участниками ходят только сообщения.</div>
+  </div>
+  <p class="links">Читать: <a href="https://www.drawio.com/blog/bpmn-2-0">draw.io, BPMN 2.0</a>; <a href="https://en.wikipedia.org/wiki/Business_Process_Model_and_Notation">Wikipedia, BPMN</a>; <a href="https://mermaid.js.org/syntax/flowchart.html">mermaid, flowchart</a>; по-русски: <a href="https://practicum.yandex.ru/blog/notaciya-bpmn-dlya-biznes-processov/">Практикум, нотация BPMN 2.0</a>, <a href="https://practicum.yandex.ru/blog/notacii-modelirovaniya-biznes-processov/">Практикум, нотации бизнес-процессов: IDEF, EPC, BPMN</a><a class="ref" href="#s12">12</a>.</p>
+</section>
+
+
+<section id="tools">
+  <span class="num">09</span>
+  <h2>В draw.io, Excalidraw, mermaid</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Нотация</th><th>draw.io</th><th>Excalidraw</th><th>mermaid (в доках)</th></tr></thead>
+    <tbody>
+      <tr><td>C4</td><td>набор C4<a class="ref" href="#s8">8</a></td><td>прямоугольники и цвет вручную</td><td><code>C4Context</code>, экспериментальный</td></tr>
+      <tr><td>Sequence</td><td>набор UML</td><td>вручную, линии жизни пунктиром</td><td><code>sequenceDiagram</code></td></tr>
+      <tr><td>State</td><td>набор UML</td><td>скруглённые прямоугольники</td><td><code>stateDiagram-v2</code></td></tr>
+      <tr><td>ERD</td><td>набор Entity Relation</td><td>вручную, концы линий рисовать сложно</td><td><code>erDiagram</code></td></tr>
+      <tr><td>BPMN</td><td>набор BPMN</td><td>вручную или библиотека сообщества<a class="ref" href="#s9">9</a></td><td>нет, только <code>flowchart</code></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Как включить наборы фигур в draw.io</h3>
+  <ol>
+    <li>Откройте файл <code>.drawio</code> в VS Code.</li>
+    <li>Внизу левой панели фигур нажмите «+ More Shapes».</li>
+    <li>Отметьте нужные наборы: UML, BPMN General, Entity Relation, C4.</li>
+    <li>Нажмите Apply. Наборы появятся в левой панели.</li>
+  </ol>
+
+  <p>Вывод для пробы: draw.io даёт фигуры нотаций готовыми, Excalidraw - свободный холст для набросков. Это пункт для сравнения 18.10.</p>
+</section>
+
+
+
+
+
+<section id="sources">
+  <span class="num">11</span>
+  <h2>Источники</h2>
+  <ol class="srclist">
+    <li id="s1"><span class="i">1</span><span><a href="https://c4model.com/diagrams/notation">C4 model, Notation</a> и <a href="https://c4model.com/">c4model.com</a>. <span class="w">Первоисточник, автор Simon Brown. Требование легенды и свобода цветов перепроверены по странице 04.10.</span></span></li>
+    <li id="s2"><span class="i">2</span><span><a href="https://c4model.com/diagrams/container">C4 model, Container diagram</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s3"><span class="i">3</span><span><a href="https://www.omg.org/spec/UML/2.5.1">OMG UML 2.5.1</a>. <span class="w">Первоисточник, спецификация; для чтения тяжела, ниже понятный пересказ.</span></span></li>
+    <li id="s4"><span class="i">4</span><span><a href="https://www.uml-diagrams.org/sequence-diagrams.html">uml-diagrams.org, Sequence diagrams</a>; <a href="https://en.wikipedia.org/wiki/Sequence_diagram">Wikipedia, Sequence diagram</a>. <span class="w">Пересказ спецификации с примерами.</span></span></li>
+    <li id="s5"><span class="i">5</span><span><a href="https://www.omg.org/spec/BPMN/2.0.2">OMG BPMN 2.0.2</a>; <a href="https://www.drawio.com/blog/bpmn-2-0">draw.io, BPMN 2.0</a>. <span class="w">Первоисточник и практический пересказ.</span></span></li>
+    <li id="s6"><span class="i">6</span><span><a href="https://www.uml-diagrams.org/state-machine-diagrams.html">uml-diagrams.org, State machine diagrams</a>; <a href="https://en.wikipedia.org/wiki/UML_state_machine">Wikipedia, UML state machine</a>. <span class="w">Пересказ спецификации.</span></span></li>
+    <li id="s7"><span class="i">7</span><span><a href="https://en.wikipedia.org/wiki/Entity%E2%80%93relationship_model">Wikipedia, Entity-relationship model</a>. <span class="w">Пересказ; единого стандарта ERD нет, crow's foot - самая частая запись.</span></span></li>
+    <li id="s8"><span class="i">8</span><span><a href="https://www.drawio.com/blog/c4-modelling">draw.io, C4 modelling</a>; <a href="https://www.drawio.com/docs">документация draw.io</a>. <span class="w">Первоисточник по инструменту; наличие наборов в расширении проверено по его файлам.</span></span></li>
+    <li id="s9"><span class="i">9</span><span><a href="https://libraries.excalidraw.com">libraries.excalidraw.com</a>; <a href="https://docs.excalidraw.com">docs.excalidraw.com</a>. <span class="w">Библиотеки сообщества, качество наборов не проверял.</span></span></li>
+    <li id="s10"><span class="i">10</span><span>Mermaid: <a href="https://mermaid.js.org/syntax/c4.html">C4</a>, <a href="https://mermaid.js.org/syntax/sequenceDiagram.html">sequence</a>, <a href="https://mermaid.js.org/syntax/stateDiagram.html">state</a>, <a href="https://mermaid.js.org/syntax/entityRelationshipDiagram.html">ER</a>, <a href="https://mermaid.js.org/syntax/flowchart.html">flowchart</a>. <span class="w">Первоисточник по синтаксису.</span></span></li>
+
+    <li id="s12"><span class="i">12</span><span>Блог Яндекс Практикума, по-русски: <a href="https://practicum.yandex.ru/blog/uml-diagrammy/">что такое UML</a>, <a href="https://practicum.yandex.ru/blog/sequence-diagram/">диаграмма последовательности</a>, <a href="https://practicum.yandex.ru/blog/chto-takoe-er-diagramma/">ER-диаграммы</a>, <a href="https://practicum.yandex.ru/blog/notaciya-bpmn-dlya-biznes-processov/">BPMN 2.0</a>, <a href="https://practicum.yandex.ru/blog/notacii-modelirovaniya-biznes-processov/">нотации бизнес-процессов</a>. Вне лекции: <a href="https://practicum.yandex.ru/blog/diagramma-potokov-dannyh-dfd/">DFD</a>, <a href="https://practicum.yandex.ru/blog/chto-takoe-use-case-kak-ih-napisat/">use case</a>. Платный курс с этими темами: <a href="https://practicum.yandex.ru/systems-analyst/">«Системный аналитик»</a>. <span class="w">Пересказ для начинающих. Адреса и заголовки проверены 04.10, текст статей целиком не вычитан. Статей про C4 и диаграмму состояний в блоге нет.</span></span></li>
+  </ol>
+  <p class="links">Книги, если захочется глубже: Simon Brown, «The C4 model for visualising software architecture»; Martin Fowler, «UML Distilled» (UML за 180 страниц, только нужное).</p>
+</section>
+</main>
+</div>
+</body></html>

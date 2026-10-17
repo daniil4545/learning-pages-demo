@@ -1,0 +1,562 @@
+<!doctype html>
+
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Наблюдаемость: логи, метрики, трассировки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --code:#EEF2EF;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818; --code:#0F1513;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818; --code:#0F1513;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px;max-height:calc(100vh - 48px);overflow-y:auto}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:18px 0 12px}
+nav.toc p:first-child{margin-top:0}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:t}
+nav.toc ol.prac{counter-reset:t 6}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:18px}
+nav.toc ol.src li::before{content:""}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+ul.plain,ol.plain{max-width:70ch;padding-left:22px;margin:0 0 14px}
+ul.plain li,ol.plain li{margin-bottom:4px}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font:13px/1.5 var(--mono);margin:10px 0 16px;max-width:100%}
+pre code{font-size:inherit}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static;max-height:none}}
+
+/* callout */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap;vertical-align:1px}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+.cap{font-size:13px;color:var(--muted);margin:-8px 0 16px}
+
+/* numbers */
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:18px 0}
+.kpi div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.kpi b{display:block;font:700 28px/1.1 var(--display);color:var(--accent)}
+.kpi span{display:block;font-size:13.5px;color:var(--muted);margin-top:6px}
+
+/* figure with inline svg */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .dash{stroke-dasharray:6 4}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .res{fill:var(--res-soft);stroke:var(--res);stroke-width:1.5}
+svg .bnd{fill:none;stroke:var(--muted);stroke-width:1.2;stroke-dasharray:6 4}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .s{font-size:11px}
+
+/* walkthrough */
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+.read p{font-size:14.5px;color:var(--muted);margin:0 0 8px}
+
+/* mistakes and steps */
+.mist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:14px 0}
+.mist div{background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:14px}
+.mist b{display:block;color:var(--warn);font-size:13px;margin-bottom:3px}
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex > div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px minmax(0,1fr);gap:6px}
+.ex > div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+.ex pre{margin:8px 0 2px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+@media print{
+  body{background:#fff}
+  nav.toc{display:none}
+  .wrap{display:block}
+  section{break-inside:avoid-page}
+}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+    <marker id="m-open" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Теория</p>
+  <ol>
+    <li><a href="#s-why">Зачем</a></li>
+    <li><a href="#s-signals">Сигналы</a></li>
+    <li><a href="#s-arch">Как устроено</a></li>
+    <li><a href="#s-tools">Инструменты</a></li>
+    <li><a href="#s-practice">Практика индустрии</a></li>
+    <li><a href="#s-setup">Настройка</a></li>
+  </ol>
+  <p>Практика</p>
+  <ol class="prac">
+
+
+
+
+
+
+
+  </ol>
+  <p>Справка</p>
+  <ol class="src">
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <span class="eyebrow">Лекция и лабораторная · 05.10.2026</span>
+  <h1>Наблюдаемость: от сигнала к причине</h1>
+  <p class="lead">Как логи, метрики и трассировки помогают понять работу сервиса. Разберём сбор сигналов, хранилища, запросы и тревоги на условных примерах.</p>
+
+<p class="library-edition">Учебная версия для публичной библиотеки. Рабочие сведения исключены, примеры обобщены. Версии и измерения сохранены на дату исходной лекции.</p></header>
+
+
+<section id="s-why">
+  <span class="num">01 · ТЕОРИЯ</span>
+  <h2>Зачем: мониторинг и наблюдаемость</h2>
+  <div class="q"><b>Вывод</b>Мониторинг отвечает на заранее известные вопросы. Наблюдаемость позволяет задать новый вопрос, не меняя код.</div>
+
+  <h3>Что такое мониторинг</h3>
+  <p>Мониторинг (monitoring) - это сбор, обработка и показ числовых данных о системе в реальном времени<a class="ref" href="#s1">1</a>. Проще говоря, ты заранее решаешь, на что смотреть: загрузка процессора, место на диске, число ошибок. Система каждые несколько секунд записывает эти числа, рисует графики и шлёт тревогу, когда число выходит за порог.</p>
+
+  <h3>Что такое наблюдаемость</h3>
+  <p>Наблюдаемость (observability) - это свойство системы, при котором по её внешним данным можно понять, что происходит внутри. Данные - это логи, метрики и трассировки. Мониторинг ловит известную беду: «диск заполнен на 90%». Наблюдаемость нужна, когда беда новая: «почему учебный сервис вчера в 03:10 не ответил лиду». Ответ ищется запросом к уже собранным данным, а не новой правкой кода.</p>
+
+  <h3>Белый и чёрный ящик</h3>
+  <p>Мониторинг белого ящика (white-box) смотрит на внутренние данные системы: логи, счётчики, метрики процесса. Мониторинг чёрного ящика (black-box) проверяет поведение снаружи, как его видит пользователь<a class="ref" href="#s1">1</a>. Проверка HTTP-ответа снаружи - пример чёрного ящика. Метрики процесса - пример белого.</p>
+
+  <div class="tbl"><table>
+    <thead><tr></tr></thead>
+    <tbody>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 1 - вопросы, которые закрывает наблюдаемость, и подходящие сигналы.</p>
+
+  <p class="links">Читать: <a href="https://sre.google/sre-book/monitoring-distributed-systems/">Google SRE Book, Monitoring Distributed Systems</a><a class="ref" href="#s1">1</a>.</p>
+</section>
+
+
+<section id="s-signals">
+  <span class="num">02 · ТЕОРИЯ</span>
+  <h2>Сигналы: логи, метрики, трассировки</h2>
+  <div class="q"><b>Вывод</b>Метрика говорит «что-то не так», лог говорит «что именно», трассировка говорит «где в цепочке». Дешевле всего метрики, дороже всего логи.</div>
+
+  <p>Сигнал (signal) - это вид телеметрии, который система отдаёт наружу. OpenTelemetry выделяет три основных сигнала: трассировки, метрики и логи<a class="ref" href="#s5">5</a>.</p>
+
+  <h3>Лог</h3>
+  <p>Лог (log) - это запись о событии со временем и текстом<a class="ref" href="#s5">5</a>. Сервис пишет строку в stdout, Docker передаёт её в журнал хоста. У учебный сервис строка - JSON с полями <code>time</code>, <code>level</code>, <code>msg</code> и номерами сделки. Лог отвечает на вопрос «что произошло с этим лидом», но занимает много места: каждая строка хранится целиком.</p>
+  <pre><code>{"time":"…","level":"INFO","msg":"…","case_id":…,"request_id":…}</code></pre>
+  <p>Уровень ошибки можно извлечь из поля JSON при запросе.</p>
+
+  <h3>Метрика</h3>
+  <p>Метрика (metric) - это число, измеренное во время работы<a class="ref" href="#s5">5</a>. Сборщик берёт его раз в 15-60 секунд и хранит ряд «время - значение». Ряд называется временным рядом (time series). Метрика отвечает на вопросы «сколько» и «как быстро растёт». Хранится дёшево: Prometheus тратит в среднем 1-2 байта на одно значение<a class="ref" href="#s7">7</a>.</p>
+  <pre><code>node_filesystem_avail_bytes{host="node-a", mountpoint="/"}  1.15e+11</code></pre>
+  <p>Из строки видно: у метрики есть имя, метки в фигурных скобках и значение. Здесь свободно около 107 ГБ корневого диска в условном примере.</p>
+
+  <h3>Трассировка</h3>
+  <p>Трассировка (trace) - это путь одного запроса через систему<a class="ref" href="#s5">5</a>. Она состоит из отрезков (span): «принял сообщение», «спросил модель», «записал в CRM», у каждого есть начало и длительность. Трассировка отвечает на вопрос «на каком шаге ушли 40 секунд». Чтобы она появилась, код сервиса должен её отдавать через библиотеку OpenTelemetry. </p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Сигнал</th><th>Отвечает на вопрос</th><th>Цена хранения</th><th>Что нужно от сервиса</th></tr></thead>
+    <tbody>
+      <tr><td>Метрика</td><td>сколько, как часто, тренд</td><td><span class="tag ok">низкая</span> байты на точку</td><td>экспортер или счётчики в коде</td></tr>
+      <tr><td>Лог</td><td>что именно случилось</td><td><span class="tag no">высокая</span> каждая строка целиком</td><td>ничего: stdout уже пишется</td></tr>
+      <tr><td>Трассировка</td><td>где в цепочке задержка или ошибка</td><td><span class="tag r">средняя</span> обычно хранят выборку</td><td>правка кода, SDK OpenTelemetry</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 2 - три сигнала. Сигналы дополняют друг друга.</p>
+
+  <p class="links">Читать: <a href="https://opentelemetry.io/docs/concepts/signals/">OpenTelemetry, Signals</a><a class="ref" href="#s5">5</a>; <a href="https://prometheus.io/docs/prometheus/latest/storage/">Prometheus, Storage</a><a class="ref" href="#s7">7</a>.</p>
+</section>
+
+
+<section id="s-arch">
+  <span class="num">03 · ТЕОРИЯ</span>
+  <h2>Как устроено: сбор, хранилище, запрос, графики, тревоги</h2>
+  <div class="q"><b>Вывод</b>Любой стек наблюдаемости - это пять звеньев. Меняются только программы в звеньях и направление сбора: pull или push.</div>
+
+  <p>Конвейер телеметрии (telemetry pipeline) - это цепочка программ от источника данных до человека. Сборщик забирает данные у сервиса и хоста. Хранилище кладёт их на диск и чистит старое. Язык запросов достаёт нужное. Графический интерфейс рисует доски. Модуль тревог раз в минуту выполняет запрос и шлёт уведомление, если условие выполнено (рис. 1).</p>
+
+  <figure>
+    <div class="ttl">Рисунок 1 - пять звеньев и два направления сбора</div>
+    <svg class="d" viewBox="0 0 800 290" role="img" aria-label="Сервис и хост отдают данные сборщику Alloy, он отправляет логи в Loki и метрики в Prometheus, Grafana запрашивает оба хранилища, правило тревоги по запросу шлёт уведомление в Telegram; Prometheus может сам забирать метрики у хоста">
+      <rect class="box" x="20" y="40" width="130" height="44" rx="4"/>
+      <text class="b" x="85" y="67" text-anchor="middle">Сервис</text>
+      <rect class="box" x="20" y="120" width="130" height="44" rx="4"/>
+      <text class="b" x="85" y="141" text-anchor="middle">Хост</text>
+      <text class="s mut" x="85" y="156" text-anchor="middle">экспортер /metrics</text>
+
+      <rect class="hl" x="210" y="80" width="130" height="44" rx="4"/>
+      <text class="b" x="275" y="101" text-anchor="middle">Сборщик</text>
+      <text class="s mut" x="275" y="116" text-anchor="middle">Alloy</text>
+
+      <rect class="soft" x="410" y="40" width="140" height="44" rx="4"/>
+      <text class="b" x="480" y="61" text-anchor="middle">Хранилище логов</text>
+      <text class="s mut" x="480" y="76" text-anchor="middle">Loki</text>
+      <rect class="soft" x="410" y="120" width="140" height="44" rx="4"/>
+      <text class="b" x="480" y="141" text-anchor="middle">Хранилище метрик</text>
+      <text class="s mut" x="480" y="156" text-anchor="middle">Prometheus</text>
+
+      <rect class="box" x="620" y="80" width="160" height="44" rx="4"/>
+      <text class="b" x="700" y="101" text-anchor="middle">Grafana</text>
+      <text class="s mut" x="700" y="116" text-anchor="middle">запрос и доски</text>
+
+      <rect class="res" x="620" y="220" width="160" height="44" rx="4"/>
+      <text class="b" x="700" y="241" text-anchor="middle">Правило тревоги</text>
+      <text class="s mut" x="700" y="256" text-anchor="middle">запрос раз в минуту</text>
+      <rect class="box" x="410" y="220" width="140" height="44" rx="4"/>
+      <text class="b" x="480" y="247" text-anchor="middle">Telegram</text>
+
+      <line class="ln" x1="150" y1="62" x2="208" y2="94" marker-end="url(#m-fill)"/>
+      <text class="lbl s" x="170" y="68">stdout</text>
+      <line class="ln" x1="150" y1="142" x2="208" y2="112" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="340" y1="94" x2="408" y2="64" marker-end="url(#m-fill)"/>
+      <text class="lbl s" x="372" y="72" text-anchor="middle">push</text>
+      <line class="ln" x1="340" y1="110" x2="408" y2="140" marker-end="url(#m-fill)"/>
+      <text class="lbl s" x="372" y="136" text-anchor="middle">push</text>
+      <line class="ln" x1="550" y1="62" x2="618" y2="94" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="550" y1="142" x2="618" y2="112" marker-end="url(#m-fill)"/>
+      <text class="lbl s" x="585" y="72" text-anchor="middle">LogQL</text>
+      <text class="lbl s" x="585" y="140" text-anchor="middle">PromQL</text>
+      <line class="ln" x1="700" y1="124" x2="700" y2="218" marker-end="url(#m-fill)"/>
+      <text class="lbl s" x="706" y="175">тот же запрос</text>
+      <line class="ln" x1="620" y1="242" x2="552" y2="242" marker-end="url(#m-fill)"/>
+      <text class="lbl s" x="586" y="234" text-anchor="middle">шлёт</text>
+
+      <path class="ln dash" d="M480,164 V196 H85 V166" marker-end="url(#m-open)"/>
+      <text class="lbl s" x="280" y="200" text-anchor="middle">pull: Prometheus сам забирает /metrics раз в 30 с</text>
+    </svg>
+    <figcaption>Сплошная стрелка - данные идут от источника (push). Пунктир - хранилище само опрашивает источник (pull). Синий - сборщик телеметрии. Источник: документация Prometheus и Alloy<a class="ref" href="#s6">6</a><a class="ref" href="#s15">15</a>.</figcaption>
+  </figure>
+
+  <div class="read">
+    <h3>Как читать</h3>
+    <ol>
+      <li>Слева источники. Сервис пишет строки в stdout, хост отдаёт счётчики экспортеру.</li>
+      <li>Сборщик в середине - единственная программа на узле. Он толкает (push) логи и метрики в два хранилища.</li>
+      <li>Grafana не хранит данных. Она отправляет запрос в хранилище и рисует ответ.</li>
+      <li>Правило тревоги выполняет тот же запрос по расписанию и шлёт сообщение в Telegram.</li>
+      <li>Пунктир внизу - второй способ сбора метрик: хранилище само ходит к экспортеру (pull).</li>
+    </ol>
+    <p>Если хранилище не может обращаться к источнику по сети, подходит отправка данных от сборщика.</p>
+  </div>
+
+  <h3>Pull и push</h3>
+  <p>Pull - это способ сбора, при котором хранилище само опрашивает источник по HTTP. Так работает Prometheus: раз в интервал он делает запрос к адресу <code>/metrics</code>. Документация Prometheus называет плюсы pull: можно поднять ещё один экземпляр для проверки и легко понять, что цель недоступна<a class="ref" href="#s6">6</a>. Push - это способ, при котором источник сам отправляет данные в хранилище. Его выбирают, когда хранилище не видит источник по сети.</p>
+
+  <p class="links">Читать: <a href="https://prometheus.io/docs/introduction/faq/">Prometheus FAQ, «Why do you pull rather than push?»</a><a class="ref" href="#s6">6</a>.</p>
+</section>
+
+
+<section id="s-tools">
+  <span class="num">04 · ТЕОРИЯ</span>
+  <h2>Инструменты</h2>
+  <div class="q"><b>Вывод</b>Для небольшой системы хватает Alloy, Loki, Grafana и одного хранилища метрик. Tempo и OpenTelemetry - когда сервисы начнут отдавать трассировки.</div>
+
+  <h3>Prometheus и экспортеры</h3>
+  <p>Prometheus - это база временных рядов, которая сама собирает метрики по модели pull<a class="ref" href="#s6">6</a>. Экспортер (exporter) - это маленькая программа, которая переводит чужие счётчики в формат Prometheus. node_exporter отдаёт метрики Linux с префиксом <code>node_</code> на порту 9100<a class="ref" href="#s8">8</a>. cAdvisor отдаёт метрики контейнеров: процессор, память, сеть<a class="ref" href="#s27">27</a>. Для логов Prometheus не подходит, документация прямо советует Loki<a class="ref" href="#s6">6</a>.</p>
+
+  <h3>Loki</h3>
+  <p>Loki - это хранилище логов, которое индексирует только метки, а не текст строк<a class="ref" href="#s42">42</a>. Строки сжимаются кусками (chunk) и лежат на диске. Поиск по тексту идёт перебором внутри выбранных метками потоков. Поэтому Loki дешёвый, но медленный на запросах без хороших меток.</p>
+
+  <h3>Alloy</h3>
+  <p>Alloy - это сборщик телеметрии от Grafana Labs, сборка OpenTelemetry Collector со встроенными конвейерами Prometheus<a class="ref" href="#s15">15</a>. Он собирает логи, метрики, трассировки и профили одной программой. Старый сборщик логов Promtail закрыт 02.03.2026, Grafana предлагает переходить на Alloy<a class="ref" href="#s14">14</a>.</p>
+
+  <h3>Grafana, Tempo, OpenTelemetry</h3>
+  <p>Grafana - это интерфейс для запросов, досок и тревог поверх любых хранилищ. Tempo - хранилище трассировок, ему нужно только объектное хранилище<a class="ref" href="#s33">33</a>. OpenTelemetry - открытый стандарт и набор библиотек, через которые код сервиса отдаёт все три сигнала по протоколу OTLP<a class="ref" href="#s5">5</a>.</p>
+
+  <div class="tbl"><table>
+    <thead><tr></tr></thead>
+    <tbody>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+      <tr></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 3 - инструменты, назначение и когда их брать.</p>
+
+  <h3>Zabbix и стек LGTM: разные участки</h3>
+  <p>Zabbix - это система мониторинга серверов. Агент на каждом узле снимает показатели, сервер Zabbix сравнивает их с порогами (триггерами) и шлёт тревогу<a class="ref" href="#s36">36</a><a class="ref" href="#s43">43</a>. Сильная сторона Zabbix - железо и операционная система: диск, память, процессор, сеть, опрос устройств по SNMP и IPMI<a class="ref" href="#s45">45</a>. Логи Zabbix не хранит и не ищет: агент следит за строками в файле и шлёт тревогу на совпадение<a class="ref" href="#s44">44</a>. Трассировок в Zabbix нет.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Участок</th><th>Zabbix</th><th>Стек LGTM</th></tr></thead>
+    <tbody>
+      <tr><td>Хост: диск, память, процессор</td><td><span class="tag ok">сильная сторона</span> готовые шаблоны</td><td>node_exporter в Alloy, доски Grafana</td></tr>
+      <tr><td>Сеть и железо: SNMP, IPMI</td><td><span class="tag ok">сильная сторона</span></td><td>слабо</td></tr>
+      <tr><td>Метрики приложения</td><td>можно, вручную на каждую метрику<a class="ref" href="#s46">46</a></td><td><span class="tag ok">сильная сторона</span> сервис отдаёт их сам</td></tr>
+      <tr><td>Логи</td><td>тревога на строку в файле, поиска нет</td><td><span class="tag ok">сильная сторона</span> Loki: хранение и поиск</td></tr>
+      <tr><td>Трассировки</td><td>нет</td><td>Tempo, позже</td></tr>
+      <tr><td>Тревоги</td><td>зрелые: эскалации, подтверждение</td><td>Grafana Alerting, проще</td></tr>
+      <tr><td>Где настройки</td><td>в базе Zabbix, правятся в интерфейсе</td><td>файлы в git</td></tr>
+
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 4 - Zabbix и стек LGTM по участкам.</p>
+  <div class="q"><b>Вывод</b>Zabbix - про серверы, стек - про сервисы. Друг другу они не мешают. Тревоги по хосту должна слать одна система, иначе приходят дубли с разными порогами.</div>
+
+
+
+  <p class="links">Читать: <a href="https://grafana.com/docs/alloy/latest/introduction/">Alloy, Introduction</a><a class="ref" href="#s15">15</a>; <a href="https://grafana.com/docs/loki/latest/get-started/overview/">Loki, Overview</a><a class="ref" href="#s42">42</a>.</p>
+</section>
+
+
+<section id="s-practice">
+  <span class="num">05 · ТЕОРИЯ</span>
+  <h2>Практика индустрии: LGTM, USE, RED, SLO, тревоги</h2>
+  <div class="q"><b>Вывод</b>Хост проверяем по USE, сервис по RED, тревогу ставим на симптом, который видит пользователь.</div>
+
+  <h3>Стек LGTM</h3>
+  <p>LGTM - это набор Grafana Labs: Loki для логов, Grafana для интерфейса, Tempo для трассировок, Mimir для метрик<a class="ref" href="#s37">37</a>. Mimir - масштабируемое хранилище, совместимое с Prometheus. На одном узле вместо Mimir ставят обычный Prometheus или VictoriaMetrics.</p>
+
+  <h3>Метод USE для ресурсов</h3>
+  <p>USE - это метод проверки ресурса: «для каждого ресурса проверь использование, насыщение и ошибки»<a class="ref" href="#s3">3</a>. Использование (utilization) - доля времени, когда ресурс занят. Насыщение (saturation) - очередь работы, которую ресурс не успевает сделать. Ошибки (errors) - число отказов. Ресурсы - процессор, память, диск, сеть.</p>
+
+  <h3>Метод RED для сервисов</h3>
+  <p>RED - это метод проверки сервиса: частота запросов (rate), число ошибок (errors) и длительность (duration)<a class="ref" href="#s4">4</a>. Его предложил Том Уилки в 2015 году, потому что USE плохо подходит к сервисам. Четыре золотых сигнала Google - то же самое плюс насыщение<a class="ref" href="#s4">4</a><a class="ref" href="#s1">1</a>.</p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Метод</th><th>Для чего</th><th>Вопросы</th><th>Условный пример</th></tr></thead>
+    <tbody>
+      <tr><td>USE</td><td>хост и его ресурсы</td><td>занят ли, есть ли очередь, есть ли ошибки</td><td>заполнение диска, swap, OOM в журнале ядра</td></tr>
+      <tr><td>RED</td><td>сервис</td><td>сколько запросов, сколько ошибок, как долго</td><td>строки учебный сервис в минуту, строки с <code>level="ERROR"</code></td></tr>
+      <tr><td>Золотые сигналы</td><td>сервис для пользователя</td><td>задержка, трафик, ошибки, насыщение</td><td>то же плюс очередь отправок</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 5 - методы и что они спрашивают.</p>
+
+  <h3>SLI, SLO и бюджет ошибок</h3>
+  <p>SLI (Service Level Indicator) - это измеряемый показатель сервиса, например доля успешных ответов. SLO (Service Level Objective) - это цель для SLI: «99% запросов быстрее 100 мс»<a class="ref" href="#s2">2</a>. SLA - договор с последствиями за промах. Бюджет ошибок (error budget) - допустимая доля промахов: при SLO 99% за 30 дней это около 7 часов плохой работы. Пока бюджет не потрачен, можно спокойно выпускать релизы.</p>
+
+  <h3>Правила хорошей тревоги</h3>
+  <p>Тревога будит человека, поэтому каждая должна требовать действия<a class="ref" href="#s1">1</a>. Тревогу ставят на симптом, а не на причину: «лиды не получают ответ», а не «процессор 80%». Причина ищется уже по доскам и логам. Например, тревоги можно разделить: Аварии - нужно действие сейчас, Предупреждения - сегодня, Журнал - действия не нужно.</p>
+
+  <p class="links">Читать: <a href="https://www.brendangregg.com/usemethod.html">Brendan Gregg, The USE Method</a><a class="ref" href="#s3">3</a>; <a href="https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/">Grafana Labs, The RED Method</a><a class="ref" href="#s4">4</a>; <a href="https://sre.google/sre-book/service-level-objectives/">Google SRE Book, Service Level Objectives</a><a class="ref" href="#s2">2</a>.</p>
+</section>
+
+
+<section id="s-setup">
+  <span class="num">06 · ТЕОРИЯ</span>
+  <h2>Настройка: Alloy, метки, запросы, доски, хранение</h2>
+  <div class="q"><b>Вывод</b>Конфиг Alloy - граф компонентов. Меток мало и только с конечным числом значений. Доски и конфиги живут в git.</div>
+
+  <h3>Конфиг Alloy</h3>
+  <p>Конфиг Alloy - это набор компонентов, соединённых ссылками. Компонент - блок вида <code>тип "имя" { ... }</code>. Один компонент читает данные, другой меняет метки, третий отправляет. Связь задаёт аргумент <code>forward_to</code>: он указывает, кому передать записи. Ниже минимальный пример: прочитать журнал и отправить в Loki<a class="ref" href="#s16">16</a><a class="ref" href="#s17">17</a>.</p>
+  <pre><code>loki.source.journal "host" {                    // читает journald хоста
+  labels     = {host = "node-a", job = "journal"} // метки на каждую запись
+  forward_to = [loki.write.node_b.receiver]       // передаёт записи дальше
+}
+
+loki.write "node_b" {                             // отправляет в Loki
+  endpoint {
+    url = "https://logs.example.org/loki/api/v1/push"
+  }
+}</code></pre>
+  <p>Из примера видно: имя компонента <code>node_b</code> используется в ссылке <code>loki.write.node_b.receiver</code>. Поля журнала приходят во внутренних метках с префиксом <code>__journal_</code>, например <code>__journal__systemd_unit</code><a class="ref" href="#s16">16</a>. Всё с префиксом <code>__</code> до Loki не доходит. Поэтому нужные поля переносят в обычные метки правилами <code>relabel</code>.</p>
+
+  <h3>Метки и кардинальность</h3>
+  <p>Поток (stream) в Loki - это все строки с одинаковым набором меток. Кардинальность (cardinality) - число разных потоков. Если метка принимает тысячи значений, Loki строит огромный индекс и пишет тысячи мелких кусков, и запросы тормозят<a class="ref" href="#s12">12</a>. Хорошая метка описывает источник: узел, тип сбора, сервис, уровень. Плохая метка описывает событие: номер сделки, IP, id трассировки.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Метка</th><th>Значения</th><th>Вердикт</th></tr></thead>
+    <tbody>
+      <tr><td><code>host</code></td><td>node-a, node-b, node-c</td><td><span class="tag ok">да</span> единицы</td></tr>
+      <tr><td><code>job</code></td><td>journal, docker, caddy</td><td><span class="tag ok">да</span> единицы</td></tr>
+      <tr><td><code>service</code></td><td>sales-bot, api-server, reverse-proxy</td><td><span class="tag ok">да</span> десятки</td></tr>
+      <tr><td><code>level</code></td><td>info, warning, error</td><td><span class="tag ok">да</span> восемь</td></tr>
+      <tr><td><code>request_id</code></td><td>номер каждой сделки</td><td><span class="tag no">нет</span> тысячи, искать фильтром <code>| json</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="cap">Таблица 6 - примеры меток, включая <code>service</code>, и одна плохая метка для сравнения.</p>
+
+  <h3>LogQL</h3>
+  <p>LogQL - это язык запросов Loki. Запрос начинается с селектора потоков в фигурных скобках, дальше идёт конвейер через <code>|</code><a class="ref" href="#s9">9</a>. Фильтр строк <code>|=</code> оставляет строки с подстрокой, <code>|~</code> - с регулярным выражением. Парсер <code>| json</code> разбирает строку в поля. Если строка не JSON, парсер ставит метку <code>__error__</code>, а не выбрасывает строку<a class="ref" href="#s11">11</a>. Функция <code>count_over_time</code> превращает строки в число за окно<a class="ref" href="#s10">10</a>.</p>
+  <pre><code>{host="node-a", service="sales-bot"}                          # все строки условного сервиса
+{host="node-a", service="sales-bot"} |= "amo"                 # только строки с подстрокой
+{host="node-a", service="sales-bot"} | json | level="ERROR"   # ошибки из поля JSON
+sum by (service) (count_over_time({host="node-a"}[5m]))           # строк за 5 минут по сервисам</code></pre>
+
+  <h3>PromQL</h3>
+  <p>PromQL - это язык запросов Prometheus. Селектор выбирает ряды по имени и меткам, функция <code>rate</code> считает скорость роста счётчика в секунду за окно<a class="ref" href="#s8">8</a>. Счётчик (counter) только растёт, поэтому сам по себе бесполезен: смотрят на его скорость.</p>
+  <pre><code>rate(node_cpu_seconds_total{mode="system"}[1m])     # доля процессора на ядро в режиме system
+node_filesystem_avail_bytes{mountpoint="/"}         # свободно на корневом диске, байт
+rate(node_network_receive_bytes_total[1m])          # входящий трафик, байт в секунду</code></pre>
+
+  <h3>Доски как код</h3>
+  <p>Доска (dashboard) в Grafana - это JSON-документ с панелями и запросами. Провижининг (provisioning) - загрузка досок из файлов на сервере Grafana<a class="ref" href="#s28">28</a>. Если доска загружена из файла с <code>allowUiUpdates: false</code>, сохранить правку из интерфейса нельзя. Например, JSON доски можно хранить в git и импортировать в Grafana.</p>
+
+  <h3>Срок хранения</h3>
+  <p>Срок хранения (retention) - сколько дней хранилище держит данные. В Loki старое удаляет только компактор (compactor), и по умолчанию эта функция выключена: логи живут вечно<a class="ref" href="#s13">13</a>. Например, <code>retention_period: 720h</code> задаёт срок 30 дней. Prometheus по умолчанию хранит 15 дней, VictoriaMetrics - 31 день<a class="ref" href="#s7">7</a><a class="ref" href="#s34">34</a>.</p>
+
+  <p class="links">Читать: <a href="https://grafana.com/docs/loki/latest/query/">LogQL</a><a class="ref" href="#s9">9</a>; <a href="https://grafana.com/docs/loki/latest/get-started/labels/cardinality/">Loki, Cardinality</a><a class="ref" href="#s12">12</a>; <a href="https://prometheus.io/docs/guides/node-exporter/">Prometheus, node exporter guide</a><a class="ref" href="#s8">8</a>.</p>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<section id="sources">
+  <span class="num">ИСТОЧНИКИ</span>
+  <h2>Источники</h2>
+  <p>Статус: первоисточник - официальная страница открыта 05.10.2026; перепроверено - факт сверен командой или кодом; пересказ - вторичный или устаревший источник.</p>
+  <ol class="srclist">
+    <li id="s1"><span class="i">1</span><span><a href="https://sre.google/sre-book/monitoring-distributed-systems/">Google SRE Book, Monitoring Distributed Systems</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s2"><span class="i">2</span><span><a href="https://sre.google/sre-book/service-level-objectives/">Google SRE Book, Service Level Objectives</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s3"><span class="i">3</span><span><a href="https://www.brendangregg.com/usemethod.html">Brendan Gregg, The USE Method</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s4"><span class="i">4</span><span><a href="https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/">Grafana Labs, The RED Method</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s5"><span class="i">5</span><span><a href="https://opentelemetry.io/docs/concepts/signals/">OpenTelemetry, Signals</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s6"><span class="i">6</span><span><a href="https://prometheus.io/docs/introduction/faq/">Prometheus FAQ</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s7"><span class="i">7</span><span><a href="https://prometheus.io/docs/prometheus/latest/storage/">Prometheus, Storage</a>: 1-2 байта на значение, 15 дней по умолчанию, флаг приёма remote_write. <span class="w">Первоисточник.</span></span></li>
+    <li id="s8"><span class="i">8</span><span><a href="https://prometheus.io/docs/guides/node-exporter/">Prometheus, Monitoring Linux host metrics with the Node Exporter</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s9"><span class="i">9</span><span><a href="https://grafana.com/docs/loki/latest/query/">Loki, LogQL</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s10"><span class="i">10</span><span><a href="https://grafana.com/docs/loki/latest/query/metric_queries/">Loki, Metric queries</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s11"><span class="i">11</span><span><a href="https://grafana.com/docs/loki/latest/query/log_queries/">Loki, Log queries</a>: поведение <code>| json</code> и <code>__error__</code>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s12"><span class="i">12</span><span><a href="https://grafana.com/docs/loki/latest/get-started/labels/cardinality/">Loki, Cardinality</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s13"><span class="i">13</span><span><a href="https://grafana.com/docs/loki/latest/operations/storage/retention/">Loki, Retention</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s14"><span class="i">14</span><span><a href="https://grafana.com/docs/loki/latest/send-data/promtail/">Loki, Promtail</a>: конец поддержки 02.03.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s15"><span class="i">15</span><span><a href="https://grafana.com/docs/alloy/latest/introduction/">Alloy, Introduction</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s16"><span class="i">16</span><span><a href="https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.journal/">Alloy, loki.source.journal</a>: метки <code>__journal_*</code>, <code>max_age</code> по умолчанию 7h. <span class="w">Первоисточник.</span></span></li>
+    <li id="s17"><span class="i">17</span><span><a href="https://grafana.com/docs/alloy/latest/reference/components/loki/loki.write/">Alloy, loki.write</a>: <code>basic_auth</code>, <code>tls_config</code>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s18"><span class="i">18</span><span><a href="https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.docker/">Alloy, loki.source.docker</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s19"><span class="i">19</span><span><a href="https://grafana.com/docs/alloy/latest/reference/components/discovery/discovery.docker/">Alloy, discovery.docker</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s20"><span class="i">20</span><span><a href="https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.exporter.unix/">Alloy, prometheus.exporter.unix</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s21"><span class="i">21</span><span><a href="https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.exporter.cadvisor/">Alloy, prometheus.exporter.cadvisor</a>. <span class="w">Первоисточник; работа в контейнере на узле A не проверена.</span></span></li>
+    <li id="s22"><span class="i">22</span><span><a href="https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.remote_write/">Alloy, prometheus.remote_write</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s23"><span class="i">23</span><span><a href="https://grafana.com/docs/alloy/latest/reference/http/">Alloy, HTTP endpoints</a>: <code>/-/ready</code>, <code>/-/healthy</code>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s24"><span class="i">24</span><span><a href="https://github.com/grafana/alloy/releases">Alloy, Releases</a>: v1.20.1 от 28.09.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s25"><span class="i">25</span><span><a href="https://grafana.com/docs/loki/v2.9.x/send-data/promtail/scraping/">Promtail 2.9, Scraping</a>: монтирование <code>/etc/machine-id</code> для чтения журнала в контейнере. <span class="w">Пересказ: документация Promtail, для Alloy перенесено по аналогии.</span></span></li>
+    <li id="s26"><span class="i">26</span><span><a href="https://github.com/prometheus/node_exporter">node_exporter, README</a>: запуск в Docker с сетью и процессами хоста. <span class="w">Первоисточник.</span></span></li>
+    <li id="s27"><span class="i">27</span><span><a href="https://github.com/google/cadvisor">cAdvisor, README</a>: монтирования и <code>--privileged</code>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s28"><span class="i">28</span><span><a href="https://grafana.com/docs/grafana/latest/administration/provisioning/">Grafana, Provisioning</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s29"><span class="i">29</span><span><a href="https://grafana.com/docs/grafana/latest/alerting/fundamentals/">Grafana Alerting, Fundamentals</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s30"><span class="i">30</span><span><a href="https://grafana.com/docs/grafana/latest/alerting/alerting-rules/create-grafana-managed-rule/">Grafana, Create Grafana-managed alert rules</a>: выбор контактной точки в правиле, pending period. <span class="w">Первоисточник.</span></span></li>
+    <li id="s31"><span class="i">31</span><span><a href="https://grafana.com/docs/grafana/latest/alerting/configure-notifications/manage-contact-points/integrations/configure-telegram/">Grafana, Configure Telegram</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s32"><span class="i">32</span><span><a href="https://github.com/grafana/alerting/blob/main/receivers/telegram/v1/config.go">grafana/alerting, receivers/telegram/v1/config.go</a>: поле <code>message_thread_id</code>. <span class="w">Перепроверено по коду: страница документации поле не описывает.</span></span></li>
+    <li id="s33"><span class="i">33</span><span><a href="https://grafana.com/docs/tempo/latest/">Grafana Tempo</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s34"><span class="i">34</span><span><a href="https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/">VictoriaMetrics, single-node</a>: <code>/api/v1/write</code>, срок хранения 31 день. <span class="w">Первоисточник.</span></span></li>
+    <li id="s35"><span class="i">35</span><span><a href="https://www.elastic.co/elastic-stack">Elastic Stack</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s36"><span class="i">36</span><span><a href="https://www.zabbix.com/features">Zabbix, Features</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s37"><span class="i">37</span><span><a href="https://grafana.com/docs/opentelemetry/docker-lgtm/">Grafana, Docker OpenTelemetry LGTM</a>. <span class="w">Пересказ: расшифровка LGTM взята из поиска, страница называет состав образа.</span></span></li>
+    <li id="s38"><span class="i">38</span><span><a href="https://grafana.com/docs/alloy/latest/set-up/install/linux/">Alloy, Install on Linux</a>: установка пакета в Linux. <span class="w">Первоисточник.</span></span></li>
+
+
+    <li id="s41"><span class="i">41</span><span><a href="https://grafana.com/docs/grafana/latest/explore/">Grafana, Explore</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s42"><span class="i">42</span><span><a href="https://grafana.com/docs/loki/latest/get-started/overview/">Loki, Overview</a>: индекс только по меткам. <span class="w">Первоисточник.</span></span></li>
+    <li id="s43"><span class="i">43</span><span><a href="https://www.zabbix.com/documentation/current/en/manual/config/triggers">Zabbix, Triggers</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s44"><span class="i">44</span><span><a href="https://www.zabbix.com/documentation/current/en/manual/config/items/itemtypes/zabbix_agent/log_items">Zabbix, Log file monitoring</a>: агент следит за файлом и предупреждает о строке или шаблоне. <span class="w">Первоисточник.</span></span></li>
+    <li id="s45"><span class="i">45</span><span><a href="https://www.zabbix.com/documentation/current/en/manual/config/items/itemtypes/snmp">Zabbix, SNMP agent</a>; <a href="https://www.zabbix.com/documentation/current/en/manual/config/items/itemtypes/ipmi">Zabbix, IPMI checks</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s46"><span class="i">46</span><span><a href="https://www.zabbix.com/documentation/current/en/manual/config/items/itemtypes/http/prometheus">Zabbix, Prometheus checks</a>: метрика задаётся отдельным элементом с предобработкой. <span class="w">Первоисточник.</span></span></li>
+
+  </ol>
+</section>
+</main>
+</div>
+</body>
+</html>
