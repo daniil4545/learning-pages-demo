@@ -9,6 +9,7 @@
 @media(max-width:600px){.library-catalog{padding:34px 18px 60px}.library-bar{font-size:13px;padding:12px 0}.library-bar span{display:none}.library-catalog h3{font-size:19px}}
 
 .library-edition{font-size:13px;color:var(--muted);border-left:2px solid var(--line);padding-left:12px}
+.library-player-part{position:static}
 /* Keep long code examples inside their existing exercise cards. */
 .ex>div{grid-template-columns:26px minmax(0,1fr)}.ex>div>span{min-width:0}
 :root{color-scheme:light dark}

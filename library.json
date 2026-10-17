@@ -57,9 +57,22 @@
   },
   {
     "path": "lectures/agent-memory.html",
-    "title": "Как агент учится на опыте",
-    "description": "Общая память двух клиентов: извлечение уроков, поиск, исправление и проверка пользы.",
+    "title": "OpenViking: полный обзор",
+    "description": "Все разделы Studio: память, скиллы, сессии, поиск, Compile, фоновые задачи и интеграции. Три аудиочасти.",
     "group": "Инженерная практика",
-    "audio": "audio/agent-memory.mp3"
+    "audio_parts": [
+      {
+        "title": "Часть 1. Устройство и Workspace",
+        "path": "audio/agent-memory.mp3"
+      },
+      {
+        "title": "Часть 2. Сессии и обработка опыта",
+        "path": "audio/agent-memory-2.mp3"
+      },
+      {
+        "title": "Часть 3. Подключение и перенос знаний",
+        "path": "audio/agent-memory-3.mp3"
+      }
+    ]
   }
 ]

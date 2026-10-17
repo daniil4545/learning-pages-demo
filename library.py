@@ -56,6 +56,16 @@ def read_registry(root: Path, site: Path) -> list[dict]:
             raise ValueError(f"Lecture not found: {name}")
         if "audio" in entry:
             validate_audio(site, entry["audio"])
+        if "audio_parts" in entry:
+            if "audio" in entry:
+                raise ValueError("Use audio or audio_parts, not both")
+            parts = entry["audio_parts"]
+            if not isinstance(parts, list) or not parts:
+                raise ValueError("audio_parts must be a nonempty list")
+            for part in parts:
+                if not isinstance(part, dict) or not isinstance(part.get("title"), str) or not part["title"].strip():
+                    raise ValueError("Each audio part needs a title")
+                validate_audio(site, part.get("path"))
     actual = {str(p.relative_to(site)) for p in site.rglob("*.html")}
     unlisted = actual - seen - {"index.html"}
     if unlisted:
@@ -88,7 +98,7 @@ def render_catalog(entries: list[dict]) -> str:
     for number, (group, items) in enumerate(groups.items(), 1):
         cards = []
         for entry in items:
-            audio = "Есть аудио" if entry.get("audio") else "Текст и схемы"
+            audio = "Есть аудио" if entry.get("audio") or entry.get("audio_parts") else "Текст и схемы"
             cards.append(
                 f'<a class="library-card" href="./{html.escape(entry["path"], quote=True)}">'
                 f'<span class="library-meta">{audio}</span>'
@@ -141,13 +151,18 @@ def render_lecture(text: str, entry: dict) -> str:
     shell = '<!-- library-body:start --><div class="library-bar">'
     shell += '<a href="../index.html">Библиотека лекций</a>'
     shell += "<span>Текст и схемы</span></div>"
+    parts = entry.get("audio_parts", [])
     if entry.get("audio"):
-        shell += '<div class="library-player" role="region" aria-label="Аудиолекция">'
-        shell += '<audio id="lecture-audio" controls preload="metadata" src="../'
-        shell += html.escape(entry["audio"], quote=True) + '"></audio>'
-        shell += (
-            '<p id="audio-status" aria-live="polite">Позиция сохраняется в этом браузере.</p></div>'
-        )
+        parts = [{"path": entry["audio"], "title": ""}]
+    for number, part in enumerate(parts):
+        suffix = f"-{number + 1}" if number else ""
+        group = " library-player-part" if len(parts) > 1 else ""
+        shell += f'<div class="library-player{group}" role="region" aria-label="Аудиолекция">'
+        if part["title"]:
+            shell += f'<p><strong>{html.escape(part["title"])}</strong></p>'
+        shell += f'<audio id="lecture-audio{suffix}" controls preload="metadata" src="../'
+        shell += html.escape(part["path"], quote=True) + '"></audio>'
+        shell += f'<p id="audio-status{suffix}" aria-live="polite">Позиция сохраняется в этом браузере.</p></div>'
     shell += "<!-- library-body:end -->\n"
     text, count = re.subn(r"(<body\b[^>]*>)", lambda m: m[1] + shell, text, count=1, flags=re.I)
     if count != 1:

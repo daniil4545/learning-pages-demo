@@ -8,6 +8,7 @@ function browser(saved) {
   const events = new Map();
   let stored = JSON.stringify(saved);
   const audio = {
+    id: "lecture-audio",
     src: "https://example.org/audio/lesson.mp3", currentSrc: "", readyState: 0,
     currentTime: 0, duration: 300, playbackRate: 1, ended: false,
     addEventListener: (name, handler) => events.set(name, handler)
@@ -15,7 +16,7 @@ function browser(saved) {
   const status = { textContent: "" };
   vm.runInNewContext(script, {
     URL, Number, JSON, Math,
-    document: { getElementById: id => id === "lecture-audio" ? audio : status },
+    document: { querySelectorAll: () => [audio], getElementById: () => status },
     window: { addEventListener: (name, handler) => events.set(name, handler) },
     localStorage: {
       getItem: () => stored,
@@ -51,4 +52,36 @@ test("finishing an episode resets its saved position", () => {
   page.audio.ended = true;
   page.fire("ended");
   assert.equal(page.saved().time, 0);
+});
+
+test("each episode restores and saves its own position", () => {
+  const stored = new Map([
+    ["lecture-position:/audio/one.mp3", JSON.stringify({ time: 20, rate: 1 })],
+    ["lecture-position:/audio/two.mp3", JSON.stringify({ time: 90, rate: 1.5 })]
+  ]);
+  const players = ["one", "two"].map((name, index) => {
+    const events = new Map();
+    return {
+      id: index ? "lecture-audio-2" : "lecture-audio",
+      src: `https://example.org/audio/${name}.mp3`, readyState: 0,
+      currentTime: 0, duration: 300, playbackRate: 1, ended: false,
+      addEventListener: (event, handler) => events.set(event, handler), events
+    };
+  });
+  const statuses = new Map([
+    ["audio-status", { textContent: "" }], ["audio-status-2", { textContent: "" }]
+  ]);
+  vm.runInNewContext(script, {
+    URL, Number, JSON, Math,
+    document: { querySelectorAll: () => players, getElementById: id => statuses.get(id) },
+    window: { addEventListener: () => {} },
+    localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) }
+  });
+  players.forEach(player => player.events.get("loadedmetadata")());
+  assert.equal(players[0].currentTime, 20);
+  assert.equal(players[1].currentTime, 90);
+  players[1].currentTime = 110;
+  players[1].events.get("pause")();
+  assert.equal(JSON.parse(stored.get("lecture-position:/audio/one.mp3")).time, 20);
+  assert.equal(JSON.parse(stored.get("lecture-position:/audio/two.mp3")).time, 110);
 });

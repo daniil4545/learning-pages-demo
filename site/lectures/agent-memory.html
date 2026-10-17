@@ -2,7 +2,7 @@
 <html lang="ru">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Как агент учится на опыте</title>
+<title>OpenViking: полный обзор</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -139,89 +139,180 @@ details{margin:18px 0;padding:14px;border:1px solid var(--line);border-radius:8p
 </style>
 
 <!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
-<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><div class="library-player" role="region" aria-label="Аудиолекция"><audio id="lecture-audio" controls preload="metadata" src="../audio/agent-memory.mp3"></audio><p id="audio-status" aria-live="polite">Позиция сохраняется в этом браузере.</p></div><!-- library-body:end -->
-
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
-    </marker>
-    <marker id="m-open" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M0,0 L10,5 L0,10" fill="none" stroke="currentColor" stroke-width="1.5"/>
-    </marker>
-    <marker id="m-circ" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7">
-      <circle cx="5" cy="5" r="4" style="fill:var(--paper)" stroke="currentColor" stroke-width="1.5"/>
-    </marker>
-  </defs>
-</svg>
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><div class="library-player library-player-part" role="region" aria-label="Аудиолекция"><p><strong>Часть 1. Устройство и Workspace</strong></p><audio id="lecture-audio" controls preload="metadata" src="../audio/agent-memory.mp3"></audio><p id="audio-status" aria-live="polite">Позиция сохраняется в этом браузере.</p></div><div class="library-player library-player-part" role="region" aria-label="Аудиолекция"><p><strong>Часть 2. Сессии и обработка опыта</strong></p><audio id="lecture-audio-2" controls preload="metadata" src="../audio/agent-memory-2.mp3"></audio><p id="audio-status-2" aria-live="polite">Позиция сохраняется в этом браузере.</p></div><div class="library-player library-player-part" role="region" aria-label="Аудиолекция"><p><strong>Часть 3. Подключение и перенос знаний</strong></p><audio id="lecture-audio-3" controls preload="metadata" src="../audio/agent-memory-3.mp3"></audio><p id="audio-status-3" aria-live="polite">Позиция сохраняется в этом браузере.</p></div><!-- library-body:end -->
 
 <div class="wrap">
-<nav class="toc" aria-label="Оглавление"><p>Оглавление</p><ol><li><a href="#problem">История и урок</a></li><li><a href="#cycle">Цикл памяти</a></li><li><a href="#search">Поиск опыта</a></li><li><a href="#shared">Два клиента</a></li><li><a href="#limits">Проверка пользы</a></li><li><a href="#sources">Источники</a></li></ol></nav>
-
+<nav class="toc" aria-label="Оглавление"><p>OpenViking</p><ol>
+<li><a href="#purpose">Место в системе</a></li><li><a href="#workspace">Workspace</a></li><li><a href="#activity">Activity</a></li><li><a href="#settings">Settings и Resources</a></li><li><a href="#data">Три вида знаний</a></li><li><a href="#retrieval">Как работает поиск</a></li><li><a href="#skills">Как работают скиллы</a></li><li><a href="#session">Как появляется опыт</a></li><li><a href="#compile">Зачем нужен Compile</a></li><li><a href="#runtime">Bot, Gateway, Helper</a></li><li><a href="#practice">Пример целиком</a></li><li><a href="#limits">Границы и стоимость</a></li><li><a href="#sources">Источники</a></li>
+</ol></nav>
 <main>
-<header class="top">
-<span class="eyebrow">Короткая лекция · 17.10.2026</span>
-<h1>Как агент учится на опыте</h1>
-<p class="lead">Общая память помогает двум агентам использовать опыт прошлой работы.</p>
-<p>Ты исправляешь ошибку в одном проекте. Через неделю похожая задача появляется в другом. Хочется получить пользу от прежней поправки без повторного объяснения. Для этого система сохраняет опыт отдельно от разговора. Перед новой задачей она выбирает подходящие записи и передаёт их агенту. Разберём этот механизм на одном примере.</p>
-<p><strong>После лекции:</strong> ты различаешь историю, память и дообучение модели. Ты понимаешь роль поиска, общей учётной записи и проверки уроков.</p>
+<header class="top"><span class="eyebrow">Обзор инструмента · 17.10.2026</span>
+<h1>OpenViking: знания, память и работа агентов</h1>
+<p class="lead">Полная карта интерфейса: что хранится, кто это обрабатывает и что получает агент.</p>
+<p>Ты ведёшь несколько проектов. Документы объясняют устройство систем, инструкции задают способ работы, разговоры содержат опыт. OpenViking объединяет эти материалы в одном адресуемом хранилище. Поиск помогает агенту получить подходящий контекст перед задачей.</p>
+<p>Первый вариант лекции объяснял только память. Здесь разобраны все перечисленные пункты Studio. Основной сценарий остаётся прежним: сохранить опыт одной работы и применить его в следующей.</p>
+<p><strong>Как пользоваться:</strong> сначала посмотри карту меню. Затем разбери один проход данных от источника до ответа. Три аудиочасти объясняют тему без экрана.</p>
 </header>
-<section id="problem"><span class="num">01</span><h2>Разговор закончился, урок остался</h2>
-<p>Представь: агент подготовил изменение сервиса. Тесты прошли, но уведомление получателю не пришло. Ты попросил проверить результат у получателя. Проверка обнаружила ошибку адресации. Полезный урок касается способа проверки, а не конкретного адреса.</p>
-<div class="tbl"><table><caption>Таблица 1. Три разных результата работы</caption><thead><tr><th>Что сохранено</th><th>Пример</th></tr></thead><tbody>
-<tr><td>История разговора</td><td>Все реплики, действия и результаты проверки.</td></tr>
-<tr><td>Состояние задачи</td><td>Ошибка исправлена, уведомление получено.</td></tr>
-<tr><td>Повторно применимый урок</td><td>Доставку уведомления проверять у получателя. Зелёные тесты могут проверять только часть цепочки.</td></tr>
+
+<section id="purpose"><span class="num">01</span><h2>Где находится OpenViking</h2>
+<figure><div class="ttl">Рисунок 1. Компоненты работают с общей базой</div>
+<svg class="d" viewBox="0 0 640 280" role="img" aria-label="Агенты и интерфейс обращаются к серверу. Сервер хранит данные и использует модели.">
+<rect class="soft" x="16" y="20" width="190" height="65" rx="8"/><text class="b" x="32" y="47">Рабочие агенты</text><text x="32" y="68">Плагины, хуки, MCP</text>
+<rect class="soft" x="434" y="20" width="190" height="65" rx="8"/><text class="b" x="451" y="47">Web Studio</text><text x="451" y="68">Просмотр и управление</text>
+<path class="ln" d="M206 54H270V110M434 54H370V110"/>
+<rect class="hl" x="195" y="110" width="250" height="60" rx="8"/><text class="b" x="217" y="135">OpenViking Server</text><text x="217" y="156">API, обработка, поиск</text>
+<path class="ln" d="M270 170V205H150M370 170V205H495"/>
+<rect class="soft" x="30" y="212" width="240" height="54" rx="8"/><text x="46" y="235">Файлы и векторный индекс</text><text x="46" y="254">Ресурсы, память, скиллы</text>
+<rect class="soft" x="370" y="212" width="240" height="54" rx="8"/><text x="386" y="235">Модели</text><text x="386" y="254">Описание, извлечение, векторы</text>
+</svg><figcaption>Интерфейс обращается к серверу. Рабочий агент исполняет задачи своими инструментами.</figcaption></figure>
+<p>Сервер предоставляет общее хранилище, API и фоновые операции. Studio показывает его содержимое и состояние. Подключённый агент выполняет пользовательскую задачу. Встроенный VikingBot добавляет ещё одного исполнителя внутри этой системы.<a class="ref" href="#s1">1</a></p>
+<p>Хранилище можно разместить на своём компьютере или сервере. Локальное размещение данных совместимо с внешней моделью извлечения. В таком случае выбранный текст отправляется провайдеру модели.</p>
+</section>
+
+<section id="workspace"><span class="num">02</span><h2>Workspace: работа с содержимым</h2>
+<div class="tbl"><table><caption>Таблица 1. Все пункты Workspace</caption><thead><tr><th>Пункт</th><th>Назначение</th><th>Пример использования</th></tr></thead><tbody>
+<tr><td>Home</td><td>Сводка активности, поиска, обработки контекста и токенов.</td><td>Проверить, обращаются ли агенты к базе после подключения.</td></tr>
+<tr><td>Filesystem</td><td>Проводник по виртуальным адресам <code>viking://</code>. Показывает каталоги и содержимое.</td><td>Открыть сохранённый урок и проверить его формулировку.</td></tr>
+<tr><td>VikingBot</td><td>Чат со встроенным агентом. Требует работающего компонента Bot.</td><td>Попросить найти документы и объяснить связи между ними.</td></tr>
+<tr><td>Retrieval</td><td>Интерактивная проверка поиска по выбранной области.</td><td>Проверить, найдётся ли урок по описанию новой задачи.</td></tr>
+<tr><td>Skills</td><td>Управление пакетами инструкций и вспомогательными файлами.</td><td>Добавить процедуру проверки миграции базы.</td></tr>
+<tr><td>Compile</td><td>Запуск обработки источников по выбранному скиллу.</td><td>Собрать связанную вики из проверенных заметок.</td></tr>
 </tbody></table></div>
-<p>История позволяет восстановить события. Состояние помогает продолжить задачу. Урок помогает решить другую похожую задачу. Хранить все три представления полезно, но они отвечают на разные вопросы.</p>
-<details><summary>Попробуй сформулировать урок без адреса и названия проекта</summary><p>Проверяй внешний результат там, где его получает человек. Укажи, какие проверки уже выполнены и какую часть цепочки они покрывают.</p></details>
-<p class="links">Механизм сохранения сессий: <a class="ref" href="#src-session">источник 1</a>.</p></section>
-<section id="cycle"><span class="num">02</span><h2>Как возникает общая память</h2>
-<figure><div class="ttl">От поправки к следующей задаче</div>
-<svg class="d" viewBox="0 0 320 380" role="img" aria-label="Разговор сохраняется, модель извлекает урок, поиск находит его для следующей задачи">
-<rect class="box" x="30" y="10" width="260" height="50" rx="5"/><text class="b" x="160" y="40" text-anchor="middle">Работа и твоя поправка</text>
-<line class="ln" x1="160" y1="60" x2="160" y2="110" marker-end="url(#m-fill)"/><text class="lbl" x="175" y="89">сохраняются</text>
-<rect class="hl" x="30" y="112" width="260" height="50" rx="5"/><text class="b" x="160" y="142" text-anchor="middle">Модель извлекает урок</text>
-<line class="ln" x1="160" y1="162" x2="160" y2="212" marker-end="url(#m-fill)"/><text class="lbl" x="175" y="191">записывает</text>
-<rect class="box" x="30" y="214" width="260" height="50" rx="5"/><text class="b" x="160" y="244" text-anchor="middle">Общая память OpenViking</text>
-<line class="ln" x1="160" y1="264" x2="160" y2="314" marker-end="url(#m-fill)"/><text class="lbl" x="175" y="293">подбирает опыт</text>
-<rect class="soft" x="30" y="316" width="260" height="50" rx="5"/><text class="b" x="160" y="346" text-anchor="middle">Новая задача любого агента</text>
-</svg><figcaption>Рисунок 1. Учебная схема на основе интеграций и обработки сессий OpenViking. Выделен шаг, требующий рассуждения модели. Источники 1 и 2.</figcaption></figure>
-<p>Расширение клиента реагирует на события сессии. Оно передаёт новые сообщения серверу памяти. Когда запускается обработка накопленной сессии, модель выделяет предпочтения, факты и опыт. Сохранение сообщения и извлечение урока происходят в разные моменты. Поэтому новая поправка может стать доступна с задержкой.</p>
-<p>Уроку нужны ситуация, полезное действие и основания. При новых свидетельствах система может обновить прежнюю запись. Но модель способна сделать неверное обобщение. Поэтому источник и условия применения важнее количества заметок.</p>
-<p class="links">Обработка сессий и интеграции: <a class="ref" href="#src-session">1</a>, <a class="ref" href="#src-integration">2</a>.</p></section>
-<section id="search"><span class="num">03</span><h2>Как агент находит нужный урок</h2>
-<p>В новой задаче речь идёт о доставке отчёта. Старый урок назывался проверкой уведомлений. Обычный поиск точных слов может его пропустить. Поисковая модель превращает тексты в числовые представления, называемые эмбеддингами. Близость представлений помогает найти связанные записи.</p>
-<div class="tbl"><table><caption>Таблица 2. Разделение работы моделей в выбранной схеме</caption><thead><tr><th>Компонент</th><th>Его работа</th></tr></thead><tbody>
-<tr><td>Модель по подписке Codex</td><td>Извлекает уроки и обобщает опыт.</td></tr>
-<tr><td>Локальный bge-m3</td><td>Создаёт поисковые представления текстов.</td></tr>
-<tr><td>OpenViking</td><td>Хранит записи, ищет и возвращает подходящий контекст.</td></tr>
-<tr><td>Рабочий агент</td><td>Решает текущую задачу с учётом полученного опыта.</td></tr>
+<p>Filesystem показывает содержимое OpenViking, а не весь диск компьютера. Наличие пункта меню ещё не подтверждает готовность его серверных зависимостей. Например, чат требует Bot, а обычное чтение файлов обходится без него.<a class="ref" href="#s1">1</a><a class="ref" href="#s2">2</a></p>
+</section>
+
+<section id="activity"><span class="num">03</span><h2>Activity: что произошло с данными</h2>
+<div class="tbl"><table><caption>Таблица 2. Все пункты Activity</caption><thead><tr><th>Пункт</th><th>Что показывает</th><th>Когда открывать</th></tr></thead><tbody>
+<tr><td>Sessions</td><td>Беседы, поступившие на сервер, их сообщения и изменения памяти.</td><td>Проверить, что разговор передан и обработан. Для интерактивного чата нужен Bot.</td></tr>
+<tr><td>Agent Experience</td><td>Накопленный опыт, связанные последовательности действий и результаты.</td><td>Посмотреть, где прочитан урок и чем закончились связанные попытки.</td></tr>
+<tr><td>Request Logs</td><td>Зарегистрированные обращения к API, их контекст и результат.</td><td>Узнать, обращался ли плагин к памяти и получил ли ошибку.</td></tr>
+<tr><td>Task Center</td><td>Фоновые импорты, обработку сессий, переиндексацию и другие операции.</td><td>Увидеть этап обработки, причину сбоя и конечный результат.</td></tr>
+<tr><td>Scheduled Sync</td><td>Периодические проверки и обновления настроенных источников.</td><td>Проверить расписание обновления добавленной документации.</td></tr>
+<tr><td>Monitoring</td><td>Состояние компонентов, очереди, ошибки, модели и задержки.</td><td>Выяснить, почему импорт остановился на создании векторов.</td></tr>
 </tbody></table></div>
-<p>Сходство помогает найти кандидата. Оно не подтверждает правильность урока. Агенту нужно сопоставить условия старого случая с новой задачей. OpenViking также использует краткие описания каталогов перед чтением полных материалов.</p>
-<p class="links">Уровни контекста: <a class="ref" href="#src-layers">источник 3</a>.</p></section>
-<section id="shared"><span class="num">04</span><h2>Почему память общая у двух клиентов</h2>
-<p>Оба клиента подключаются к одному серверу под одной учётной записью. Их расширения пишут в общее пространство памяти. Идентификатор проекта помогает сохранить происхождение записи. При широком поиске полезный опыт другого проекта тоже может попасть в контекст.</p>
-<p>Так поправка, полученная первым агентом, становится доступна второму. Это требует одинаковой настройки личности и совместимой настройки проекта. Две независимые учётные записи не получают общую память автоматически.</p>
-<div class="q">Общий опыт должен сохранять происхождение и границы применимости. Полномочия текущего проекта задаются его правилами; выбранная память служит дополнительным контекстом.</div>
-<p>В нашей выбранной схеме база хранится на компьютере. Для извлечения уроков содержимое сессий передаётся модели по подписке. Локальное хранение не означает полностью локальную обработку. Закрытые данные требуют отдельного выбора допустимого способа обработки.</p>
-<p class="links">Области поиска обоих клиентов: <a class="ref" href="#src-integration">источник 2</a>.</p></section>
-<section id="limits"><span class="num">05</span><h2>Что считать настоящим улучшением</h2>
-<p>Веса модели при таком обучении не меняются. Меняются внешние записи и контекст следующего запроса. Это позволяет исправлять уроки без обучения собственной модели. Но агент всё равно может проигнорировать найденную запись или применить её неправильно.</p>
-<p>Возвращаемся к уведомлению. Полезный результат: в новой задаче агент сам проверил получение отчёта. Если он только процитировал старую заметку, улучшение ещё не доказано. Даже связь прочитанного урока с успешной задачей не доказывает причинность.</p>
-<details><summary>Новый случай: агент нашёл старый адрес сервера. Нужно использовать его сразу?</summary><p>Нет. Это изменчивый факт. Следует проверить действующий источник. Память подсказывает, где искать; сохранённый адрес может устареть.</p></details>
-<details><summary>Что ты вспомнишь позже без перечитывания?</summary><ol><li>Чем урок отличается от истории разговора?</li><li>Для чего нужна отдельная поисковая модель?</li><li>Почему общая память требует общей учётной записи?</li><li>Как доказать, что опыт помог следующей задаче?</li></ol></details>
-<p class="links">Границы оценки результата: <a class="ref" href="#src-outcome">источник 4</a>.</p></section>
-<section id="sources"><span class="num">06</span><h2>Источники и озвучка</h2>
-<p>Механизмы сверены 17.10.2026 по документации и исходникам. Пример уведомления учебный. Лекция объясняет выбранную схему; она не является подтверждением завершённой установки.</p>
-<ol>
-<li id="src-session"><a href="https://docs.openviking.ai/en/concepts/08-session">OpenViking: обработка сессий</a>. Первоисточник: сохранение, извлечение памяти, политика опыта.</li>
-<li id="src-integration"><a href="https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md">Интеграция первого клиента</a> и <a href="https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/README.md">интеграция Codex</a>. Первоисточники: события, общий пользователь, области поиска.</li>
-<li id="src-layers"><a href="https://docs.openviking.ai/en/concepts/03-context-layers">OpenViking: уровни контекста</a>. Первоисточник: аннотации, обзоры, полное содержимое.</li>
-<li id="src-outcome"><a href="https://docs.openviking.ai/en/api/19-agent-evolution">OpenViking: учёт опыта и результатов</a>. Первоисточник: связь траекторий и ограничения причинных выводов.</li>
-<li><a href="https://github.com/snakers4/silero-models">Silero Models, Silero Team</a>. Озвучка: v5_5_ru, голос xenia; текст авторский. <a href="https://github.com/snakers4/silero-models/blob/master/LICENSE">Лицензия модели CC BY-NC-SA 4.0</a>. Аудиолекция распространяется по <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>.</li>
-</ol></section>
-</main>
-</div>
-</body>
-</html>
+<p>Task Center ведёт техническую обработку данных. Проектные задачи разработчика продолжают жить в его трекере. Пустая очередь не доказывает успех: нужно проверить конечный статус операции и её ошибки.<a class="ref" href="#s5">5</a><a class="ref" href="#s8">8</a></p>
+<p>Sessions содержит только поступившие беседы. Локальный архив другого приложения появится после интеграции или импорта. Agent Experience связывает чтение опыта с результатом попытки. Такая связь сама по себе не доказывает причинную пользу урока.<a class="ref" href="#s4">4</a><a class="ref" href="#s6">6</a></p>
+</section>
+
+<section id="settings"><span class="num">04</span><h2>Settings и Resources: доступ и справка</h2>
+<div class="tbl"><table><caption>Таблица 3. Настройки и внешние разделы</caption><thead><tr><th>Пункт</th><th>Назначение</th><th>Следствие для работы</th></tr></thead><tbody>
+<tr><td>Connection Settings</td><td>Адрес сервера, ключ и выбранная личность: account/user.</td><td>Другой сервер или пользователь может показать другое содержимое.</td></tr>
+<tr><td>OAuth verify</td><td>Подтверждение доступа MCP-клиента, включая вход с другого устройства.</td><td>Используется при авторизации клиента в OpenViking.</td></tr>
+<tr><td>Documentation</td><td>Руководство по функциям, установке и ограничениям.</td><td>Помогает проверить назначение и условия работы функции.</td></tr>
+<tr><td>SDK &amp; API</td><td>Программный доступ через клиентские библиотеки и HTTP.</td><td>Позволяет автоматизировать загрузку, поиск и проверку операций.</td></tr>
+<tr><td>Agent Integrations</td><td>Инструкции подключения агентов через плагины, хуки и MCP.</td><td>Определяет, как конкретный клиент сохраняет и получает память.</td></tr>
+</tbody></table></div>
+<p>Раздел меню Resources содержит ссылки на справку. Данные типа Resource хранятся внутри базы и видны через Filesystem. Эти два применения слова легко спутать.</p>
+<p>Общий сервер ещё не означает общую выдачу. Подключения должны согласовать пользователя, области поиска и проектные идентификаторы. Авторизация ограничивает доступ, а настройка поиска определяет выбранный контекст.<a class="ref" href="#s2">2</a><a class="ref" href="#s12">12</a></p>
+</section>
+
+<section id="data"><span class="num">05</span><h2>Что именно хранится</h2>
+<div class="tbl"><table><caption>Таблица 4. Три вида контекста на одном примере</caption><thead><tr><th>Тип</th><th>Что содержит</th><th>Пример</th></tr></thead><tbody>
+<tr><td>Resource</td><td>Материал, который добавили как источник.</td><td>Описание восстановления базы после сбоя.</td></tr>
+<tr><td>Memory</td><td>Сохранённые предпочтения, факты и опыт взаимодействия.</td><td>В прошлой попытке забыли проверить восстановление копии.</td></tr>
+<tr><td>Skill</td><td>Процедуру выполнения задачи и необходимые приложения.</td><td>Порядок подготовки и проверки резервной копии.</td></tr>
+</tbody></table></div>
+<p>Каждый объект имеет адрес в виртуальном пространстве. Агент может прочитать выбранный объект целиком. Доступность объекта зависит от пользователя и разрешений.<a class="ref" href="#s3">3</a></p>
+<p>Для каталогов система формирует краткое описание L0 и более подробный обзор L1. Полное содержимое относится к L2. Это помогает выбирать нужную глубину чтения. Генерация описаний и поисковых векторов требует обработки.<a class="ref" href="#s9">9</a></p>
+<details><summary>Проверь понимание: куда положить обязательный запрет на публикацию?</summary><p>Обязательный запрет остаётся в настройках и правилах рабочего клиента. Копия в Resources служит справкой. Найденный по сходству текст не обеспечивает обязательного исполнения правила.</p></details>
+</section>
+
+<section id="retrieval"><span class="num">06</span><h2>Как агент находит прошлый опыт</h2>
+<div class="tbl"><table><caption>Таблица 5. Два режима поиска</caption><thead><tr><th>Режим</th><th>Механизм</th><th>Цена</th></tr></thead><tbody>
+<tr><td>find</td><td>Ищет по одному запросу без анализа беседы.</td><td>Создание вектора запроса и обращение к индексу.</td></tr>
+<tr><td>search</td><td>Может учитывать сессию и строить несколько запросов. При настройке применяет повторное ранжирование.</td><td>Дополнительные обращения к моделям зависят от конфигурации.</td></tr>
+</tbody></table></div>
+<p>Допустим, агенту нужно подготовить резервную копию. Поиск может вернуть процедуру, описание системы и урок прошлой ошибки. Агент читает подходящие материалы и решает задачу своими инструментами.</p>
+<p>Текущая реализация выполняет глобальный векторный поиск с ограничением области. Она не обязана обходить дерево каталогов по одному уровню. Наличие L0, L1 и L2 само по себе не задаёт порядок чтения.<a class="ref" href="#s7">7</a></p>
+<p>Проверка Retrieval полезна до поиска причин в промпте агента. Если нужного урока нет среди результатов, проверь область, индекс и формулировку записи. Если урок найден, дальше проверяй передачу контекста клиенту.</p>
+</section>
+
+<section id="skills"><span class="num">07</span><h2>Как работают Skills</h2>
+<div class="tbl"><table><caption>Таблица 6. Граница между хранилищем и исполнителем</caption><thead><tr><th>OpenViking</th><th>Рабочий агент</th></tr></thead><tbody>
+<tr><td>Хранит SKILL.md и приложения.</td><td>Читает выбранную процедуру.</td></tr><tr><td>Описывает и индексирует пакет.</td><td>Проверяет применимость и зависимости.</td></tr><tr><td>Возвращает найденный скилл.</td><td>Исполняет шаги своими инструментами и разрешениями.</td></tr>
+</tbody></table></div>
+<p>Скилл проверки копии содержит шаги и, возможно, скрипт проверки. Загрузка одного SKILL.md может потерять этот скрипт. Поэтому переносить нужно пакет с рабочими ссылками и зависимостями.</p>
+<p>Размещение пакета в базе не устанавливает зависимости и не предоставляет агенту доступ к инструментам. Преобразование описания MCP-инструмента в скилл тоже создаёт документацию; само подключение MCP выполняется отдельно.<a class="ref" href="#s10">10</a></p>
+<p>У двух скиллов может совпасть имя при разном содержимом. До переноса нужно выбрать версию или развести назначение. Автоматическое слияние инструкций способно изменить поведение.</p>
+</section>
+
+<section id="session"><span class="num">08</span><h2>Как беседа становится памятью</h2>
+<div class="tbl"><table><caption>Таблица 7. Один цикл обработки</caption><thead><tr><th>Шаг</th><th>Что происходит</th><th>Где смотреть</th></tr></thead><tbody>
+<tr><td>Получение</td><td>Интеграция передаёт сообщения в серверную сессию.</td><td>Sessions, Request Logs</td></tr>
+<tr><td>Commit</td><td>Сервер сохраняет архив и возвращает идентификатор фоновой операции.</td><td>Sessions, Task Center</td></tr>
+<tr><td>Извлечение</td><td>Модель формирует обзор и долгосрочную память.</td><td>Task Center, Filesystem</td></tr>
+<tr><td>Повторное применение</td><td>Следующий запрос находит подходящий опыт.</td><td>Retrieval, Agent Experience</td></tr>
+</tbody></table></div>
+<p>Возврат task_id означает принятие операции. Успех подтверждает её завершение с проверенным результатом. Закрытие вкладки или прекращение опроса не отменяет работу сервера.<a class="ref" href="#s4">4</a><a class="ref" href="#s5">5</a></p>
+<p>Модель может извлечь предпочтение, сведения о проекте или опыт решения. Поздняя поправка должна уточнить прежний вывод. Надёжность такой поправки проверяется отдельным примером, а не обещанием самообучения.</p>
+<p>При импорте истории часть инструментальных данных может потеряться. Уверенный ответ ассистента не подтверждает успешный запуск. Источник урока и доказательство результата нужно сохранить отдельно.</p>
+</section>
+
+<section id="compile"><span class="num">09</span><h2>Зачем нужен Compile</h2>
+<div class="tbl"><table><caption>Таблица 8. Варианты обработки одних источников</caption><thead><tr><th>Выбранная процедура</th><th>Результат</th><th>Применение</th></tr></thead><tbody>
+<tr><td>LLM Wiki</td><td>Связанные страницы и оглавление.</td><td>Читать знания по темам.</td></tr>
+<tr><td>Knowledge Graph</td><td>Сущности и связи между ними.</td><td>Исследовать отношения объектов.</td></tr>
+<tr><td>Daily Report</td><td>Материалы по отдельным датам.</td><td>Восстановить ход работы.</td></tr>
+<tr><td>Knowledge Distillation</td><td>Обобщения по выбранным темам.</td><td>Сопоставить выводы нескольких источников.</td></tr>
+<tr><td>Режим memory</td><td>Упорядочивание существующей памяти.</td><td>Объединить повторы и уточнить структуру.</td></tr>
+</tbody></table></div>
+<p>Для обычной сборки выбираются источники, место результата и скилл. Настроенный исполнитель выполняет отдельную работу модели. Результат сохраняется в OpenViking. В локальном варианте исполнителем может служить VikingBot.<a class="ref" href="#s11">11</a></p>
+<p>Режим memory работает с существующей памятью на месте. Он не загружает внешний архив и обходится без Bot. Изменения нужно проверять по результату операции, включая частичные ошибки.<a class="ref" href="#s13">13</a></p>
+</section>
+
+<section id="runtime"><span class="num">10</span><h2>VikingBot, Gateway и Helper</h2>
+<div class="tbl"><table><caption>Таблица 9. Дополнительные компоненты</caption><thead><tr><th>Компонент</th><th>Задача</th><th>Когда нужен</th></tr></thead><tbody>
+<tr><td>VikingBot</td><td>Встроенный агент: чат, инструменты, выполнение процедур.</td><td>Работа с базой из Studio или выполнение Compile.</td></tr>
+<tr><td>Gateway</td><td>Прокси между модельным клиентом и провайдером с настройками контекста.</td><td>Подключение через совместимый модельный интерфейс вместо отдельных интеграций.</td></tr>
+<tr><td>Helper</td><td>Отдельное настольное приложение для подключения локальных агентов и просмотра следов интеграции.</td><td>Наглядная настройка и проверка, действительно ли память участвует в сессии.</td></tr>
+</tbody></table></div>
+<p>Базовая память для внешних агентов не требует включать все дополнительные компоненты. Для локального Bot предусмотрен запуск сервера с <code>--with-bot</code>. Его зависимости и модель нужно проверить отдельно.<a class="ref" href="#s14">14</a></p>
+<p>Gateway имеет собственные настройки провайдеров и доступа. Его нельзя считать готовым способом использовать любую подписку. Helper находится в бета-версии и использует существующие интеграции, а не заменяет их.<a class="ref" href="#s15">15</a><a class="ref" href="#s16">16</a></p>
+</section>
+
+<section id="practice"><span class="num">11</span><h2>Пример: перенести урок между проектами</h2>
+<div class="tbl"><table><caption>Таблица 10. Учебный проход по интерфейсу</caption><thead><tr><th>Действие</th><th>Ожидаемая проверка</th></tr></thead><tbody>
+<tr><td>Добавить безопасный учебный документ.</td><td>В Filesystem виден полный текст.</td></tr><tr><td>Добавить скилл проверки копии.</td><td>В Skills сохранены инструкция и приложения.</td></tr><tr><td>Передать короткую беседу с исправлением.</td><td>В Sessions есть исходные сообщения.</td></tr><tr><td>Дождаться извлечения.</td><td>В Task Center завершена операция без ошибки.</td></tr><tr><td>Найти урок по новой формулировке.</td><td>Retrieval возвращает исправленный вывод.</td></tr><tr><td>Дать похожую задачу второму клиенту.</td><td>Клиент получает урок из общей области.</td></tr>
+</tbody></table></div>
+<p>Это учебный сценарий, а не отчёт об уже принятой интеграции. Для каждого шага проверяется наблюдаемый результат. Повтор загрузки должен сохранять состав данных.</p>
+<details><summary>Прогноз: импорт принят, но поиск пуст. Что проверить первым?</summary><p>Открой Task Center. Принятая операция могла ещё выполняться или завершиться ошибкой. Затем проверь Filesystem и область Retrieval. Повторный импорт до проверки способен создать дубли.</p></details>
+<details><summary>Новый пример: два клиента видят одну базу, но находят разный опыт. Почему?</summary><p>Проверь пользователя, проектную область и запросы интеграций. Общий адрес сервера не отменяет различий идентичности и фильтров. Затем сравни обращения в Request Logs.</p></details>
+</section>
+
+<section id="limits"><span class="num">12</span><h2>Что меняется и сколько это стоит</h2>
+<div class="tbl"><table><caption>Таблица 11. Польза и цена механизма</caption><thead><tr><th>Механизм</th><th>Что даёт</th><th>Что требует</th></tr></thead><tbody>
+<tr><td>Общее хранилище</td><td>Одинаковые источники для нескольких клиентов.</td><td>Настройки идентичностей, доступа и резервирования.</td></tr><tr><td>Извлечение памяти</td><td>Уроки из разговоров.</td><td>Модель, токены, проверка качества.</td></tr><tr><td>Поиск</td><td>Выбор применимого контекста.</td><td>Векторный индекс и проверка выдачи.</td></tr><tr><td>Compile</td><td>Новые материалы из накопленных знаний.</td><td>Отдельные модельные операции и проверка результата.</td></tr><tr><td>Scheduled Sync</td><td>Обновление поддерживаемых источников.</td><td>Настроенное расписание и наблюдение за ошибками.</td></tr>
+</tbody></table></div>
+<p>Весовые параметры рабочей модели при таком процессе не меняются. Польза возникает из контекста, который получает агент. Старые, ошибочные и неприменимые записи способны ухудшить ответ. Правила разрешений продолжают действовать в рабочем клиенте.</p>
+<p>До импорта нужно подготовить источники: убрать точные копии, проверить секреты, сохранить происхождение и поздние исправления. Затем обработать небольшую партию и измерить качество, время и расход. Объём файлов сам по себе не определяет стоимость.</p>
+<p>Scheduled Sync обновляет явно настроенные источники. Он не превращает весь компьютер в постоянно синхронизируемую базу. Поддерживаемые источники и операции проверяются по конфигурации.<a class="ref" href="#s17">17</a></p>
+<p>При откате нужно учитывать индекс и разрешения. Встроенные снимки файлов не сохраняют весь этот состав. Для полной миграции требуется проверяемая согласованная резервная копия.<a class="ref" href="#s18">18</a></p>
+<div class="q"><b>Для возвращения к теме</b>Кто исполняет скилл? Чем task_id отличается от завершения? Где проверить получение урока? Что потеряется при переносе одного SKILL.md?</div>
+</section>
+
+<section id="sources"><span class="num">13</span><h2>Источники и границы проверки</h2>
+<p>Проверено 17.10.2026. Локальная установка: OpenViking 0.5.0. Карта меню сверена с исходниками Studio. Возможности описаны по документации репозитория; их доступность зависит от сборки, конфигурации и прав. Установка пункта меню не доказывает работу интеграции.</p>
+<ol class="srclist">
+<li id="s1"><span class="i">1</span><span><a href="https://github.com/volcengine/OpenViking">OpenViking</a><br><span class="w">Общее назначение и компоненты.</span></span></li>
+<li id="s2"><span class="i">2</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/web-studio/README.md">Web Studio</a><br><span class="w">Интерфейс, подключения и зависимости.</span></span></li>
+<li id="s3"><span class="i">3</span><span><a href="https://docs.openviking.ai/en/concepts/02-context-types">Context Types</a><br><span class="w">Resources, Memory, Skills.</span></span></li>
+<li id="s4"><span class="i">4</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/concepts/08-session.md">Session Management</a><br><span class="w">Архив, асинхронное извлечение и журнал изменений памяти.</span></span></li>
+<li id="s5"><span class="i">5</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/api/17-tasks.md">Background Tasks</a><br><span class="w">Статусы и проверка завершения.</span></span></li>
+<li id="s6"><span class="i">6</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/api/19-agent-evolution.md">Agent Evolution</a><br><span class="w">Связь опыта с попытками и ограничение причинных выводов.</span></span></li>
+<li id="s7"><span class="i">7</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/concepts/07-retrieval.md">Retrieval Mechanism</a><br><span class="w">find, search, глобальный поиск и повторное ранжирование.</span></span></li>
+<li id="s8"><span class="i">8</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/guides/05-observability.md">Observability</a><br><span class="w">Метрики, журналы и диагностика.</span></span></li>
+<li id="s9"><span class="i">9</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/concepts/03-context-layers.md">Context Layers</a><br><span class="w">L0, L1 и L2.</span></span></li>
+<li id="s10"><span class="i">10</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/api/04-skills.md">Skills API</a><br><span class="w">Пакеты, приложения и граница исполнения.</span></span></li>
+<li id="s11"><span class="i">11</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/context-compilation/01-overview.md">Context Compilation</a><br><span class="w">Вики, графы и отчёты.</span></span></li>
+<li id="s12"><span class="i">12</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/web-studio/src/i18n/locales/en/activity.ts">OAuth в Studio</a><br><span class="w">Подтверждение доступа MCP-клиента.</span></span></li>
+<li id="s13"><span class="i">13</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/context-compilation/06-memory-consolidation.md">Memory Consolidation</a><br><span class="w">Обработка существующей памяти на месте.</span></span></li>
+<li id="s14"><span class="i">14</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/guides/17-vikingbot.md">VikingBot</a><br><span class="w">Встроенный исполнитель и условия запуска.</span></span></li>
+<li id="s15"><span class="i">15</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/api/25-gateway.md">Gateway</a><br><span class="w">Провайдеры, контекст и доступ.</span></span></li>
+<li id="s16"><span class="i">16</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/agent-integrations/14-openviking-helper.md">Helper</a><br><span class="w">Настольная настройка и проверка интеграций.</span></span></li>
+<li id="s17"><span class="i">17</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/api/15-watches.md">Resource Watches</a><br><span class="w">Периодические проверки источников.</span></span></li>
+<li id="s18"><span class="i">18</span><span><a href="https://github.com/volcengine/OpenViking/blob/main/docs/en/api/11-snapshot.md">Snapshots</a><br><span class="w">Границы встроенного отката.</span></span></li>
+<li id="s19"><span class="i">19</span><span><a href="https://github.com/snakers4/silero-models">Silero Models</a><br><span class="w">Локальная озвучка v5_5_ru, голос xenia. Модель CC BY-NC-SA 4.0. Учебное некоммерческое использование.</span></span></li>
+</ol>
+<p class="links">Тексты пересказаны своими словами. Доказательство снижения ошибок требует проверки на реальных задачах. Полная установка всех дополнительных компонентов в рамках этой лекции не выполнялась.</p>
+</section>
+</main></div></body></html>

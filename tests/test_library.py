@@ -89,6 +89,40 @@ class LibraryTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Unlisted lecture"):
             library.prepare(self.root, self.site)
 
+    def test_audio_parts_have_independent_players_and_validate_files(self) -> None:
+        self.entry["audio_parts"] = [
+            {"title": "Part 1", "path": "audio/part-1.mp3"},
+            {"title": "Part 2", "path": "audio/part-2.mp3"},
+        ]
+        self.write_registry([self.entry])
+        (self.site / "audio").mkdir()
+        (self.site / "audio/part-1.mp3").touch()
+        with self.assertRaisesRegex(ValueError, "Audio not found"):
+            library.prepare(self.root, self.site)
+        (self.site / "audio/part-2.mp3").touch()
+        library.run(self.root, self.site, check=False)
+        text = self.page.read_text()
+        self.assertEqual(text.count("<audio"), 2)
+        self.assertIn('id="lecture-audio-2"', text)
+        self.assertIn('id="audio-status-2"', text)
+        self.assertIn("Part 2", text)
+        library.run(self.root, self.site, check=True)
+
+    def test_audio_parts_reject_conflicting_or_invalid_registry(self) -> None:
+        (self.site / "audio").mkdir()
+        (self.site / "audio/one.mp3").touch()
+        self.entry["audio"] = "audio/one.mp3"
+        self.entry["audio_parts"] = []
+        self.write_registry([self.entry])
+        with self.assertRaisesRegex(ValueError, "not both"):
+            library.prepare(self.root, self.site)
+        del self.entry["audio"]
+        for parts in ([], "audio/one.mp3", [{"path": "audio/one.mp3"}]):
+            self.entry["audio_parts"] = parts
+            self.write_registry([self.entry])
+            with self.assertRaises(ValueError):
+                library.prepare(self.root, self.site)
+
     def test_unlisted_html_anywhere_in_site_is_rejected(self) -> None:
         for relative in ("report.html", "lectures/drafts/report.html"):
             with self.subTest(path=relative):

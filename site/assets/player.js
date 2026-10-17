@@ -1,7 +1,6 @@
 "use strict";
-const audio = document.getElementById("lecture-audio");
-if (audio) {
-  const status = document.getElementById("audio-status");
+for (const audio of document.querySelectorAll(".library-player audio")) {
+  const status = document.getElementById(audio.id.replace("lecture-audio", "audio-status"));
   const key = "lecture-position:" + new URL(audio.currentSrc || audio.src).pathname;
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(key)); }
