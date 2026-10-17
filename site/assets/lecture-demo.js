@@ -53,34 +53,3 @@ if (figure) {
   document.getElementById("step-demo").hidden = false;
   render();
 }
-
-const model = document.getElementById("library-model");
-if (model) {
-  const lessons = document.getElementById("lesson-count");
-  const audio = document.getElementById("audio-count");
-  const files = document.getElementById("model-files");
-  const render = () => {
-    const count = Number(lessons.value);
-    audio.max = String(count);
-    const recordings = Number(audio.value);
-    document.getElementById("lesson-value").textContent = String(count);
-    document.getElementById("audio-value").textContent = String(recordings);
-    files.replaceChildren();
-    for (const [total, label, className] of [
-      [count, "HTML", "model-html"], [recordings, "MP3", "model-audio"], [1, "Каталог", ""]
-    ]) {
-      for (let index = 0; index < total; index += 1) {
-        const file = document.createElement("span");
-        file.className = className;
-        file.textContent = label;
-        files.append(file);
-      }
-    }
-    document.getElementById("model-result").textContent =
-      `HTML: ${count}. MP3: ${recordings}. Каталог: 1. Всего файлов: ${count + recordings + 1}.`;
-  };
-  lessons.addEventListener("input", render);
-  audio.addEventListener("input", render);
-  model.hidden = false;
-  render();
-}

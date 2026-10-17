@@ -187,18 +187,7 @@ body.deck header.top,body.deck section{scroll-snap-align:start}
   "description": "Идея, алгоритм и примеры.",
   "group": "Об устройстве библиотеки",
   "audio": "audio/lecture-library.mp3"
-}</code></pre><p>Путь audio связывает страницу с MP3. Остальные поля задают запись оглавления.</p><div class="lecture-demo" id="library-model" hidden>
-  <h3>Собери условную библиотеку</h3>
-  <p>Меняй состав и посмотри, какие файлы потребуются. Эта модель ничего не создаёт и не публикует.</p>
-  <label for="lesson-count">Лекций: <output id="lesson-value" for="lesson-count">4</output></label>
-  <input id="lesson-count" type="range" min="1" max="12" value="4">
-  <label for="audio-count">Из них с аудио: <output id="audio-value" for="audio-count">1</output></label>
-  <input id="audio-count" type="range" min="0" max="4" value="1">
-  <div class="model-files" id="model-files" aria-hidden="true"></div>
-  <p id="model-result" role="status" aria-live="polite"></p>
-  <p class="model-note">Одна лекция даёт одну HTML-страницу. Выбранное аудио добавляет MP3. Каталог остаётся общим. Стили, скрипты и изображения в этом учебном подсчёте не учитываются.</p>
-</div>
-<div class="q">Проверка ссылки подтверждает наличие файла или раздела. Она не подтверждает правильность объяснения.</div></section>
+}</code></pre><p>Путь audio связывает страницу с MP3. Остальные поля задают запись оглавления.</p><div class="q">Проверка ссылки подтверждает наличие файла или раздела. Она не подтверждает правильность объяснения.</div></section>
 <section id="boundaries"><span class="num">06</span><h2>Что не попадает в библиотеку</h2>
 <div class="tbl"><table><thead><tr><th>Материал</th><th>Правило</th></tr></thead><tbody><tr><td>Явно заказанная лекция</td><td>Сбор материала и публикация входят в запрос</td></tr><tr><td>HTML-спецификация заказчику</td><td>Остаётся документом проекта</td></tr><tr><td>Отчёт или материал к решению</td><td>Не становится лекцией из-за формата HTML</td></tr><tr><td>Аудио</td><td>Нужен отдельный запрос или согласие</td></tr><tr><td>Рабочие адреса и персональные данные</td><td>Исключаются из публичной копии</td></tr></tbody></table></div>
 <p class="cap">Таблица 2 - назначение материала определяет место публикации.</p>
