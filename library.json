@@ -52,6 +52,7 @@
     "path": "lectures/reverse-engineering.html",
     "title": "Понять устройство изнутри",
     "description": "Реверс-инжиниринг устройств и применение ИИ.",
-    "group": "Инженерная практика"
+    "group": "Инженерная практика",
+    "audio": "audio/reverse-engineering.mp3"
   }
 ]

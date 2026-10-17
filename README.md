@@ -53,7 +53,8 @@
 | --- | --- |
 | Правила проекта и назначение материалов | [AGENTS.md](AGENTS.md) |
 | Общий процесс подготовки лекции | [skills/learning-library/SKILL.md](skills/learning-library/SKILL.md) |
-| Рамка текущей работы | [docs/plans/library.md](docs/plans/library.md) |
+| Состояние и результаты проверок | [docs/state.md](docs/state.md) |
+| Следующие задачи | [docs/backlog.md](docs/backlog.md) |
 | Что перенесено | [docs/migration.md](docs/migration.md) |
 | Пробная лекция о библиотеке | [site/lectures/lecture-library.html](site/lectures/lecture-library.html) |
 
