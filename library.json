@@ -74,5 +74,11 @@
         "path": "audio/agent-memory-3.mp3"
       }
     ]
+  },
+  {
+    "path": "lectures/agent-practitioners.html",
+    "title": "Практики агентной разработки",
+    "description": "За кем следить: обвязка вокруг LLM, философия, отношение к ИИ, ссылки.",
+    "group": "Люди и практики"
   }
 ]

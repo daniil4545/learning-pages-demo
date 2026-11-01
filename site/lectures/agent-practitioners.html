@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Практики агентной разработки: чем известны, над чем работают, философия, отношение к ИИ и ссылки.">
+<title>Практики агентной разработки</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:16px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static}}
+
+/* callout */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+
+/* person card */
+.person{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px 20px 6px;margin:18px 0}
+.person h3{margin:0 0 4px;font-size:18px}
+.person .role{font-size:14px;color:var(--muted);margin:0 0 12px}
+.person dl{margin:0 0 10px;display:grid;grid-template-columns:150px minmax(0,1fr);gap:6px 14px;font-size:15px}
+.person dt{font:600 11px/1.9 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.person dd{margin:0;max-width:66ch}
+@media (max-width:600px){.person dl{grid-template-columns:1fr}.person dd{margin-bottom:6px}}
+
+/* figure */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .okc{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+svg .wc{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1.5}
+svg .rc{fill:var(--res-soft);stroke:var(--res);stroke-width:1.5}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+
+/* exercises */
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px 1fr;gap:6px}
+.ex div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+details{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:10px 0;max-width:72ch;font-size:15px}
+details summary{cursor:pointer;font-weight:600}
+details p{margin:10px 0 4px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+svg.defs{position:absolute}
+@media print{body{background:#fff}nav.toc{display:none}.wrap{display:block}section{break-inside:avoid-page}}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Оглавление</p>
+  <ol>
+    <li><a href="#s-map">Карта взглядов</a></li>
+    <li><a href="#s-core">Ядро: обвязка и минимализм</a></li>
+    <li><a href="#s-understand">Голоса понимания</a></li>
+    <li><a href="#s-contrast">Другой полюс</a></li>
+    <li><a href="#s-new">Новые голоса 2026</a></li>
+    <li><a href="#s-cis">Русскоязычные авторы</a></li>
+    <li><a href="#s-ideas">Общие идеи</a></li>
+    <li><a href="#s-next">С кого начать</a></li>
+    <li><a href="#s-check">Вопросы</a></li>
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <span class="eyebrow">Обзор людей · 01.11.2026</span>
+  <h1>Практики агентной разработки: за кем следить</h1>
+  <p class="lead">Люди, которые делают реальные продукты и публично пишут, как строят обвязку вокруг языковых моделей. Для каждого: чем известен, над чем работает, во что верит, как относится к разработке с ИИ и где читать.</p>
+</header>
+
+<p>Разработка с агентами меняется быстрее, чем успевают появиться учебники. Поэтому ориентиры сейчас дают не книги, а практики, которые пишут о своей работе по ходу дела. Здесь собраны около пятнадцати таких людей. Отбор шёл по трём признакам: человек делает настоящий продукт, публично пишет о своём методе и интересен тому, кто строит инструменты, процессы и доступ агентов к системам, а не сами модели. Имена взяты частично из памяти и дополнены выборкой самых обсуждаемых историй Hacker News за 2026 год. Факты проверены по блогам и репозиториям 1 ноября 2026 года. От тебя нужно одно: по ходу чтения отметить двух-трёх человек, чей подход откликается, и начать с их текстов.</p>
+
+<section id="s-map">
+  <span class="num">01</span>
+  <h2>Карта взглядов</h2>
+  <p>Главное, чем отличаются эти люди, - сколько работы они доверяют агенту. На одном краю стоит полный запрет кода от моделей, на другом - агент, который сутками работает в цикле без человека. Большинство практиков из этой лекции стоят посередине: агент пишет много, но человек проектирует обвязку и проверки.</p>
+
+  <div class="q"><b>Прогноз</b>Прежде чем смотреть схему: где на этой оси стоишь ты сейчас, и где хотел бы стоять через год?</div>
+
+  <figure>
+    <div class="ttl">Сколько работы человек отдаёт агенту</div>
+    <svg class="d" viewBox="0 0 920 230" role="img" aria-label="Ось от запрета кода от моделей до полной автономии агента, на ней расставлены практики">
+      <line class="ln" x1="20" y1="115" x2="900" y2="115" marker-end="url(#m-fill)"/>
+      <text class="mut" x="20" y="140">руками, без моделей</text>
+      <text class="mut" x="900" y="140" text-anchor="end">агент в цикле без человека</text>
+      <rect class="wc" x="30" y="40" width="120" height="42" rx="4"/><text class="b" x="90" y="58" text-anchor="middle">Andrew Kelley</text><text x="90" y="74" text-anchor="middle">запрет LLM в Zig</text>
+      <rect class="rc" x="165" y="160" width="150" height="42" rx="4"/><text class="b" x="240" y="178" text-anchor="middle">Beck, Gross</text><text x="240" y="194" text-anchor="middle">понимай каждый код</text>
+      <rect class="okc" x="280" y="40" width="150" height="42" rx="4"/><text class="b" x="355" y="58" text-anchor="middle">Mitchell Hashimoto</text><text x="355" y="74" text-anchor="middle">один агент, ремесло</text>
+      <rect class="okc" x="420" y="160" width="170" height="42" rx="4"/><text class="b" x="505" y="178" text-anchor="middle">Zechner, Ronacher, Ball</text><text x="505" y="194" text-anchor="middle">минимальный харнесс</text>
+      <rect class="hl" x="470" y="40" width="160" height="42" rx="4"/><text class="b" x="550" y="58" text-anchor="middle">Horthy, Tane</text><text x="550" y="74" text-anchor="middle">процесс и контекст</text>
+      <rect class="rc" x="640" y="160" width="130" height="42" rx="4"/><text class="b" x="705" y="178" text-anchor="middle">Jarred Sumner</text><text x="705" y="194" text-anchor="middle">переписать агентами</text>
+      <rect class="wc" x="760" y="40" width="140" height="42" rx="4"/><text class="b" x="830" y="58" text-anchor="middle">Geoffrey Huntley</text><text x="830" y="74" text-anchor="middle">Ralph: bash-цикл</text>
+    </svg>
+    <figcaption>Положение на оси - учебная модель по их текстам, а не измерение. Зелёным отмечены люди, ближе всего к философии малых быстрых инструментов.</figcaption>
+  </figure>
+</section>
+
+<section id="s-core">
+  <span class="num">02</span>
+  <h2>Ядро: обвязка и минимализм</h2>
+  <p>Эти пятеро ближе всего к подходу «маленький, быстрый, проверяемый инструмент». Все они пишут не о том, какая модель умнее, а о том, как устроить работу вокруг неё.</p>
+
+  <div class="person">
+    <h3>Mitchell Hashimoto</h3>
+    <p class="role">Ghostty, libghostty, компания Superlogical</p>
+    <dl>
+      <dt>Чем известен</dt><dd>Сооснователь HashiCorp, был в первой инженерной команде Vagrant, Packer, Terraform и других её продуктов<a class="ref" href="#s1">1</a>.</dd>
+      <dt>Над чем работает</dt><dd>Терминал Ghostty и встраиваемая библиотека libghostty на Zig. В 2026 году основал Superlogical, которая делает на libghostty продукт Rex<a class="ref" href="#s1">1</a><a class="ref" href="#s2">2</a>. Свежий пост от 6 октября 2026 года описывает протокол статуса программ для терминала<a class="ref" href="#s3">3</a>.</dd>
+      <dt>Философия</dt><dd>Ремесло: строить ради любви к делу. Он называет себя «software craftsman» и много пишет руками там, где работа ему нравится<a class="ref" href="#s4">4</a>.</dd>
+      <dt>Отношение к ИИ</dt><dd>Осторожный путь от скептика к практику. Каждую ошибку агента он закрывает строкой в AGENTS.md или скриптом проверки и называет это harness engineering (инженерия обвязки). Держит одного фонового агента и выключает его уведомления<a class="ref" href="#s4">4</a>.</dd>
+      <dt>Читать</dt><dd><a href="https://mitchellh.com/writing/my-ai-adoption-journey">My AI Adoption Journey</a>, <a href="https://mitchellh.com/writing">блог</a>, <a href="https://github.com/ghostty-org/ghostty">Ghostty на GitHub</a>.</dd>
+    </dl>
+  </div>
+
+  <div class="person">
+    <h3>Mario Zechner</h3>
+    <p class="role">агент pi, компания Earendil, Грац</p>
+    <dl>
+      <dt>Чем известен</dt><dd>Автор libGDX, кроссплатформенного фреймворка для игр на Java<a class="ref" href="#s5">5</a>.</dd>
+      <dt>Над чем работает</dt><dd>Минимальный агент для кода pi на TypeScript. В апреле 2026 года перешёл в Earendil и забрал pi с собой, сейчас ведёт его техническое направление<a class="ref" href="#s5">5</a><a class="ref" href="#s6">6</a>.</dd>
+      <dt>Философия</dt><dd>Простые предсказуемые инструменты: «I'm a simple boy who likes simple, predictable tools». Claude Code для него стал «космическим кораблём», в котором 80% функций ему не нужны<a class="ref" href="#s7">7</a>.</dd>
+      <dt>Отношение к ИИ</dt><dd>Пишет агентов сам и считает управление контекстом главным в их устройстве. В марте 2026 года выпустил текст о том, что пора замедлиться: агенты пришли в боевой код, и уже видны последствия<a class="ref" href="#s7">7</a><a class="ref" href="#s8">8</a>.</dd>
+      <dt>Читать</dt><dd><a href="https://mariozechner.at/posts/2025-11-30-pi-coding-agent/">What I learned building an opinionated and minimal coding agent</a>, <a href="https://mariozechner.at/posts/2026-03-25-thoughts-on-slowing-the-fuck-down/">Thoughts on slowing down</a>, <a href="https://github.com/badlogic/pi-mono">pi-mono</a>.</dd>
+    </dl>
+  </div>
+
+  <div class="person">
+    <h3>Armin Ronacher</h3>
+    <p class="role">Earendil, pi; автор Flask</p>
+    <dl>
+      <dt>Чем известен</dt><dd>Автор веб-фреймворка Flask и многих библиотек Python.</dd>
+      <dt>Над чем работает</dt><dd>Earendil делает инструменты для работы с ИИ: агент pi и продукт Lefos<a class="ref" href="#s9">9</a>. В блоге пишет о Rust и агентах.</dd>
+      <dt>Философия</dt><dd>Малое и быстрое. В августе 2026 года он показал, что агенты снимают с «трудных» языков цену входа, поэтому быстрые маленькие проекты всё чаще выбирают Rust и Zig<a class="ref" href="#s10">10</a>.</dd>
+      <dt>Отношение к ИИ</dt><dd>Ставит агенту спецификацию и отдаёт ему реализацию: расширения pi написал агент по его спецификации<a class="ref" href="#s11">11</a>. В pi сначала сознательно не было MCP. Потом команда признала, что ошиблась, и встроила его в ядро<a class="ref" href="#s11">11</a><a class="ref" href="#s12">12</a>.</dd>
+      <dt>Читать</dt><dd><a href="https://lucumr.pocoo.org/2026/1/31/pi/">Pi: The Minimal Agent</a>, <a href="https://lucumr.pocoo.org/2026/8/22/fast-hard-code/">Fast, hard code</a>, <a href="https://earendil.com/posts/you-said-no-mcp/">You Said No MCP!</a>.</dd>
+    </dl>
+  </div>
+
+  <div class="person">
+    <h3>Dex Horthy</h3>
+    <p class="role">HumanLayer, руководство 12-Factor Agents</p>
+    <dl>
+      <dt>Чем известен</dt><dd>Открытым руководством 12-Factor Agents: двенадцать принципов надёжных приложений на языковых моделях<a class="ref" href="#s13">13</a>. Ему часто приписывают термин context engineering (инженерия контекста), но первоисточника для этого я не нашёл.</dd>
+      <dt>Над чем работает</dt><dd>HumanLayer: среда и облако для командной работы с агентами, где видны сессии, планы и диффы<a class="ref" href="#s14">14</a>.</dd>
+      <dt>Философия</dt><dd>Бери маленькие модульные идеи из устройства агентов и встраивай их в обычный продукт. Не строй всё вокруг фреймворка<a class="ref" href="#s13">13</a>.</dd>
+      <dt>Отношение к ИИ</dt><dd>Агент - это в основном обычный код, в который вставлены решения модели. Третий фактор - «владей своим окном контекста»: на каждом шаге модель получает явную историю «что уже случилось и какой следующий шаг»<a class="ref" href="#s15">15</a>.</dd>
+      <dt>Читать</dt><dd><a href="https://github.com/humanlayer/12-factor-agents">12-Factor Agents</a>, <a href="https://github.com/humanlayer/12-factor-agents/blob/main/content/factor-03-own-your-context-window.md">фактор 3</a>, <a href="https://www.humanlayer.dev/">HumanLayer</a>.</dd>
+    </dl>
+  </div>
+
+  <div class="person">
+    <h3>Thorsten Ball</h3>
+    <p class="role">сооснователь Amp; раньше Sourcegraph и Zed</p>
+    <dl>
+      <dt>Чем известен</dt><dd>Книгами на Go: «Writing An Interpreter In Go» ведёт от нуля строк до работающего интерпретатора, «Writing A Compiler In Go» - её продолжение<a class="ref" href="#s16">16</a>.</dd>
+      <dt>Над чем работает</dt><dd>Агент для кода Amp, который он сделал вместе с коллегами<a class="ref" href="#s17">17</a>. Каждую неделю выпускает рассылку Joy &amp; Curiosity, выпуск 103 вышел 25 октября 2026 года<a class="ref" href="#s18">18</a>.</dd>
+      <dt>Философия</dt><dd>Механизм без магии. Его вывод: агент для кода - это модель, цикл и достаточно токенов, а рабочая версия укладывается меньше чем в 400 строк на Go<a class="ref" href="#s19">19</a>.</dd>
+      <dt>Отношение к ИИ</dt><dd>Работает с агентами каждый день и почти без надстроек. На Laracon в июле 2026 года рассказал, что не использует MCP-серверы и фреймворки, а держит один-два скилла<a class="ref" href="#s20">20</a>.</dd>
+      <dt>Читать</dt><dd><a href="https://ampcode.com/how-to-build-an-agent">How to Build an Agent</a>, <a href="https://thorstenball.com/talks/how-i-prompt/">How I Prompt</a>, <a href="https://registerspill.thorstenball.com">рассылка</a>.</dd>
+    </dl>
+  </div>
+
+  <div class="q"><b>Вывод</b>У всех пятерых одна мысль: качество агента определяет обвязка, то есть контекст, проверки и минимум лишнего, а не выбор модели.</div>
+</section>
+
+<section id="s-understand">
+  <span class="num">03</span>
+  <h2>Голоса понимания</h2>
+  <p>Эти люди не против ИИ, но напоминают о цене: если код сгенерирован, его всё равно должен понимать человек. Их полезно читать тому, кто хочет работать вдумчиво.</p>
+
+  <div class="person">
+    <h3>Kent Beck</h3>
+    <p class="role">автор экстремального программирования (XP) и TDD</p>
+    <dl>
+      <dt>Чем известен</dt><dd>Создал экстремальное программирование и разработку через тесты. Книга «Extreme Programming Explained» подтверждена только справочниками<a class="ref" href="#s21">21</a>.</dd>
+      <dt>Над чем работает</dt><dd>Рассылка Tidy First? и серия книг Empirical Software Design: вышла «Tidy First?», готовится «Tidy Together»<a class="ref" href="#s22">22</a>.</dd>
+      <dt>Философия</dt><dd>Дизайн маленькими шагами с обратной связью. Агентам эта мысль подходит напрямую.</dd>
+      <dt>Отношение к ИИ</dt><dd>Свою работу с ассистентами называет augmented coding (дополненное программирование), а не vibe coding<a class="ref" href="#s23">23</a>. Против роёв агентов: «Nobody wants agent swarms. I have a system and I want it to change»<a class="ref" href="#s24">24</a>.</dd>
+      <dt>Читать</dt><dd><a href="https://tidyfirst.substack.com/p/augmented-coding-negative-feedback">Augmented coding</a>, <a href="https://tidyfirst.substack.com/p/genie-lessons-nobody-wants-agents">Nobody Wants Agents</a>, <a href="https://www.kentbeck.com/">kentbeck.com</a>.</dd>
+    </dl>
+  </div>
+
+  <div class="person">
+    <h3>Carson Gross</h3>
+    <p class="role">htmx, hyperscript; профессор Montana State University</p>
+    <dl>
+      <dt>Чем известен</dt><dd>Библиотекой htmx и манифестом простоты grugbrain.dev, где главный враг разработчика - сложность<a class="ref" href="#s25">25</a>. Соавтор книги «Hypermedia Systems», она бесплатно доступна онлайн<a class="ref" href="#s26">26</a>.</dd>
+      <dt>Над чем работает</dt><dd>htmx и эссе о разработке. В 2026 году вышли эссе о том, что Markdown становится исходным кодом, и о том, что код стал дешевле<a class="ref" href="#s27">27</a>.</dd>
+      <dt>Философия</dt><dd>Простота как защита от сложности. Дешёвый код делает рост сложности ещё опаснее.</dd>
+      <dt>Отношение к ИИ</dt><dd>Сам называет себя «ambivalent towards AI». Настаивает, что разработчик должен понимать сгенерированный код, и советует добавлять его маленькими порциями<a class="ref" href="#s27">27</a>.</dd>
+      <dt>Читать</dt><dd><a href="https://grugbrain.dev/">The Grug Brained Developer</a>, <a href="https://htmx.org/essays/code-is-cheap/">Code is Cheap(er)</a>, <a href="https://hypermedia.systems/">Hypermedia Systems</a>.</dd>
+    </dl>
+  </div>
+
+  <div class="person">
+    <h3>Gabriella Gonzalez</h3>
+    <p class="role">блог Haskell for All</p>
+    <dl>
+      <dt>Чем известна</dt><dd>Блогом Haskell for All. По справочным данным - автор языка конфигурации Dhall, первоисточник не открылся<a class="ref" href="#s28">28</a>.</dd>
+      <dt>Тезис</dt><dd>Пост от 17 марта 2026 года «A sufficiently detailed spec is code» спорит с идеей генерировать код из одних спецификаций. Первое заблуждение, по её разбору: будто спецификация проще кода<a class="ref" href="#s29">29</a>.</dd>
+      <dt>Читать</dt><dd><a href="https://haskellforall.com/2026/03/a-sufficiently-detailed-spec-is-code">A sufficiently detailed spec is code</a>.</dd>
+    </dl>
+  </div>
+</section>
+
+<section id="s-contrast">
+  <span class="num">04</span>
+  <h2>Другой полюс</h2>
+  <p>Сильные практики, которые думают иначе. Их стоит читать, чтобы проверять свои взгляды, а не чтобы с ними соглашаться.</p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Кто</th><th>Что делает</th><th>Взгляд</th><th>Читать</th></tr></thead>
+    <tbody>
+      <tr><td><b>Geoffrey Huntley</b></td><td>техника Ralph, подкаст о loop engineering</td><td>Ralph - это bash-цикл, который снова и снова подаёт агенту один промпт. Модель ненадёжна, цикл детерминирован, дефекты чинятся правкой промпта<a class="ref" href="#s30">30</a></td><td><a href="https://ghuntley.com/ralph">Ralph</a>, <a href="https://ghuntley.com/loop/">loop</a></td></tr>
+      <tr><td><b>Jarred Sumner</b></td><td>Bun; с декабря 2025 года Bun принадлежит Anthropic</td><td>Переписал Bun с Zig на Rust за 11 дней примерно в 50 потоках работы Claude Code, с ревью второй моделью и ручным контролем<a class="ref" href="#s31">31</a></td><td><a href="https://bun.com/blog/bun-in-rust">Bun in Rust</a></td></tr>
+      <tr><td><b>Andrew Kelley</b></td><td>язык Zig, проект ушёл с GitHub на Codeberg</td><td>В Zig действует строгий запрет LLM, даже для поиска багов<a class="ref" href="#s32">32</a>. Переписывание Bun объясняет расхождением ценностей двух проектов<a class="ref" href="#s33">33</a></td><td><a href="https://andrewkelley.me/post/my-thoughts-bun-rust-rewrite.html">My Thoughts on the Bun Rust Rewrite</a></td></tr>
+      <tr><td><b>Dax Raad</b></td><td>opencode, открытый агент для кода</td><td>Ощущение от продукта важнее бенчмарков. С ИИ код писать проще, но трудные части работы никуда не деваются<a class="ref" href="#s34">34</a></td><td><a href="https://newsletter.pragmaticengineer.com/p/opencode">Building OpenCode</a></td></tr>
+    </tbody>
+  </table></div>
+
+  <details><summary>Новый пример: Sumner и Kelley смотрят на одно событие. Почему выводы противоположные?</summary><p>Оба оценивают переписывание Bun. Sumner измеряет результат: работающий код за 11 дней при контроле процесса. Kelley смотрит на практики разработки и ценности: для него поспешный код был проблемой ещё до агентов. Спорят они не о языке и не об ИИ, а о том, что считать качеством.</p></details>
+</section>
+
+<section id="s-new">
+  <span class="num">05</span>
+  <h2>Новые голоса 2026</h2>
+  <p>Эти имена нашлись в выборке Hacker News за 2026 год, а не в памяти. Проверены они меньше, чем ядро.</p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Кто</th><th>Чем занят</th><th>Главный тезис</th><th>Читать</th></tr></thead>
+    <tbody>
+      <tr><td><b>Drew Breunig</b></td><td>CEO и сооснователь Cmpnd, редактор The Context Engine</td><td>Инженерия контекста останется трудной, потому что модели - не люди. Его хронология терминов: prompt engineering в 2023 году, context engineering в 2025-м, harness engineering в 2026-м<a class="ref" href="#s35">35</a></td><td><a href="https://www.dbreunig.com/2026/10/24/the-state-of-context-engineering.html">State of Context Engineering</a></td></tr>
+      <tr><td><b>Boris Tane</b></td><td>разработчик, около 9 месяцев работает с Claude Code</td><td>Агент не пишет код, пока человек не прочитал и не одобрил письменный план<a class="ref" href="#s36">36</a></td><td><a href="https://boristane.com/blog/how-i-use-claude-code">How I Use Claude Code</a></td></tr>
+      <tr><td><b>Simon Willison</b></td><td>Datasette, CLI <code>llm</code>, ежедневный блог</td><td>Lethal trifecta: агент опасен, если у него одновременно доступ к приватным данным, чужой текст на входе и канал наружу<a class="ref" href="#s37">37</a></td><td><a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">The lethal trifecta</a></td></tr>
+      <tr><td><b>antirez</b></td><td>автор Redis, сейчас движок локального инференса ds4 и агент для него</td><td>Локальный инференс беден токенами, поэтому оптимизации агента там решают всё<a class="ref" href="#s38">38</a></td><td><a href="https://antirez.com/">antirez.com</a>, <a href="https://github.com/antirez/ds4">ds4</a></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s-cis">
+  <span class="num">06</span>
+  <h2>Русскоязычные авторы</h2>
+  <p>Практиков того же масштаба, что в ядре, поиск по Habr, Telegram и GitHub не нашёл. Возможно, сильные авторы из СНГ пишут по-английски, и поиск по русскому языку их не поймал. Доклады Podlodka и HighLoad++ не просмотрены.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Кто</th><th>Что делает</th><th>Где читать</th></tr></thead>
+    <tbody>
+      <tr><td><b>Алексей Леденев</b></td><td>Инфраструктура и инструменты разработчика с 1995 года: pumba для хаос-тестирования контейнеров, ccgram для управления агентами из Telegram, MCP-сервер для Kubernetes<a class="ref" href="#s39">39</a></td><td><a href="https://github.com/alexei-led">GitHub</a>, <a href="https://alexei-led.github.io">блог</a></td></tr>
+      <tr><td><b>akovalion</b></td><td>paranoid-qa: набор скиллов Claude Code, который играет роль QA-инженера, плюс серия статей на Habr<a class="ref" href="#s40">40</a></td><td><a href="https://github.com/akovalion/paranoid-qa">paranoid-qa</a></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s-ideas">
+  <span class="num">07</span>
+  <h2>Общие идеи</h2>
+  <p>Если сложить тексты вместе, повторяются пять идей. Каждую стоит связать с собственной работой.</p>
+
+  <div class="q"><b>Вспомни</b>До таблицы: какие две идеи из прочитанного ты бы применил к своему воркфлоу завтра?</div>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Идея</th><th>Кто</th><th>Что это значит на практике</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag ok">обвязка</span> harness engineering</td><td>Hashimoto, Breunig</td><td>Каждая повторная ошибка агента превращается в строку правил или скрипт проверки</td></tr>
+      <tr><td><span class="tag p">контекст</span> context engineering</td><td>Horthy, Zechner, Breunig</td><td>Ты сам решаешь, что модель видит на каждом шаге, а не доверяешь это формату по умолчанию</td></tr>
+      <tr><td><span class="tag ok">минимум</span> маленький харнесс</td><td>Zechner, Ronacher, Ball</td><td>Агент - это модель, цикл и инструменты. Каждая надстройка должна окупаться</td></tr>
+      <tr><td><span class="tag p">план</span> план до кода</td><td>Tane, Hashimoto</td><td>Планирование и исполнение идут отдельными сессиями, план проверяет человек</td></tr>
+      <tr><td><span class="tag r">понимание</span> понимай результат</td><td>Gross, Beck, Gonzalez</td><td>Сгенерированный код остаётся твоей ответственностью. Детальная спецификация - уже почти код</td></tr>
+    </tbody>
+  </table></div>
+
+  <details><summary>Новый пример: агент снова запускает тесты не той командой. Что сделал бы каждый?</summary><p>Hashimoto добавит строку в AGENTS.md с правильной командой. Ball, скорее всего, обойдётся без скилла, если строки хватит. Horthy проверит, видит ли агент результат прошлого запуска в контексте. Huntley поправит промпт цикла и запустит его снова. Решения разные, но у первых трёх общий принцип: устранить причину один раз.</p></details>
+</section>
+
+<section id="s-next">
+  <span class="num">08</span>
+  <h2>С кого начать</h2>
+  <p>Если начинать с троих, хватит Mitchell Hashimoto, Mario Zechner и Dex Horthy. Вместе они покрывают ремесло, минимальный харнесс и процесс. Ниже план на первые недели.</p>
+  <div class="ex">
+    <div><span><b>Прочитать три опорных текста.</b> My AI Adoption Journey, пост Mario о минимальном агенте, README 12-Factor Agents.<small>По одному тексту за вечер, с заметкой: что беру себе, с чем не согласен.</small></span></div>
+    <div><span><b>Подписаться на ленты.</b> Блоги Hashimoto, Zechner, Ronacher, рассылку Ball и блог Breunig.<small>Ленты можно добавить в свой коллектор новостей, чтобы тексты сами приходили в утренний брифинг.</small></span></div>
+    <div><span><b>Проверить одну идею на своём проекте.</b> Например, превратить последнюю повторную ошибку агента в строку правил или скрипт.<small>Так прочитанное станет собственным опытом, как у Hashimoto в его шаге 2.</small></span></div>
+    <div><span><b>Ответить кому-то из них.</b> Комментарий к посту, issue в их проекте, короткая заметка со ссылкой на их текст.<small>Из вакуума выводит не чтение, а разговор.</small></span></div>
+  </div>
+</section>
+
+<section id="s-check">
+  <span class="num">09</span>
+  <h2>Вопросы для возвращения</h2>
+  <details><summary>Что Mitchell Hashimoto называет harness engineering?</summary><p>Привычку каждую ошибку агента закрывать навсегда: строкой в AGENTS.md или программным инструментом проверки. Цель - чтобы агент сразу делал правильно или сам видел свою ошибку.</p></details>
+  <details><summary>Почему в pi сначала не было MCP, и что случилось потом?</summary><p>Pi задумывался как минимальный агент, MCP убрали сознательно. Позже команда Earendil встроила MCP в ядро и написала пост «You Said No MCP!» о смене решения.</p></details>
+  <details><summary>Какие три условия входят в lethal trifecta?</summary><p>Доступ к приватным данным, чужой текст на входе и канал связи наружу. Вместе они позволяют чужому тексту заставить агента отправить твои данные злоумышленнику.</p></details>
+  <details><summary>В чём главный тезис Gabriella Gonzalez против генерации кода из спецификаций?</summary><p>Достаточно подробная спецификация сама становится кодом, поэтому она не проще кода. Сложность не исчезает, а переезжает в документ.</p></details>
+  <details><summary>Чем Ralph Huntley отличается от подхода Kent Beck?</summary><p>Ralph крутит агента в цикле с одним промптом и чинит дефекты правкой промпта. Beck хочет менять свою систему маленькими шагами и не доверяет роям агентов.</p></details>
+</section>
+
+<section id="sources">
+  <span class="num">10</span>
+  <h2>Источники</h2>
+  <p>Проверено 01.11.2026. Первоисточник - текст прочитан целиком. Справочно - данные из каталогов и поиска, без чтения первоисточника.</p>
+  <ol class="srclist">
+    <li id="s1"><span class="i">1</span><span><a href="https://mitchellh.com/">mitchellh.com</a>. <span class="w">Первоисточник: HashiCorp, Ghostty, libghostty.</span></span></li>
+    <li id="s2"><span class="i">2</span><span><a href="https://mitchellh.com/writing/superlogical">Superlogical</a>. <span class="w">Первоисточник: основание компании.</span></span></li>
+    <li id="s3"><span class="i">3</span><span><a href="https://mitchellh.com/writing">mitchellh.com/writing</a>. <span class="w">Первоисточник: список постов, OSC 7501 от 06.10.2026.</span></span></li>
+    <li id="s4"><span class="i">4</span><span><a href="https://mitchellh.com/writing/my-ai-adoption-journey">My AI Adoption Journey</a>, 05.02.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s5"><span class="i">5</span><span><a href="https://www.ai.engineer/speakers/mario-zechner">Mario Zechner на ai.engineer</a>. <span class="w">Биография на странице конференции: libGDX, pi, Earendil.</span></span></li>
+    <li id="s6"><span class="i">6</span><span><a href="https://mariozechner.at/posts/2026-04-08-ive-sold-out/">I've sold out</a>, 08.04.2026. <span class="w">Первоисточник: переход в Earendil.</span></span></li>
+    <li id="s7"><span class="i">7</span><span><a href="https://mariozechner.at/posts/2025-11-30-pi-coding-agent/">What I learned building an opinionated and minimal coding agent</a>, 30.11.2025. <span class="w">Первоисточник.</span></span></li>
+    <li id="s8"><span class="i">8</span><span><a href="https://mariozechner.at/posts/2026-03-25-thoughts-on-slowing-the-fuck-down/">Thoughts on slowing down</a>, 25.03.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s9"><span class="i">9</span><span><a href="https://earendil.com">earendil.com</a>. <span class="w">Первоисточник: pi и Lefos.</span></span></li>
+    <li id="s10"><span class="i">10</span><span><a href="https://lucumr.pocoo.org/2026/8/22/fast-hard-code/">Fast, hard code</a>, 22.08.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s11"><span class="i">11</span><span><a href="https://lucumr.pocoo.org/2026/1/31/pi/">Pi: The Minimal Agent Within OpenClaw</a>, 31.01.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s12"><span class="i">12</span><span><a href="https://earendil.com/posts/you-said-no-mcp/">You Said No MCP!</a> <span class="w">Первоисточник; автор на странице не назван, текст от лица команды.</span></span></li>
+    <li id="s13"><span class="i">13</span><span><a href="https://github.com/humanlayer/12-factor-agents">12-Factor Agents</a>. <span class="w">Первоисточник: README.</span></span></li>
+    <li id="s14"><span class="i">14</span><span><a href="https://www.humanlayer.dev/">humanlayer.dev</a>. <span class="w">Первоисточник: описание продукта.</span></span></li>
+    <li id="s15"><span class="i">15</span><span><a href="https://github.com/humanlayer/12-factor-agents/blob/main/content/factor-03-own-your-context-window.md">Factor 3: Own your context window</a>; <a href="https://www.ai.engineer/talks/12-factor-agents">доклад на AI Engineer</a>. <span class="w">Фактор - первоисточник, тезис доклада - по описанию на странице конференции.</span></span></li>
+    <li id="s16"><span class="i">16</span><span><a href="https://thorstenball.com/books/">thorstenball.com/books</a>, <a href="https://interpreterbook.com">interpreterbook.com</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s17"><span class="i">17</span><span><a href="https://thorstenball.com/">thorstenball.com</a>. <span class="w">Первоисточник: роль в Amp.</span></span></li>
+    <li id="s18"><span class="i">18</span><span><a href="https://registerspill.thorstenball.com/archive">Архив Register Spill</a>. <span class="w">Первоисточник: выпуск 103 от 25.10.2026.</span></span></li>
+    <li id="s19"><span class="i">19</span><span><a href="https://ampcode.com/how-to-build-an-agent">How to Build an Agent</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s20"><span class="i">20</span><span><a href="https://thorstenball.com/talks/how-i-prompt/">How I Prompt</a>, Laracon US, 29.07.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s21"><span class="i">21</span><span><a href="https://en.wikipedia.org/wiki/Kent_Beck">Kent Beck в Wikipedia</a>. <span class="w">Справочно: XP и книга Extreme Programming Explained.</span></span></li>
+    <li id="s22"><span class="i">22</span><span><a href="https://www.kentbeck.com/">kentbeck.com</a>. <span class="w">Первоисточник: Tidy First?, серия Empirical Software Design.</span></span></li>
+    <li id="s23"><span class="i">23</span><span><a href="https://tidyfirst.substack.com/p/augmented-coding-negative-feedback">Augmented coding</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s24"><span class="i">24</span><span><a href="https://tidyfirst.substack.com/p/genie-lessons-nobody-wants-agents">Genie Lessons: Nobody Wants Agents</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s25"><span class="i">25</span><span><a href="https://grugbrain.dev/">The Grug Brained Developer</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s26"><span class="i">26</span><span><a href="https://hypermedia.systems/book/contents/">Hypermedia Systems</a>. <span class="w">Оглавление - первоисточник, состав авторов - справочно.</span></span></li>
+    <li id="s27"><span class="i">27</span><span><a href="https://htmx.org/essays/code-is-cheap/">Code is Cheap(er)</a>, 04.06.2026; <a href="https://htmx.org/essays/working-with-ai/">Working With AI</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s28"><span class="i">28</span><span><a href="https://leanpub.com/u/gabriella439">Gabriella Gonzalez на Leanpub</a>. <span class="w">Справочно.</span></span></li>
+    <li id="s29"><span class="i">29</span><span><a href="https://haskellforall.com/2026/03/a-sufficiently-detailed-spec-is-code">A sufficiently detailed spec is code</a>, 17.03.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s30"><span class="i">30</span><span><a href="https://ghuntley.com/ralph">Ralph</a>, <a href="https://ghuntley.com/loop/">loop</a>, <a href="https://ghuntley.com">ghuntley.com</a>. <span class="w">Первоисточник; даты постов на страницах не видны.</span></span></li>
+    <li id="s31"><span class="i">31</span><span><a href="https://bun.com/blog/bun-in-rust">Bun in Rust</a>, 08.07.2026. <span class="w">Первоисточник, включая раскрытие о покупке Bun компанией Anthropic.</span></span></li>
+    <li id="s32"><span class="i">32</span><span><a href="https://ziglang.org/code-of-conduct/">Zig Code of Conduct</a>. <span class="w">Первоисточник: политика без LLM.</span></span></li>
+    <li id="s33"><span class="i">33</span><span><a href="https://andrewkelley.me/post/my-thoughts-bun-rust-rewrite.html">My Thoughts on the Bun Rust Rewrite</a>. <span class="w">Первоисточник; дата на странице не указана.</span></span></li>
+    <li id="s34"><span class="i">34</span><span><a href="https://newsletter.pragmaticengineer.com/p/opencode">Building OpenCode with Dax Raad</a>; <a href="https://baseten.co/blog/building-ai-agents-open-code-and-open-source-a-conversation-with-dax/">интервью Baseten</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s35"><span class="i">35</span><span><a href="https://www.dbreunig.com/2026/10/24/the-state-of-context-engineering.html">The State of Context Engineering</a>, 24.10.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s36"><span class="i">36</span><span><a href="https://boristane.com/blog/how-i-use-claude-code">How I Use Claude Code</a>, 11.02.2026. <span class="w">Первоисточник.</span></span></li>
+    <li id="s37"><span class="i">37</span><span><a href="https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/">The lethal trifecta</a>, 16.06.2025. <span class="w">Первоисточник.</span></span></li>
+    <li id="s38"><span class="i">38</span><span><a href="https://antirez.com/">antirez.com</a>, <a href="https://github.com/antirez/ds4">antirez/ds4</a>. <span class="w">Первоисточник.</span></span></li>
+    <li id="s39"><span class="i">39</span><span><a href="https://github.com/alexei-led">alexei-led на GitHub</a>, <a href="https://github.com/alexei-led/ccgram">ccgram</a>. <span class="w">Первоисточник; страна не указана.</span></span></li>
+    <li id="s40"><span class="i">40</span><span><a href="https://github.com/akovalion/paranoid-qa">paranoid-qa</a>. <span class="w">Первоисточник: README.</span></span></li>
+  </ol>
+</section>
+</main>
+</div>
+<svg class="defs" width="0" height="0" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+</svg>
+</body>
+</html>
