@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenViking изнутри</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:16px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+pre{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;font:13.5px/1.55 var(--mono);margin:16px 0}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static}}
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:top;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg.defs{position:absolute}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .dash{stroke-dasharray:6 4}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .st{fill:var(--res-soft);stroke:var(--res);stroke-width:1.5}
+svg .qq{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .s{font-size:11px}
+.layer{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:16px 0}
+.layer div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:14px}
+.layer b{display:block;font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+details{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:14px 0;max-width:70ch;font-size:15px}
+details summary{cursor:pointer;font-weight:600}
+details p{margin:10px 0 4px}
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+@media print{body{background:#fff}nav.toc{display:none}.wrap{display:block}section{break-inside:avoid-page}}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+<svg class="defs" width="0" height="0" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Оглавление</p>
+  <ol>
+    <li><a href="#s-goal">Цель и сквозной пример</a></li>
+    <li><a href="#s-l0">Слой 0. Спайк</a></li>
+    <li><a href="#s-l1">Слой 1. Дерево адресов</a></li>
+    <li><a href="#s-l2">Слой 2. Разбор и нарезка</a></li>
+    <li><a href="#s-l3">Слой 3. Очередь</a></li>
+    <li><a href="#s-l4">Слой 4. Сводки L0 и L1</a></li>
+    <li><a href="#s-l5">Слой 5. Поиск</a></li>
+    <li><a href="#s-l6">Слой 6. Сессии и память</a></li>
+    <li><a href="#s-l7">Слой 7. Плагин и подсказка</a></li>
+    <li><a href="#s-l8">Слой 8. Люди и проекты</a></li>
+    <li><a href="#s-model">Итоговая модель</a></li>
+    <li><a href="#s-contrib">Куда можно внести вклад</a></li>
+    <li><a href="#s-check">Вопросы для возвращения</a></li>
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <span class="eyebrow">Лекция · 02.11.2026 · OpenViking main 2f6871a</span>
+  <h1>OpenViking изнутри: от спайка к системе</h1>
+  <p class="lead">OpenViking - это сервер памяти для агентов: он принимает документы и разговоры, хранит их деревом адресов и отдаёт агенту по смыслу. Здесь мы собираем его заново, по одному механизму за шаг.</p>
+  <p>Лекция <a href="agent-memory.html">«OpenViking: полный обзор»</a> показывает систему снаружи, через разделы Studio. Эта лекция смотрит внутрь, в код сервера и плагина Claude Code. Мы начинаем со спайка (spike), минимальной программы из десяти строк, которая ищет текст по смыслу. Затем добавляем слои по одному. Для каждого слоя разбираем, какая проблема его потребовала, что он даёт, сколько стоит и какой модуль репозитория его реализует. В конце получится схема того, как OpenViking работает сейчас, и карта мест, где наши сбои касаются кода. Читать можно подряд или с любого слоя; перед разбором некоторых слоёв есть вопрос, на который стоит ответить самому.</p>
+</header>
+
+<section id="s-goal">
+  <span class="num">00</span>
+  <h2>Цель и сквозной пример</h2>
+  <p>Цель: после лекции ты можешь назвать путь данных от команды <code>ov add-resource</code> до ответа агенту и указать модуль, который отвечает за каждый шаг. Это нужно, чтобы находить причину сбоя в коде и предлагать исправления в проект.</p>
+  <p>Сквозной пример - заметка <code>queue-pause.md</code> на 9 КБ: разбор того, как поставить очередь OpenViking на паузу. Мы кладём её в базу, а потом агент в новой сессии спрашивает: «как остановить обработку очереди, не выключая поиск?». На каждом слое смотрим, что происходит с этой заметкой и с этим вопросом.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Задание</th><th>Опирается на слой</th></tr></thead>
+    <tbody>
+      <tr><td>Объяснить, почему поиск находит заметку по вопросу без общих слов</td><td>0</td></tr>
+      <tr><td>Назвать адрес заметки и где она лежит на диске</td><td>1, 2</td></tr>
+      <tr><td>Объяснить, почему после загрузки заметка находится не сразу</td><td>3, 4</td></tr>
+      <tr><td>Объяснить, почему агент получил подсказку, хотя ничего не искал</td><td>5, 7</td></tr>
+      <tr><td>Найти модуль, где живёт каждый наш сбой</td><td>все</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s-l0">
+  <span class="num">01</span>
+  <h2>Слой 0. Спайк: текст, вектор, ближайший сосед</h2>
+  <h3>Задача</h3>
+  <p>Вопрос «как остановить обработку очереди» и заметка про паузу могут не иметь ни одного общего слова. Поиск по строке (grep) их не свяжет. Нужен поиск по смыслу.</p>
+  <h3>Механизм</h3>
+  <p><b>Эмбеддинг</b> (embedding) - это список из сотен чисел, который модель строит по тексту так, что близкие по смыслу тексты получают близкие списки. Спайк хранит пары «текст, вектор». На запрос он строит вектор вопроса и возвращает тексты с наибольшим косинусным сходством (cosine similarity), то есть с наименьшим углом между векторами.</p>
+<pre>docs = {}                                  # id: (текст, вектор)
+
+def add(doc_id, text):
+    docs[doc_id] = (text, embed(text))     # один вызов модели эмбеддинга
+
+def find(query, k=3):
+    v = embed(query)
+    return sorted(docs, key=lambda i: -cos(v, docs[i][1]))[:k]</pre>
+  <p>В OpenViking эту роль играют модели в <code>openviking/models/embedder/</code> (OpenAI-совместимые, Ollama, Volcengine, Jina, локальные) и векторный индекс <code>openviking/storage/vectordb/</code> на движке C++ из каталога <code>src/</code><a class="ref" href="#s1">1</a>.</p>
+  <h3>Граница</h3>
+  <p>Спайк работает на десятках заметок. Дальше всплывают четыре проблемы: у текста нет адреса, длинный документ сжимается в один вектор и теряет детали, вызов модели на каждый документ медленный, а агент сам никогда не вызовет <code>find</code>. Каждый следующий слой закрывает одну из них.</p>
+</section>
+
+<section id="s-l1">
+  <span class="num">02</span>
+  <h2>Слой 1. Дерево адресов viking://</h2>
+  <h3>Задача</h3>
+  <p>Агенту мало получить текст: ему нужно сослаться на него, прочитать соседние файлы, посмотреть список, найти строку. Для этого у каждой единицы нужен постоянный адрес.</p>
+  <h3>Механизм</h3>
+  <p><b>Viking URI</b> - это адрес вида <code>viking://resources/notes/queue-pause.md</code>. Дерево делится на области: <code>resources</code> (документы), <code>user</code> (память, сессии и скиллы пользователя), <code>agent</code> (скиллы агента) и служебные <code>temp</code>, <code>queue</code>, <code>upload</code><a class="ref" href="#s3">3</a>. Под адресами лежит виртуальная файловая система VikingFS: модуль <code>openviking/storage/viking_fs/</code> поверх RAGFS, написанной на Rust (<code>crates/ragfs</code>). RAGFS умеет хранить данные на локальном диске, в S3 или в памяти<a class="ref" href="#s4">4</a>.</p>
+  <p>Поэтому у OpenViking два хранилища: файлы с содержимым и векторный индекс. Запись индекса хранит адрес, адрес родителя, тип и сам вектор. Поиск находит адрес в индексе, а текст читается из файловой системы<a class="ref" href="#s4">4</a>.</p>
+  <h3>Результат и цена</h3>
+  <p>Агент получает команды <code>ls</code>, <code>tree</code>, <code>read</code>, <code>grep</code>, <code>glob</code>, которые работают без векторов. Цена в том, что два хранилища надо держать согласованными: удалённый файл должен уйти и из индекса.</p>
+</section>
+
+<section id="s-l2">
+  <span class="num">03</span>
+  <h2>Слой 2. Разбор и нарезка</h2>
+  <h3>Задача</h3>
+  <p>Документы приходят в виде PDF, HTML, Markdown, кода, архивов. Один вектор на 9 КБ текста усредняет все темы заметки, и вопрос про одну деталь попадает хуже.</p>
+  <h3>Механизм</h3>
+  <p><b>Парсер</b> (parser) - это модуль, который превращает файл одного формата в дерево разделов. Парсеры лежат в <code>openviking/parse/parsers/</code>, сборка дерева - в <code>parse/tree_builder.py</code>, весь путь приёма ресурса - в <code>utils/resource_processor.py</code>. Markdown режется по заголовкам, а слишком длинный раздел делится по лимиту <code>max_section_chars</code> в символах; старый параметр <code>max_section_size</code> на 2048 помечен устаревшим<a class="ref" href="#s10">10</a>.</p>
+  <p>Наша заметка становится каталогом: каждый раздел «Конфигурация воркеров», «Обходной путь», «Проверка на копии» - отдельный файл со своим адресом внутри.</p>
+  <h3>Цена</h3>
+  <p>Векторов становится больше, и каждый требует вызова модели. Если раздел всё равно длиннее окна модели эмбеддинга, вызов падает. Мы видели это у себя: одна задача из 813 упала с ответом 400 на слишком длинном куске.</p>
+</section>
+
+<section id="s-l3">
+  <span class="num">04</span>
+  <h2>Слой 3. Асинхронная очередь</h2>
+  <details><summary>Сначала подумай: заметку загрузили, команда вернула success, а поиск её не находит. Почему?</summary>
+  <p>Команда только поставила задачи в очередь. Вектор и сводки ещё не построены, поэтому в индексе заметки пока нет.</p></details>
+  <h3>Задача</h3>
+  <p>Эмбеддинг и сводки - это сетевые вызовы моделей, иногда минуты на документ. Если <code>add-resource</code> ждёт их все, клиент отваливается по таймауту, а сервер не может принять следующую работу.</p>
+  <h3>Механизм</h3>
+  <p><b>Очередь</b> (queue) - это список задач, который сервер разбирает в фоне. У OpenViking восемь именованных очередей: <code>Embedding</code>, <code>Semantic</code>, <code>AddResource</code>, <code>Reindex</code>, <code>SessionCommit</code>, <code>ExternalParse</code>, <code>ExternalTask</code>, <code>DataCleanup</code>. У каждой свой рабочий поток и свой предел параллельности: по умолчанию 10 для эмбеддинга, 32 для сводок, 4 для приёма ресурсов<a class="ref" href="#s10">10</a>. Хранится всё в SQLite-файле <code>_system/queue/queue.db</code>.</p>
+  <p>Задача проходит путь <code>enqueue, pending, dequeue, processing, ack, removed</code>. Подтверждение (ack) снимает задачу только после успешной обработки, поэтому при падении сервера задача не теряется. Очередь пуста, только когда и <code>pending</code>, и <code>processing</code> равны нулю: раньше проект ошибался именно здесь и считал очередь пустой, пока последняя задача ещё работала<a class="ref" href="#s6">6</a>.</p>
+  <h3>Цена</h3>
+  <p>Появляется окно, когда данные загружены, но не найдены. Паузы очереди нет ни в нашей версии 0.5.0, ни в main: поиск по коду не нашёл такого режима, а <code>max_concurrent=0</code> не проходит проверку конфигурации. Мы обходили это копией базы без очереди для поиска.</p>
+</section>
+
+<section id="s-l4">
+  <span class="num">05</span>
+  <h2>Слой 4. Сводки L0 и L1</h2>
+  <h3>Задача</h3>
+  <p>Агент нашёл десять кусков, но не знает, какой из каталогов про что. Читать все файлы целиком дорого по токенам. Нужна короткая карта каждого каталога.</p>
+  <h3>Механизм</h3>
+  <p>У каждого каталога есть два файла-спутника. <b>L0</b> (<code>.abstract.md</code>) - аннотация до 256 знаков для векторного поиска и быстрого отсева. <b>L1</b> (<code>.overview.md</code>) - обзор до 4000 знаков для переранжирования и навигации. <b>L2</b> - сами файлы. У обычного файла собственных L0 и L1 нет: сводки файлов входят в L1 его каталога<a class="ref" href="#s5">5</a>.</p>
+  <p>Сводки строит <code>storage/queuefs/semantic_processor.py</code> снизу вверх. Сначала модель кратко описывает каждый файл, затем пишет обзор каталога из этих описаний, затем L0 вырезается из L1. После этого каталог и файлы уходят в очередь <code>Embedding</code>, и только тогда заметка находится поиском<a class="ref" href="#s11">11</a>.</p>
+  <h3>Цена</h3>
+  <p>Каждый каталог - вызов языковой модели (VLM в терминах проекта). У нас обзоры строил Codex по одному за раз: 225 каталогов шли около трёх с половиной часов. Язык сводки модель выбирает сама, и мы видели русскую карточку с обзором на португальском.</p>
+</section>
+
+<section id="s-l5">
+  <span class="num">06</span>
+  <h2>Слой 5. Поиск: find, search, grep</h2>
+  <h3>Задача</h3>
+  <p>Короткий вопрос плохо выражает намерение, а десяток похожих кусков надо упорядочить.</p>
+  <h3>Механизм</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Команда</th><th>Что делает</th><th>Модель</th></tr></thead>
+    <tbody>
+      <tr><td><code>find</code></td><td>один векторный запрос</td><td>только эмбеддинг</td></tr>
+      <tr><td><code>search</code></td><td>анализ намерения по контексту сессии, ноль или несколько типизированных запросов</td><td>эмбеддинг и языковая модель</td></tr>
+      <tr><td><code>grep</code>, <code>glob</code></td><td>по содержимому и именам в VikingFS</td><td>нет</td></tr>
+    </tbody>
+  </table></div>
+  <p>Ранжирует класс <code>HierarchicalRetriever</code>. Несмотря на имя, он делает один глобальный векторный поиск и, если настроен реранкер (reranker), переупорядочивает верхние результаты. Обход дерева с очередями по каталогам и раундами сходимости из кода удалён<a class="ref" href="#s7">7</a><a class="ref" href="#s12">12</a>. Иерархия сохраняется по-другому: L0 каталогов лежат в индексе как обычные записи, и поиск может вернуть каталог целиком.</p>
+  <div class="q"><b>Вывод</b>Имя класса описывает старую идею, код описывает текущую. При спорах о поведении верить коду и документу <code>07-retrieval.md</code>.</div>
+</section>
+
+<section id="s-l6">
+  <span class="num">07</span>
+  <h2>Слой 6. Сессии и долговременная память</h2>
+  <h3>Задача</h3>
+  <p>Документы кто-то кладёт руками, а решения и предпочтения рождаются в разговоре и теряются с концом сессии.</p>
+  <h3>Механизм</h3>
+  <p><b>Сессия</b> (session) - это журнал сообщений разговора на сервере, <code>viking://user/.../sessions/&lt;id&gt;</code>. <b>Коммит сессии</b> (commit) проходит в две фазы. Сначала сервер под блокировкой пути архивирует накопленные сообщения и ставит задачу в очередь <code>SessionCommit</code>. Затем фоновый обработчик пишет сводку архива и запускает извлечение памяти<a class="ref" href="#s8">8</a>.</p>
+  <p>Извлечение делает <code>session/memory/extract_loop.py</code>: языковая модель читает архив и правит файлы памяти через инструменты, по схемам типов (события, сущности, предпочтения, опыт) из <code>system_assets/memory</code>. Новые факты сливаются с существующими правками, а не дописываются копиями<a class="ref" href="#s9">9</a>.</p>
+  <h3>Цена</h3>
+  <p>Каждый коммит - вызов модели с большим выводом. Плагин Claude Code поэтому коммитит не каждую реплику, а по порогу в 20 000 накопленных токенов, который считает сам<a class="ref" href="#s13">13</a>.</p>
+</section>
+
+<section id="s-l7">
+  <span class="num">08</span>
+  <h2>Слой 7. Плагин и автоподсказка</h2>
+  <details><summary>Сначала подумай: агент ни разу не вызвал find, но в его контексте появились факты из памяти. Кто их туда положил?</summary>
+  <p>Хук плагина на событии UserPromptSubmit: он сам ищет по тексту твоего сообщения и подмешивает блок в контекст до того, как модель начнёт отвечать.</p></details>
+  <h3>Задача</h3>
+  <p>Модель редко сама решает поискать в памяти или сохранить разговор. Значит, это должен делать код вокруг неё.</p>
+  <h3>Механизм</h3>
+  <p><b>Хук</b> (hook) - это скрипт, который Claude Code запускает на событии. Плагин <code>examples/claude-code-memory-plugin</code> вешает шесть хуков<a class="ref" href="#s13">13</a>:</p>
+  <div class="layer">
+    <div><b>Stop</b>после ответа отправляет новые реплики в сессию OpenViking</div>
+    <div><b>UserPromptSubmit</b>ищет по сообщению и подмешивает блок памяти</div>
+    <div><b>SessionStart</b>подкладывает профиль</div>
+    <div><b>PreCompact, SessionEnd</b>сохраняют хвост перед сжатием и в конце</div>
+    <div><b>PreToolUse</b>проверяет адреса viking:// в вызовах инструментов</div>
+  </div>
+  <p>Блок подсказки собирает сервер: <code>retrieve/context_assembler</code> с квотами по типам памяти (по умолчанию 10 событий, 10 сущностей, 3 предпочтения, 0 опыта) и штрафом записям чужих проектов<a class="ref" href="#s14">14</a>. Плагин настраивает фильтры: <code>RECALL_PEER_SCOPE</code> (все проекты или только текущий), <code>RECALL_EXCLUDE_URIS</code> (поддеревья, которые не подсказывать) и <code>RECALL_MAX_TOKENS</code> (бюджет блока).</p>
+  <h3>Цена</h3>
+  <p>Каждое сообщение несёт блок в сотни токенов, нужен он или нет. В нашей проверке 30 подсказок агент не использовал ни одного факта, а 86% записей были документами корпуса. Мы убрали корпус из подсказки и сузили её до текущего проекта и 400 токенов.</p>
+</section>
+
+<section id="s-l8">
+  <span class="num">09</span>
+  <h2>Слой 8. Люди, проекты, доступ</h2>
+  <p>Один сервер обслуживает многих людей и агентов, и память одного не должна утекать к другому. Поэтому у каждого запроса есть идентичность: аккаунт (account), пользователь (user) и peer, то есть проект или агент, от имени которого пишется память. Роли ROOT, ADMIN и USER, списки доступа (ACL), ключи API и шифрование данных живут в <code>server/identity.py</code>, <code>server/auth/</code>, <code>storage/acl.py</code> и <code>crypto/</code><a class="ref" href="#s15">15</a>. В main peer для плагинов берётся из адреса <code>git origin</code>, а не из текущего каталога, поэтому память разных репозиториев больше не смешивается.</p>
+</section>
+
+<section id="s-model">
+  <span class="num">10</span>
+  <h2>Итоговая модель</h2>
+  <figure>
+    <div class="ttl">OpenViking: приём, хранение, поиск</div>
+    <svg class="d" viewBox="0 0 900 470" role="img" aria-label="Клиенты обращаются к API сервера. Ресурсы идут через разбор в VikingFS и очередь сводок, затем в очередь эмбеддинга и векторный индекс. Сессии идут через очередь коммита к сводке и извлечению памяти. Поиск идёт к векторному индексу и сборщику контекста, который возвращает блок плагину.">
+      <rect class="soft" x="10" y="20" width="150" height="190" rx="6"/>
+      <text class="b" x="85" y="42" text-anchor="middle">Клиенты</text>
+      <rect class="box" x="22" y="56" width="126" height="40" rx="4"/><text x="85" y="74" text-anchor="middle">Плагин: хуки</text><text class="s mut" x="85" y="89" text-anchor="middle">захват и подсказка</text>
+      <rect class="box" x="22" y="106" width="126" height="40" rx="4"/><text x="85" y="130" text-anchor="middle">ov CLI, SDK, MCP</text>
+      <rect class="box" x="22" y="156" width="126" height="40" rx="4"/><text x="85" y="180" text-anchor="middle">ingest журналов</text>
+
+      <rect class="hl" x="200" y="20" width="140" height="190" rx="6"/>
+      <text class="b" x="270" y="42" text-anchor="middle">Сервер API</text>
+      <text x="270" y="72" text-anchor="middle">роутеры</text>
+      <text x="270" y="102" text-anchor="middle">идентичность, ACL</text>
+      <text x="270" y="132" text-anchor="middle">сервисы:</text>
+      <text class="s mut" x="270" y="150" text-anchor="middle">Resource, Session,</text>
+      <text class="s mut" x="270" y="166" text-anchor="middle">Search</text>
+      <line class="ln" x1="160" y1="115" x2="198" y2="115" marker-end="url(#m-fill)"/>
+
+      <rect class="box" x="390" y="20" width="130" height="44" rx="4"/><text x="455" y="38" text-anchor="middle">Разбор, нарезка</text><text class="s mut" x="455" y="54" text-anchor="middle">parse, TreeBuilder</text>
+      <rect class="qq" x="390" y="90" width="130" height="34" rx="4"/><text x="455" y="112" text-anchor="middle">очередь Semantic</text>
+      <rect class="box" x="560" y="90" width="150" height="34" rx="4"/><text x="635" y="112" text-anchor="middle">сводки L0, L1 (VLM)</text>
+      <rect class="box" x="390" y="160" width="130" height="34" rx="4"/><text x="455" y="182" text-anchor="middle">Сессия, архив</text>
+      <rect class="qq" x="560" y="160" width="150" height="34" rx="4"/><text x="635" y="182" text-anchor="middle">очередь SessionCommit</text>
+      <rect class="box" x="560" y="215" width="150" height="34" rx="4"/><text x="635" y="237" text-anchor="middle">извлечение памяти</text>
+
+      <rect class="st" x="740" y="20" width="150" height="70" rx="6"/><text class="b" x="815" y="46" text-anchor="middle">VikingFS</text><text class="s" x="815" y="64" text-anchor="middle">viking:// L0 L1 L2</text><text class="s mut" x="815" y="80" text-anchor="middle">RAGFS: диск, S3</text>
+      <rect class="qq" x="740" y="160" width="150" height="34" rx="4"/><text x="815" y="182" text-anchor="middle">очередь Embedding</text>
+      <rect class="st" x="740" y="290" width="150" height="56" rx="6"/><text class="b" x="815" y="314" text-anchor="middle">Векторный индекс</text><text class="s mut" x="815" y="332" text-anchor="middle">C++ движок, leveldb</text>
+
+      <line class="ln" x1="340" y1="45" x2="388" y2="42" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="520" y1="40" x2="738" y2="45" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="455" y1="64" x2="455" y2="88" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="520" y1="107" x2="558" y2="107" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="710" y1="100" x2="760" y2="92" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="690" y1="124" x2="760" y2="158" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="340" y1="177" x2="388" y2="177" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="520" y1="177" x2="558" y2="177" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="635" y1="194" x2="635" y2="213" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="710" y1="232" x2="775" y2="196" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="815" y1="194" x2="815" y2="288" marker-end="url(#m-fill)"/>
+
+      <rect class="box" x="390" y="300" width="150" height="40" rx="4"/><text x="465" y="318" text-anchor="middle">find, search</text><text class="s mut" x="465" y="333" text-anchor="middle">вектор + реранкер</text>
+      <rect class="hl" x="390" y="390" width="200" height="48" rx="4"/><text x="490" y="410" text-anchor="middle">context_assembler</text><text class="s mut" x="490" y="427" text-anchor="middle">квоты, peer, exclude, бюджет</text>
+      <line class="ln" x1="270" y1="210" x2="270" y2="320"/>
+      <line class="ln" x1="270" y1="320" x2="388" y2="320" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="540" y1="318" x2="738" y2="318" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="465" y1="340" x2="465" y2="388" marker-end="url(#m-fill)"/>
+      <line class="ln dash" x1="390" y1="414" x2="85" y2="414"/>
+      <line class="ln dash" x1="85" y1="414" x2="85" y2="212" marker-end="url(#m-fill)"/>
+      <text class="lbl s" x="220" y="408" text-anchor="middle">блок подсказки</text>
+      <text class="lbl s mut" x="640" y="310" text-anchor="middle">запрос к индексу</text>
+    </svg>
+    <figcaption>Синие блоки - сервер и сборка контекста, зелёные - очереди в queue.db, коричневые - хранилища. Пунктир - обратный путь подсказки в контекст агента. Источник: код main 2f6871a и документы concepts<a class="ref" href="#s2">2</a>.</figcaption>
+  </figure>
+  <p>Пройдём сквозной пример по схеме. Заметка <code>queue-pause.md</code> идёт от CLI в сервис ресурсов, разбирается на разделы и ложится в VikingFS. Её каталог встаёт в очередь <code>Semantic</code>, модель пишет L0 и L1, затем очередь <code>Embedding</code> кладёт векторы в индекс. В новой сессии хук UserPromptSubmit отправляет вопрос в <code>search</code>, поиск находит каталог заметки по L0, сборщик контекста урезает результат по квотам и бюджету, и блок попадает в контекст агента.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Слой</th><th>Проблема</th><th>Модуль</th></tr></thead>
+    <tbody>
+      <tr><td>0. Спайк</td><td>поиск по смыслу</td><td><code>models/embedder</code>, <code>storage/vectordb</code></td></tr>
+      <tr><td>1. Адреса</td><td>ссылки, ls, read, grep</td><td><code>storage/viking_fs</code>, <code>crates/ragfs</code></td></tr>
+      <tr><td>2. Разбор</td><td>форматы, длинные документы</td><td><code>parse/</code>, <code>utils/resource_processor.py</code></td></tr>
+      <tr><td>3. Очередь</td><td>медленные вызовы моделей</td><td><code>storage/queuefs/</code></td></tr>
+      <tr><td>4. Сводки</td><td>карта каталога без чтения файлов</td><td><code>storage/queuefs/semantic_processor.py</code></td></tr>
+      <tr><td>5. Поиск</td><td>намерение и порядок</td><td><code>retrieve/</code>, <code>server/routers/search.py</code></td></tr>
+      <tr><td>6. Память</td><td>знание из разговоров</td><td><code>session/</code>, <code>session/memory/</code></td></tr>
+      <tr><td>7. Плагин</td><td>агент сам не ищет и не сохраняет</td><td><code>examples/claude-code-memory-plugin</code>, <code>retrieve/context_assembler</code></td></tr>
+      <tr><td>8. Доступ</td><td>много людей и проектов</td><td><code>server/identity.py</code>, <code>storage/acl.py</code></td></tr>
+    </tbody>
+  </table></div>
+  <p>Остальной репозиторий опционален для понимания ядра: <code>openviking_gateway</code> (прокси к API модели вместо плагина), <code>bot/</code> (встроенный агент VikingBot), <code>sdk/</code> (клиенты Go, Python, TypeScript), <code>web-studio/</code> (веб-консоль), плагины других агентов в <code>examples/</code>.</p>
+  <p>Порядок слоёв 3 и 4 и причины их появления восстановлены по коду и документам: история коммитов до 0.5.3 в разобранной копии недоступна.</p>
+</section>
+
+<section id="s-contrib">
+  <span class="num">11</span>
+  <h2>Куда можно внести вклад</h2>
+  <p>Наши сбои при работе с OpenViking ложатся на конкретные слои. Это кандидаты, а не выводы: каждый ещё нужно сверить с main и открытыми issue.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Сбой у нас</th><th>Слой</th><th>Где искать</th><th>Статус</th></tr></thead>
+    <tbody>
+      <tr><td>Нет паузы очереди</td><td>3</td><td><code>storage/queuefs/queue_manager.py</code></td><td><span class="tag p">кандидат</span></td></tr>
+      <tr><td>Сервер не останавливался, пока висел запрос клиента с <code>--wait</code></td><td>3, сервер</td><td>ожидание задачи в HTTP-слое</td><td><span class="tag r">найти место</span></td></tr>
+      <tr><td>Кусок длиннее окна модели эмбеддинга, задача падает с 400</td><td>2, 3</td><td><code>parse/parsers/markdown.py</code>, обработчик эмбеддинга</td><td><span class="tag p">кандидат</span></td></tr>
+      <tr><td>Обзор русской карточки на португальском</td><td>4</td><td><code>semantic_processor.py</code>, промпты</td><td><span class="tag r">похоже на открытый #6004</span></td></tr>
+      <tr><td>Подсказка шумит</td><td>7</td><td><code>context_assembler</code>, плагин</td><td><span class="tag p">данные для обсуждения</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="q"><b>Решения дальше</b>Сверить кандидатов с main и issue, выбрать один с воспроизведением и оформить issue, затем небольшой PR по правилам проекта.</div>
+</section>
+
+<section id="s-check">
+  <span class="num">12</span>
+  <h2>Вопросы для возвращения</h2>
+  <p>Ответь своими словами, потом открой разбор.</p>
+  <details><summary>1. Зачем OpenViking хранит данные в двух местах?</summary><p>Файлы в VikingFS дают адреса, чтение и grep; векторный индекс даёт поиск по смыслу. Индекс хранит адрес и вектор, текст читается из файлов.</p></details>
+  <details><summary>2. Что значит «очередь пуста»?</summary><p>И pending, и processing равны нулю. Пустой pending при задаче в обработке ещё не конец.</p></details>
+  <details><summary>3. Для чего нужен L0 и почему его нет у отдельного файла?</summary><p>L0 - короткая аннотация каталога для векторного поиска. Сводки файлов входят в L1 каталога, отдельных спутников у файлов нет.</p></details>
+  <details><summary>4. Чем find отличается от search?</summary><p>find делает один векторный запрос без языковой модели. search сначала анализирует намерение по контексту сессии и может сделать несколько типизированных запросов.</p></details>
+  <details><summary>5. Почему плагин коммитит сессию не на каждой реплике?</summary><p>Коммит запускает извлечение памяти языковой моделью. Порог в 20 000 токенов собирает материал и экономит вызовы.</p></details>
+  <details><summary>6. Новый пример: ты загрузил 50 PDF, и через час поиск находит только половину. Где смотреть?</summary><p>В очереди: сколько задач в pending и processing у Semantic и Embedding, нет ли ошибок задач. Половина, скорее всего, ждёт сводок или упала на эмбеддинге.</p></details>
+</section>
+
+<section id="sources">
+  <span class="num">13</span>
+  <h2>Источники</h2>
+  <p>Проверено 02.11.2026 по main <code>2f6871a</code>. Внутренности движка C++ и формат leveldb не разбирались. Цифры нашего использования взяты из собственных журналов.</p>
+  <ol class="srclist">
+    <li id="s1"><span class="i">1</span><span><a href="https://github.com/volcengine/OpenViking">volcengine/OpenViking</a>. <span class="w">Репозиторий, структура каталогов. Первоисточник.</span></span></li>
+    <li id="s2"><span class="i">2</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/01-architecture.md">Architecture</a>. <span class="w">Общий путь приёма. Документация проекта.</span></span></li>
+    <li id="s3"><span class="i">3</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/04-viking-uri.md">Viking URI</a>. <span class="w">Области дерева адресов. Документация проекта.</span></span></li>
+    <li id="s4"><span class="i">4</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/05-storage.md">Storage</a>. <span class="w">Два хранилища, схема индекса. Документация проекта.</span></span></li>
+    <li id="s5"><span class="i">5</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/03-context-layers.md">Context Layers</a>. <span class="w">L0, L1, L2 и их бюджеты. Документация проекта.</span></span></li>
+    <li id="s6"><span class="i">6</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/16-queue-lifecycle.md">Queue State and Completion Semantics</a>. <span class="w">Жизненный цикл задачи и признак пустой очереди. Документация проекта.</span></span></li>
+    <li id="s7"><span class="i">7</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/07-retrieval.md">Retrieval</a>. <span class="w">find и search, удаление обхода дерева. Документация проекта.</span></span></li>
+    <li id="s8"><span class="i">8</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/08-session.md">Session</a>. <span class="w">Сессии и коммит. Документация проекта.</span></span></li>
+    <li id="s9"><span class="i">9</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/06-extraction.md">Extraction</a>. <span class="w">Извлечение памяти. Документация проекта.</span></span></li>
+    <li id="s10"><span class="i">10</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/openviking/storage/queuefs/queue_manager.py">queue_manager.py</a>. <span class="w">Имена очередей и пределы параллельности. Код, прочитан.</span></span></li>
+    <li id="s11"><span class="i">11</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/openviking/storage/queuefs/semantic_processor.py">semantic_processor.py</a>. <span class="w">Сводки файлов и каталогов. Код, прочитан.</span></span></li>
+    <li id="s12"><span class="i">12</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/openviking/retrieve/hierarchical_retriever.py">hierarchical_retriever.py</a>. <span class="w">Глобальный векторный поиск и реранкер. Код, прочитан.</span></span></li>
+    <li id="s13"><span class="i">13</span><span><a href="https://github.com/volcengine/OpenViking/tree/2f6871a/examples/claude-code-memory-plugin">claude-code-memory-plugin</a>. <span class="w">Хуки, порог коммита, фильтры подсказки. Код, прочитан.</span></span></li>
+    <li id="s14"><span class="i">14</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/openviking/retrieve/context_assembler/params.py">context_assembler/params.py</a>. <span class="w">Квоты и штрафы чужих peer. Код, прочитан.</span></span></li>
+    <li id="s15"><span class="i">15</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/11-multi-tenant.md">Multi-tenant</a>. <span class="w">Аккаунты, роли, peer. Документация проекта.</span></span></li>
+  </ol>
+</section>
+</main>
+</div>
+</body>
+</html>
