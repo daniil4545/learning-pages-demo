@@ -183,7 +183,7 @@ def find(query, k=3):
   <p>Агенту мало получить текст: ему нужно сослаться на него, прочитать соседние файлы, посмотреть список, найти строку. Для этого у каждой единицы нужен постоянный адрес.</p>
   <h3>Механизм</h3>
   <p><b>Viking URI</b> - это адрес вида <code>viking://resources/notes/queue-pause.md</code>. Дерево делится на области: <code>resources</code> (документы), <code>user</code> (память, сессии и скиллы пользователя), <code>agent</code> (скиллы агента) и служебные <code>temp</code>, <code>queue</code>, <code>upload</code><a class="ref" href="#s3">3</a>. Под адресами лежит виртуальная файловая система VikingFS: модуль <code>openviking/storage/viking_fs/</code> поверх RAGFS, написанной на Rust (<code>crates/ragfs</code>). RAGFS умеет хранить данные на локальном диске, в S3 или в памяти<a class="ref" href="#s4">4</a>.</p>
-  <p>Поэтому у OpenViking два хранилища: файлы с содержимым и векторный индекс. Запись индекса хранит адрес, адрес родителя, тип и сам вектор. Поиск находит адрес в индексе, а текст читается из файловой системы<a class="ref" href="#s4">4</a>.</p>
+  <p>Поэтому у OpenViking два хранилища: файлы с полным содержимым и векторный индекс. Запись индекса - это карточка: адрес <code>uri</code>, уровень <code>level</code> (0 - <code>.abstract.md</code> каталога, 1 - <code>.overview.md</code>, 2 - сам файл), тип, вектор, короткий текст <code>abstract</code>, метки и права доступа<a class="ref" href="#s16">16</a>. Отдельного поля родителя в схеме кода нет, хотя документация его ещё упоминает: связь с деревом даёт сам <code>uri</code> с типом <code>path</code>, по которому можно отбирать записи по префиксу<a class="ref" href="#s4">4</a><a class="ref" href="#s16">16</a>. Поиск находит карточку по вектору, а полный текст читается из файловой системы.</p>
   <h3>Результат и цена</h3>
   <p>Агент получает команды <code>ls</code>, <code>tree</code>, <code>read</code>, <code>grep</code>, <code>glob</code>, которые работают без векторов. Цена в том, что два хранилища надо держать согласованными: удалённый файл должен уйти и из индекса.</p>
 </section>
@@ -408,6 +408,7 @@ def find(query, k=3):
     <li id="s13"><span class="i">13</span><span><a href="https://github.com/volcengine/OpenViking/tree/2f6871a/examples/claude-code-memory-plugin">claude-code-memory-plugin</a>. <span class="w">Хуки, порог коммита, фильтры подсказки. Код, прочитан.</span></span></li>
     <li id="s14"><span class="i">14</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/openviking/retrieve/context_assembler/params.py">context_assembler/params.py</a>. <span class="w">Квоты и штрафы чужих peer. Код, прочитан.</span></span></li>
     <li id="s15"><span class="i">15</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/docs/en/concepts/11-multi-tenant.md">Multi-tenant</a>. <span class="w">Аккаунты, роли, peer. Документация проекта.</span></span></li>
+    <li id="s16"><span class="i">16</span><span><a href="https://github.com/volcengine/OpenViking/blob/2f6871a/openviking/storage/collection_schemas.py">collection_schemas.py</a>. <span class="w">Поля карточки векторного индекса. Код, прочитан и сверен с локальной установкой 0.5.0.</span></span></li>
   </ol>
 </section>
 </main>
