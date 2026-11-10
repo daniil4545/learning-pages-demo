@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Три контура ИИ в BPMSoft 1.9: LLM, ML-сервис и отдельные сервисы; включение, цена, данные, анонс 2.0 и состояние тестового стенда.">
+<title>ИИ в CRM BPMSoft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* tokens */
+:root{
+  --ground:#F3F5F2; --paper:#FFFFFF; --ink:#18221F; --muted:#56635E; --line:#D5DCD7;
+  --accent:#1E6C63;
+  --ok:#2E6B45; --ok-soft:#E2F0E6; --warn:#A3342B; --warn-soft:#F7E4E1;
+  --proc:#2C5C86; --proc-soft:#E3ECF4; --res:#8C5A1E; --res-soft:#F5EBDD;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+    --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+    --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121816; --paper:#1A2220; --ink:#E4EAE6; --muted:#9AA8A2; --line:#2E3A36;
+  --accent:#6CC2B6; --ok:#86C79C; --ok-soft:#1B3024; --warn:#EE8A80; --warn-soft:#3A1F1C;
+  --proc:#8DB8E0; --proc-soft:#1C2B38; --res:#E0B27A; --res-soft:#342818;
+}
+
+/* base and layout */
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:16px/1.6 var(--body);margin:0;padding-inline:16px}
+.wrap{max-width:1160px;margin:0 auto;padding-block:40px 80px;display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px}
+.wrap.solo{grid-template-columns:minmax(0,1fr);max-width:900px}
+nav.toc{position:sticky;top:24px;align-self:start;font-size:14px}
+nav.toc p{font:600 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+nav.toc ol{margin:0;padding:0;list-style:none;display:grid;gap:8px;counter-reset:t}
+nav.toc li{counter-increment:t;display:flex;gap:8px}
+nav.toc li::before{content:counter(t);font:600 12px/1.6 var(--mono);color:var(--accent);min-width:16px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover,nav.toc a:focus-visible{color:var(--accent);text-decoration:underline}
+main{min-width:0}
+header.top{margin-bottom:40px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{font:700 clamp(28px,4.4vw,44px)/1.12 var(--display);margin:14px 0 18px;letter-spacing:-.01em}
+h2{font:500 clamp(21px,2.6vw,27px)/1.25 var(--display);margin:0 0 14px}
+h3{font:600 17px/1.35 var(--body);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:70ch}
+.lead{font-size:18px;color:var(--muted);max-width:64ch}
+section{padding-block:40px;border-top:1px solid var(--line);scroll-margin-top:16px}
+section .num{font:600 12px/1 var(--mono);color:var(--accent);letter-spacing:.1em;display:block;margin-bottom:10px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em}
+@media (max-width:860px){.wrap{grid-template-columns:1fr;gap:24px}nav.toc{position:static}}
+
+/* callout: question, conclusion, how to say */
+.q{font-size:15px;background:var(--paper);border-left:3px solid var(--accent);padding:10px 14px;margin:0 0 18px;max-width:70ch}
+.q b{font:600 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:6px}
+
+/* table */
+.tbl{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:560px}
+th,td{text-align:left;vertical-align:middle;padding:9px 14px;border-bottom:1px solid var(--line)}
+th{font:600 11px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--ground)}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.ic{width:76px}
+td.ic svg{display:block;width:64px;height:32px}
+.tag{display:inline-block;font:600 11px/1 var(--mono);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.no{background:var(--warn-soft);color:var(--warn)}
+.tag.p{background:var(--proc-soft);color:var(--proc)}
+.tag.r{background:var(--res-soft);color:var(--res)}
+
+/* numbers: stat tiles */
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:18px 0}
+.kpi div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.kpi b{display:block;font:700 30px/1.1 var(--display);color:var(--accent)}
+.kpi span{display:block;font-size:13.5px;color:var(--muted);margin-top:6px}
+
+/* figure with inline svg */
+figure{margin:22px 0;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:18px 18px 12px}
+figure .ttl{font-weight:600;font-size:15px;margin-bottom:10px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px}
+figure svg.d{display:block;width:100%;height:auto}
+svg{color:var(--ink)}
+svg text{font-family:var(--body);fill:var(--ink);font-size:12px}
+svg .ln{stroke:currentColor;fill:none;stroke-width:1.5}
+svg .dash{stroke-dasharray:6 4}
+svg .dot{stroke-dasharray:2 3}
+svg .box{fill:var(--paper);stroke:currentColor;stroke-width:1.5}
+svg .soft{fill:var(--ground);stroke:currentColor;stroke-width:1.5}
+svg .hl{fill:var(--proc-soft);stroke:var(--proc);stroke-width:1.5}
+svg .lbl{paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round}
+svg .mut{fill:var(--muted)}
+svg .b{font-weight:600;font-size:13px}
+svg .fillc{fill:currentColor}
+
+/* walkthrough: how to read */
+.read{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px 18px 6px;margin:18px 0}
+.read h3{margin:0 0 8px;font-size:15px}
+.read ol{margin:0 0 10px;padding-left:20px;font-size:15px;max-width:72ch}
+.read li{margin-bottom:6px}
+.read p{font-size:14.5px;color:var(--muted);margin:0 0 8px}
+
+/* cards: mistakes or risks (.mist), numbered steps or exercises (.ex) */
+.mist{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:14px 0}
+.mist div{background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:14px}
+.mist b{display:block;color:var(--warn);font-size:13px;margin-bottom:3px}
+.mist div.good{background:var(--ok-soft)}.mist div.good b{color:var(--ok)}
+.ex{display:grid;gap:10px;margin:16px 0;counter-reset:e}
+.ex div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:12px 16px;font-size:14.5px;counter-increment:e;display:grid;grid-template-columns:26px 1fr;gap:6px}
+.ex div::before{content:counter(e);font:600 13px/1.6 var(--mono);color:var(--accent)}
+.ex small{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+
+/* sources */
+a.ref{font:600 10.5px/1 var(--mono);text-decoration:none;vertical-align:super;margin-left:2px}
+a.ref:hover{text-decoration:underline}
+.links{font-size:13.5px;color:var(--muted);margin-top:14px}
+.srclist{margin:0;padding:0;list-style:none;display:grid;gap:10px;font-size:14px}
+.srclist li{display:grid;grid-template-columns:30px 1fr;gap:8px;scroll-margin-top:20px}
+.srclist li:target{background:var(--ok-soft);border-radius:4px}
+.srclist .i{font:600 12px/1.6 var(--mono);color:var(--accent)}
+.srclist .w{color:var(--muted);font-size:13px}
+
+/* deck: one section per screen, page break in print */
+body.deck nav.toc{display:none}
+body.deck .wrap{grid-template-columns:minmax(0,1fr);max-width:1000px;padding-block:0}
+body.deck header.top,body.deck section{min-height:100vh;display:flex;flex-direction:column;justify-content:center;margin:0;padding-block:48px}
+body.deck section{border-top:0}
+body.deck h2{font-size:clamp(26px,3.4vw,36px)}
+html:has(body.deck){scroll-snap-type:y proximity}
+body.deck header.top,body.deck section{scroll-snap-align:start}
+@media print{
+  body{background:#fff}
+  nav.toc{display:none}
+  .wrap{display:block}
+  section{break-inside:avoid-page}
+  body.deck section{break-before:page;min-height:auto}
+}
+details{margin:14px 0;padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);max-width:76ch}summary{cursor:pointer;font-weight:600}details p{margin:12px 0 0}
+svg.defs{position:absolute}
+</style>
+
+<!-- library-head:start --><link rel="stylesheet" href="../assets/library.css"><script defer src="../assets/player.js"></script><!-- library-head:end -->
+<body><!-- library-body:start --><div class="library-bar"><a href="../index.html">Библиотека лекций</a><span>Текст и схемы</span></div><!-- library-body:end -->
+
+<!-- arrow markers for all inline svg on the page -->
+<svg class="defs" width="0" height="0" aria-hidden="true">
+  <defs>
+    <marker id="m-fill" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+    <marker id="m-open" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </marker>
+  </defs>
+</svg>
+
+<div class="wrap">
+<nav class="toc" aria-label="Оглавление">
+  <p>Оглавление</p>
+  <ol>
+    <li><a href="#s-crm">Что такое BPMSoft</a></li>
+    <li><a href="#s-map">Карта ИИ в BPMSoft</a></li>
+    <li><a href="#s-llm">LLM-контур: справочник и элемент</a></li>
+    <li><a href="#s-apps">Готовые ИИ-приложения</a></li>
+    <li><a href="#s-calls">Звонки: анализ и распознавание</a></li>
+    <li><a href="#s-ml">ML-сервис и модели</a></li>
+    <li><a href="#s-svc">Пересказ и ассистент «Софья»</a></li>
+    <li><a href="#s-next">Анонсы: BPMSoft 2.0</a></li>
+    <li><a href="#s-money">Лицензии и цена</a></li>
+    <li><a href="#s-data">Куда уходят данные</a></li>
+    <li><a href="#s-stand">Что на тестовом стенде</a></li>
+    <li><a href="#s-gaps">Чего никто не знает</a></li>
+    <li><a href="#s-decide">Что берём и решения дальше</a></li>
+    <li><a href="#s-recall">Вопросы для возвращения</a></li>
+    <li><a href="#sources">Источники</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <span class="eyebrow">Лекция · проверено 10.11.2026</span>
+  <h1>ИИ в CRM BPMSoft</h1>
+  <p class="lead">Какие ИИ-функции есть в российской CRM BPMSoft версии 1.9, как каждая устроена, что нужно для включения, куда при этом уходят данные и что вендор обещает в версии 2.0.</p>
+  <p>Лекция рассчитана на читателя, который BPMSoft раньше не видел. Сначала идёт сама CRM: из чего она состоит и где в ней живут данные. Затем карта ИИ-функций: их три независимых контура, и почти любая путаница в разговорах про «ИИ в BPMSoft» идёт от смешения этих контуров. Дальше каждый контур разобран отдельно: что делает, что нужно для включения, сколько стоит и где ограничения. Отдельный раздел показывает, что на самом деле включено на тестовом стенде одной торговой компании: документация и живая система расходятся. В конце стоят варианты первых шагов с ценой и рекомендацией и вопросы, на которые стоит ответить себе через неделю. Сквозной пример всей лекции: менеджер по продажам поговорил с клиентом по телефону, и мы смотрим, что CRM может сделать с этим звонком с помощью ИИ.</p>
+  <div class="q"><b>Ответ в одной фразе</b>В BPMSoft 1.9 ИИ - это шаг бизнес-процесса «Работа с LLM», который зовёт любую подключённую языковую модель, плюс набор бесплатных готовых приложений поверх него и отдельный платный ML-сервис для скоринга и прогнозов; на стенде ни один из контуров пока не включён.</div>
+</header>
+
+<section id="s-crm">
+  <span class="num">01</span>
+  <h2>Что такое BPMSoft</h2>
+
+  <h3>CRM и low-code</h3>
+  <p><b>BPMSoft</b> - это российская low-code платформа, на которой собрана CRM: система учёта клиентов, сделок, звонков и задач менеджеров. Её делает компания «БПМСофт» из ИТ-холдинга LANSOFT; платформа входит в реестр российского ПО<a class="ref" href="#s15">15</a>. Low-code (разработка с минимумом кода) значит, что большую часть доработок администратор собирает мышкой в дизайнерах: дизайнер объектов, дизайнер страниц, дизайнер бизнес-процессов. По устройству и API (программному интерфейсу) платформа очень похожа на зарубежную Creatio: те же имена объектов, тот же OData и пакеты. Это наблюдение по работе с системой, вендор его не формулирует; на практике документацию Creatio используют как подсказку там, где своей у BPMSoft нет.</p>
+
+  <h3>Из чего состоит</h3>
+  <p>Данные CRM лежат в <b>объектах</b> (таблицах базы). Для ИИ важны пять: <code>Lead</code> (лид, первичный интерес клиента), <code>Opportunity</code> (продажа, или сделка, со стадиями), <code>Call</code> (звонок с телефонии), <code>Activity</code> (активность: задача, письмо, встреча) и <code>Case</code> (обращение клиента в поддержку). Пользователь видит объект как <b>раздел</b> с карточками записей. Справочники хранят списки значений, например стадии продажи, а системные настройки - параметры всей системы вроде адреса внешнего сервиса или ключа.</p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Понятие</th><th>Что это</th><th>Зачем знать для ИИ</th></tr></thead>
+    <tbody>
+      <tr><td>Бизнес-процесс</td><td>Схема шагов, которую CRM выполняет сама: по кнопке, сигналу записи или таймеру</td><td>Вызов языковой модели в 1.9 - это один шаг такого процесса</td></tr>
+      <tr><td>Справочник</td><td>Таблица значений с формой редактирования</td><td>Модели подключаются записью в справочнике «LLM модели»</td></tr>
+      <tr><td>Системная настройка</td><td>Параметр системы по коду, например <code>MLServiceAPIKey</code></td><td>Ключи и адреса ML-сервиса, шаблоны ИИ-приложений</td></tr>
+      <tr><td>Пакет</td><td>Единица поставки доработки: объекты, страницы, процессы</td><td>Каждое ИИ-приложение - пакет, его ставят из файла</td></tr>
+      <tr><td>Магазин приложений</td><td><code>market.bpmsoft.ru</code>, каталог пакетов вендора и партнёров</td><td>Отсюда берутся готовые ИИ-агенты: анализ звонков, КП и другие</td></tr>
+      <tr><td>OData</td><td>Стандартный REST-интерфейс чтения и записи объектов</td><td>Через него внешний сервис читает CRM и пишет результаты</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Версии</h3>
+  <p>Вендор выпускает релиз раз в 3-8 месяцев. Почти все ИИ-функции, о которых пойдёт речь, появились в версии 1.9 от 19.02.2026; текущая версия - 1.9.1 от 28.05.2026, это обновление безопасности без новых функций<a class="ref" href="#s3">3</a>. Платформа бывает на двух средах исполнения, .NET Framework и .NET 8, и в двух вариантах размещения: облако вендора или своя установка (on-site, на серверах компании).</p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Версия</th><th>Дата</th><th>Что важно для ИИ</th></tr></thead>
+    <tbody>
+      <tr><td>1.8</td><td class="n">21.08.2025</td><td>ML-сервис учитывает лимиты по новому ключу <code>MLServiceAPIKey</code>; входящие вебхуки</td></tr>
+      <tr><td>1.9</td><td class="n">19.02.2026</td><td>Справочник «LLM модели», элемент «Работа с LLM», приложения-агенты в Магазине</td></tr>
+      <tr><td>1.9.1</td><td class="n">28.05.2026</td><td>Только безопасность</td></tr>
+      <tr><td>2.0 (анонс)</td><td class="n">30.11.2026</td><td>Элемент «ИИ-агент», ассистент «Софья 2.0», доступ агентов к конфигурации по MCP</td></tr>
+    </tbody>
+  </table></div>
+  <div class="q"><b>Вывод</b>ИИ в BPMSoft встраивается в уже существующие механизмы: процессы, справочники, пакеты. Кто понимает эти три вещи, тот понимает, как включается любая ИИ-функция.</div>
+</section>
+
+<section id="s-map">
+  <span class="num">02</span>
+  <h2>Карта ИИ в BPMSoft</h2>
+  <p>Задача: менеджер закончил звонок, и мы хотим, чтобы CRM сама сделала из него что-то полезное: выжимку, оценку разговора, черновик письма, прогноз шанса сделки. Каждая из этих вещей в BPMSoft делается в своём контуре, у каждого контура свой сервер, своя лицензия и свой путь данных.</p>
+
+  <figure>
+    <div class="ttl">Три контура ИИ в BPMSoft 1.9</div>
+    <svg class="d" viewBox="0 0 760 330" role="img" aria-label="Три контура: LLM через справочник LLM модели, ML-сервис для скоринга и прогнозов, отдельные сервисы пересказа и ассистента">
+      <rect class="soft" x="10" y="10" width="740" height="96" rx="6"/>
+      <text class="b" x="24" y="32">1. LLM-контур (с 1.9, в платформе)</text>
+      <rect class="box" x="24" y="44" width="150" height="48" rx="4"/>
+      <text x="99" y="65" text-anchor="middle">Процесс с шагом</text>
+      <text x="99" y="81" text-anchor="middle">«Работа с LLM»</text>
+      <rect class="box" x="194" y="44" width="150" height="48" rx="4"/>
+      <text x="269" y="65" text-anchor="middle">Приложения</text>
+      <text x="269" y="81" text-anchor="middle">Магазина</text>
+      <rect class="hl" x="404" y="44" width="150" height="48" rx="4"/>
+      <text class="b" x="479" y="65" text-anchor="middle">Справочник</text>
+      <text class="b" x="479" y="81" text-anchor="middle">«LLM модели»</text>
+      <rect class="box" x="604" y="44" width="134" height="48" rx="4"/>
+      <text x="671" y="65" text-anchor="middle">Языковая модель</text>
+      <text x="671" y="81" text-anchor="middle">Yandex или своя</text>
+      <path class="ln" d="M99,92 L99,100 L470,100 L470,94" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="344" y1="68" x2="402" y2="68" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="554" y1="68" x2="602" y2="68" marker-end="url(#m-fill)"/>
+
+      <rect class="soft" x="10" y="120" width="740" height="96" rx="6"/>
+      <text class="b" x="24" y="142">2. ML-сервис (отдельный сервер, лицензия на модели)</text>
+      <rect class="box" x="24" y="154" width="150" height="48" rx="4"/>
+      <text x="99" y="175" text-anchor="middle">Процесс с шагом</text>
+      <text x="99" y="191" text-anchor="middle">«Прогнозировать»</text>
+      <rect class="hl" x="404" y="154" width="150" height="48" rx="4"/>
+      <text class="b" x="479" y="175" text-anchor="middle">ML-сервис</text>
+      <text class="b" x="479" y="191" text-anchor="middle">Docker, порт 5005</text>
+      <rect class="box" x="604" y="154" width="134" height="48" rx="4"/>
+      <text x="671" y="175" text-anchor="middle">Скоринг, отток,</text>
+      <text x="671" y="191" text-anchor="middle">рекомендации</text>
+      <line class="ln" x1="174" y1="178" x2="402" y2="178" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="288" y="171" text-anchor="middle">обучение и прогноз</text>
+      <line class="ln" x1="554" y1="178" x2="602" y2="178" marker-end="url(#m-fill)"/>
+
+      <rect class="soft" x="10" y="230" width="740" height="90" rx="6"/>
+      <text class="b" x="24" y="252">3. Отдельные сервисы (ключ от поддержки вендора)</text>
+      <rect class="box" x="24" y="262" width="150" height="44" rx="4"/>
+      <text x="99" y="289" text-anchor="middle">«AI пересказ»</text>
+      <rect class="box" x="194" y="262" width="150" height="44" rx="4"/>
+      <text x="269" y="289" text-anchor="middle">Ассистент «Софья»</text>
+      <rect class="hl" x="404" y="262" width="150" height="44" rx="4"/>
+      <text class="b" x="479" y="283" text-anchor="middle">Свой сервер</text>
+      <text class="b" x="479" y="299" text-anchor="middle">или облако вендора</text>
+      <line class="ln dash" x1="344" y1="284" x2="402" y2="284" marker-end="url(#m-fill)"/>
+    </svg>
+    <figcaption>Голубым выделено место, которое решает, куда уходят данные. Источники: база знаний BPMSoft<a class="ref" href="#s1">1</a><a class="ref" href="#s5">5</a><a class="ref" href="#s7">7</a>.</figcaption>
+  </figure>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Контур</th><th>Что умеет</th><th>Что нужно</th><th>Пример со звонком</th></tr></thead>
+    <tbody>
+      <tr><td>LLM</td><td>Генерация и разбор текста по промпту</td><td>Версия 1.9 и запись в справочнике с адресом модели</td><td>Разбор расшифровки, письмо клиенту после звонка</td></tr>
+      <tr><td>ML-сервис</td><td>Классические модели на истории: вероятность, отток, рекомендации</td><td>Сервер, ключ от поддержки, лицензия, история данных</td><td>Вероятность закрытия сделки, к которой относится звонок</td></tr>
+      <tr><td>Отдельные сервисы</td><td>Выжимка переписки, ответы по базе знаний</td><td>Свой сервис или облако вендора, ключ</td><td>Выжимка писем по той же сделке</td></tr>
+    </tbody>
+  </table></div>
+  <details><summary>Проверь понимание: менеджер хочет видеть «шанс сделки 73%». Какой контур это даёт?</summary><p>ML-сервис, модель «Предиктивный скоринг: Продажи». Языковая модель может написать число в ответе, но не обучена на исходах ваших прошлых сделок, поэтому её число ничем не подкреплено. Скоринг учится на тысячах закрытых сделок и показывает, какие поля влияют на исход.</p></details>
+</section>
+
+<section id="s-llm">
+  <span class="num">03</span>
+  <h2>LLM-контур: справочник и элемент</h2>
+
+  <h3>Справочник «LLM модели»</h3>
+  <p><b>Справочник «LLM модели»</b> - это список языковых моделей, к которым CRM умеет обращаться. Одна запись описывает одну модель: какой протокол, по какому адресу, с каким ключом. Все ИИ-функции LLM-контура, и свои процессы, и готовые приложения, берут модель отсюда. Поэтому вопрос «куда уходят данные» решается в одном месте: в поле «API URL» записи. Справочник находится в дизайнере системы, «Справочники», «LLM модели»<a class="ref" href="#s1">1</a>.</p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Поле</th><th>Назначение</th><th>Пример</th></tr></thead>
+    <tbody>
+      <tr><td>Название</td><td>Имя модели в CRM</td><td>GPT (Yandex)</td></tr>
+      <tr><td>Модель</td><td>Идентификатор модели у провайдера</td><td><code>gpt://&lt;каталог&gt;/yandexgpt/latest</code>, <code>gemma3</code></td></tr>
+      <tr><td>Тип</td><td>Поддерживается только «LLM»</td><td>LLM</td></tr>
+      <tr><td>Тип API</td><td>Протокол: YandexGPT API, OpenAI API или Ollama API</td><td>OpenAI</td></tr>
+      <tr><td>API URL</td><td>Адрес, куда CRM шлёт запрос</td><td><code>https://llm.api.cloud.yandex.net/v1</code></td></tr>
+      <tr><td>API ключ</td><td>Ключ доступа; после сохранения не показывается, хранится в колонке <code>LlmModel.ApiKey</code></td><td>-</td></tr>
+      <tr><td>Лимит токенов в ответе</td><td>Максимальная длина ответа</td><td class="n">5000</td></tr>
+      <tr><td>Температура</td><td>0.00-1.00: ближе к 0 ответ предсказуемее</td><td class="n">0.00</td></tr>
+    </tbody>
+  </table></div>
+
+  <p>Три протокола покрывают почти весь рынок. OpenAI API (протокол, который повторяют большинство серверов моделей) - это DeepSeek, ChatGPT и любой совместимый сервер, включая vLLM, сервер для запуска открытых моделей на своих GPU. Ollama API - локальный запуск открытых моделей. YandexGPT API - облако Яндекса. Из коробки в 1.9 заведены три записи на Yandex Cloud: GPT, GPT-lite и Qwen3. Они работают только после того, как техподдержка BPMSoft выдаст идентификатор каталога и ключ; один ключ подходит ко всем трём<a class="ref" href="#s1">1</a>. Модель Qwen3-235B Яндекс уже снял, вендор советует заменить её на Qwen3.6 35B и предупреждает, что строки подключения Яндекса могут меняться без уведомления.</p>
+
+  <h3>Элемент процесса «Работа с LLM»</h3>
+  <p><b>«Работа с LLM»</b> - это шаг бизнес-процесса, который отправляет промпт выбранной модели и кладёт ответ в параметр процесса. До и после этого шага стоят обычные шаги BPMSoft: прочитать данные записи, изменить данные, показать результат на странице. Так из трёх-четырёх шагов без кода собирается «свой ИИ-агент» в терминологии вендора.</p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Параметр</th><th>Что принимает</th></tr></thead>
+    <tbody>
+      <tr><td>Модель</td><td>Запись из справочника «LLM модели»</td></tr>
+      <tr><td>Промпт</td><td>Текст, формула, параметр процесса или значение справочника. Формат ответа описывается прямо в промпте</td></tr>
+      <tr><td>Файлы</td><td>Только PDF через шаг «Обработать файл»; извлечённый текст дописывается в конец промпта</td></tr>
+      <tr><td>Результат (выход)</td><td>Ответ модели обычным текстом</td></tr>
+    </tbody>
+  </table></div>
+
+  <figure>
+    <div class="ttl">Процесс «разбор звонка» на элементе «Работа с LLM»</div>
+    <svg class="d" viewBox="0 0 760 120" role="img" aria-label="Кнопка на звонке, читать данные, работа с LLM, изменить данные, поле на странице">
+      <rect class="box" x="6" y="30" width="130" height="54" rx="4"/>
+      <text x="71" y="53" text-anchor="middle">Кнопка</text>
+      <text x="71" y="69" text-anchor="middle">на звонке</text>
+      <rect class="box" x="162" y="30" width="130" height="54" rx="4"/>
+      <text x="227" y="53" text-anchor="middle">Читать данные:</text>
+      <text x="227" y="69" text-anchor="middle">текст звонка</text>
+      <rect class="hl" x="318" y="30" width="130" height="54" rx="4"/>
+      <text class="b" x="383" y="53" text-anchor="middle">Работа с LLM</text>
+      <text x="383" y="69" text-anchor="middle">промпт + текст</text>
+      <rect class="box" x="474" y="30" width="130" height="54" rx="4"/>
+      <text x="539" y="53" text-anchor="middle">Изменить данные:</text>
+      <text x="539" y="69" text-anchor="middle">поле «Разбор»</text>
+      <rect class="box" x="630" y="30" width="124" height="54" rx="4"/>
+      <text x="692" y="53" text-anchor="middle">Поле</text>
+      <text x="692" y="69" text-anchor="middle">на странице</text>
+      <line class="ln" x1="136" y1="57" x2="160" y2="57" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="292" y1="57" x2="316" y2="57" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="448" y1="57" x2="472" y2="57" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="604" y1="57" x2="628" y2="57" marker-end="url(#m-fill)"/>
+    </svg>
+    <figcaption>Та же схема, что в примере вендора для раздела «Проблемы»: процесс <code>GeneratingAnalysisForProblemProcess</code> читает тему и симптомы, шлёт в модель и пишет ответ в поле с модулем «Текст»<a class="ref" href="#s1">1</a>.</figcaption>
+  </figure>
+
+  <h3>Ограничения элемента</h3>
+  <p>Ответ всегда приходит текстом. У элемента нет системного промпта (отдельной инструкции модели, которая не смешивается с данными), нет JSON-схемы ответа, нет температуры на отдельный вызов: температура задаётся один раз в записи справочника. Из файлов поддерживается только PDF и только его текст: сканы и картинки модель не увидит. Таймаут вызова в документации не описан. Для сравнения: у функции «Сегментация» есть системная настройка «Таймаут LLM для работы сегментации», 200 секунд<a class="ref" href="#s5">5</a>.</p>
+
+  <div class="mist">
+    <div><b>Неправильно</b>Попросить в промпте «верни JSON» и сразу раскладывать ответ по полям сделки. Модель иногда добавит пояснение или обрежет ответ по лимиту токенов, и шаг записи упадёт или запишет мусор.</div>
+    <div class="good"><b>Правильно</b>Ответ для человека писать в одно текстовое поле. Где нужна строгая структура, проверять формат отдельным шагом или вызывать свой сервис, который сам проверяет схему.</div>
+  </div>
+
+  <details><summary>Прогноз: в справочник добавили запись «своя vLLM» с типом OpenAI API. Что проверить первым, до промптов?</summary><p>Что сервер CRM вообще достаёт до адреса модели по сети и что CRM собирает правильный путь запроса. Документация не говорит, дописывает ли CRM <code>/chat/completions</code> к адресу, обязателен ли ключ и разрешён ли HTTP без TLS. Первый тест - короткий синтетический промпт и просмотр журнала сервера модели: пришёл ли запрос и по какому пути.</p></details>
+</section>
+
+<section id="s-apps">
+  <span class="num">04</span>
+  <h2>Готовые ИИ-приложения</h2>
+  <p>Свой процесс требует времени администратора. Вендор выложил в Магазин готовые пакеты-«агенты», которые уже содержат процесс, промпт и вкладку на странице. Все они бесплатны при действующей лицензии BPMSoft, сертифицированы для 1.9 и берут модель из того же справочника «LLM модели»<a class="ref" href="#s4">4</a>. Токены оплачиваются отдельно тому, чья модель стоит в справочнике.</p>
+
+  <h3>Как ставится любое из них</h3>
+  <div class="ex">
+    <div><span><b>Скачать пакет.</b> Нужна подтверждённая учётная запись <code>my.bpmsoft.ru</code>; PDF-инструкции открыты всем.</span></div>
+    <div><span><b>Установить.</b> Дизайнер системы, «Установка и удаление приложений», «Установить из файла».</span></div>
+    <div><span><b>Включить Angular.</b> Системная настройка «Включить поддержку модулей Angular», затем перекомпиляция.</span></div>
+    <div><span><b>Указать модель.</b> В записи справочника «LLM модели» заполнить модель, ключ и температуру.</span></div>
+  </div>
+  <p>Отсюда главное практическое следствие: стоит один раз завести хорошую запись модели, и все приложения начнут работать на ней. Какую именно запись берёт каждое приложение, если записей несколько, инструкции не говорят<a class="ref" href="#s6">6</a>.</p>
+
+  <div class="tbl"><table>
+    <thead><tr><th>Приложение</th><th>Где появляется</th><th>Что делает</th><th>Для торговли</th></tr></thead>
+    <tbody>
+      <tr><td>Анализ звонков</td><td>Звонок, вкладки «Транскрибация» и «ИИ-анализ»</td><td>Темы, намерение, тон, коммерческие возможности, итог по тексту звонка</td><td><span class="tag ok">высокий</span></td></tr>
+      <tr><td>Анализ продаж</td><td>Продажа, вкладка «ИИ-анализ»</td><td>Резюме и рекомендации по сделке, вопросы к данным сделки обычным языком</td><td><span class="tag ok">высокий</span></td></tr>
+      <tr><td>Коммерческое предложение</td><td>Продажа, вкладка «Продукты», кнопка «Подготовить КП»</td><td>Черновик письма с КП по продуктам, скидке и условиям</td><td><span class="tag ok">высокий</span></td></tr>
+      <tr><td>Чек-листы</td><td>Активность, деталь «Чек-лист»</td><td>Список подзадач по заголовку задачи</td><td><span class="tag p">средний</span></td></tr>
+      <tr><td>Анализ документов</td><td>Файл записи</td><td>Сверка файла с шаблоном; форматы не указаны</td><td><span class="tag p">средний</span></td></tr>
+      <tr><td>Ответы на обращения</td><td>Обращение, лента</td><td>Черновик ответа клиенту; нужен ещё и ML-сервис</td><td><span class="tag r">низкий</span></td></tr>
+      <tr><td>Рекомендации по обращениям, контроль качества сервиса</td><td>Обращение</td><td>Подсказки оператору, оценка переписки</td><td><span class="tag r">низкий</span></td></tr>
+      <tr><td>Анализ новостей, аудитория рассылки</td><td>Контрагент, маркетинг</td><td>Новости по контрагентам из RSS, аудитория по текстовому описанию</td><td><span class="tag r">низкий</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="links">Оценка «для торговли» - вывод лекции для компании, где менеджеры продают по телефону, а обращений в поддержку мало.</p>
+  <div class="q"><b>Вывод</b>Готовые приложения - это промпт и вкладка поверх того же элемента LLM. Их качество целиком зависит от модели в справочнике, а промпт меняется только правкой процесса в дизайнере.</div>
+</section>
+
+<section id="s-calls">
+  <span class="num">05</span>
+  <h2>Звонки: анализ и распознавание</h2>
+  <p>Вернёмся к звонку менеджера. Чтобы языковая модель что-то о нём сказала, нужен текст разговора. В BPMSoft это две разные вещи от двух разных поставщиков: распознавание речи и анализ текста.</p>
+
+  <figure>
+    <div class="ttl">Путь звонка до ИИ-анализа</div>
+    <svg class="d" viewBox="0 0 760 150" role="img" aria-label="Аудио звонка, распознавание речи платное стороннее или свой сервис, поле Транскрибация, кнопка ИИ-анализ, LLM из справочника, лист анализа">
+      <rect class="box" x="6" y="44" width="110" height="50" rx="4"/>
+      <text x="61" y="66" text-anchor="middle">Аудио</text>
+      <text x="61" y="82" text-anchor="middle">звонка</text>
+      <rect class="soft" x="146" y="10" width="150" height="50" rx="4"/>
+      <text x="221" y="32" text-anchor="middle">AP Распознавание</text>
+      <text x="221" y="48" text-anchor="middle">речи (платно)</text>
+      <rect class="soft" x="146" y="82" width="150" height="50" rx="4"/>
+      <text x="221" y="104" text-anchor="middle">Свой сервис</text>
+      <text x="221" y="120" text-anchor="middle">распознавания</text>
+      <rect class="hl" x="330" y="44" width="130" height="50" rx="4"/>
+      <text class="b" x="395" y="66" text-anchor="middle">Поле</text>
+      <text class="b" x="395" y="82" text-anchor="middle">«Транскрибация»</text>
+      <rect class="box" x="490" y="44" width="120" height="50" rx="4"/>
+      <text x="550" y="66" text-anchor="middle">Кнопка</text>
+      <text x="550" y="82" text-anchor="middle">«ИИ-анализ»</text>
+      <rect class="box" x="640" y="44" width="114" height="50" rx="4"/>
+      <text x="697" y="66" text-anchor="middle">Лист анализа</text>
+      <text x="697" y="82" text-anchor="middle">в активности</text>
+      <line class="ln" x1="116" y1="60" x2="144" y2="38" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="116" y1="78" x2="144" y2="104" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="296" y1="38" x2="328" y2="60" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="296" y1="106" x2="328" y2="80" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="312" y="138" text-anchor="middle">пишет по API</text>
+      <line class="ln" x1="460" y1="69" x2="488" y2="69" marker-end="url(#m-fill)"/>
+      <line class="ln" x1="610" y1="69" x2="638" y2="69" marker-end="url(#m-fill)"/>
+      <text class="lbl" x="624" y="40" text-anchor="middle">LLM</text>
+    </svg>
+    <figcaption>Анализ берёт только текст из поля; кто его туда положил, приложению неважно. Источники: инструкции приложений<a class="ref" href="#s6">6</a><a class="ref" href="#s8">8</a>.</figcaption>
+  </figure>
+
+  <h3>Анализ звонков</h3>
+  <p><b>«ИИ-агент: анализ звонков»</b> (пакет <code>BPMAICallAnalytics</code>, версия 1.0 от 19.02.2026) - это бесплатное приложение, которое отправляет текст звонка в языковую модель и возвращает лист анализа. Оно не распознаёт речь. Текст оно берёт из поля звонка, код которого задан системной настройкой <code>BPMCallTranscribitionCode</code> (по умолчанию <code>BpmTranscription</code>). Кнопка «ИИ-анализ» активна только когда поле заполнено. Внешний вид листа задаёт HTML-шаблон в настройке <code>BPMTemplateGeneratingAnalyticsCall</code>, а сам запрос к модели живёт в процессе «ИИ-анализ звонка». По описанию Магазина лист содержит темы разговора, намерение клиента, тон, коммерческие возможности и итог; в инструкции пользователя есть пункт о том, насколько полно менеджер выявил боли клиента<a class="ref" href="#s6">6</a>.</p>
+  <p>Чего приложение не делает: оценку по чек-листу компании с весами и баллами, отчёт по менеджерам за период, сравнение звонков между собой. Это остаётся работой отдельного сервиса оценки звонков, если он у компании есть. Зато поле «Транскрибация» - удобная точка стыковки: внешний сервис, который уже расшифровывает звонки, может записать текст в это поле через OData или вебхук, и бесплатный анализ заработает без платного распознавания.</p>
+
+  <h3>AP Распознавание речи</h3>
+  <p><b>«AP Распознавание речи»</b> (пакет <code>AprSpeechToolkit</code>, партнёр Automated Process) - платное приложение, которое переводит аудио звонка в текст. Оно работает в Docker-контейнере на сервере компании, поэтому аудио не покидает периметр. Аудио из «Звонок - Файлы и примечания» попадает в очередь через 10 секунд, а текст подтягивается раз в час или по кнопке «Обновить»; на звонок обрабатывается один файл. При первом запуске контейнер скачивает модели и зависимости из интернета, около 900 МБ. Цена по запросу, качество на телефонном звуке 8 кГц не заявлено, а сертификация указана для версий 1.7 и 1.8, не для 1.9<a class="ref" href="#s8">8</a>.</p>
+
+  <details><summary>Новый пример: у компании уже есть свой сервис, который расшифровывает звонки и ставит оценки. Зачем тогда вообще смотреть на «Анализ звонков»?</summary><p>Как на бесплатную точку сравнения и на запасной вариант. Если положить те же расшифровки в поле «Транскрибация» и сравнить листы анализа с отчётами своего сервиса на 20-30 синтетических или обезличенных звонках, станет видно, что даёт свой сервис сверх бесплатного. Это ответ на вопрос руководства «зачем своё, если в CRM есть». Сравнение без замены: оценки по чек-листу приложение не делает.</p></details>
+</section>
+
+<section id="s-ml">
+  <span class="num">06</span>
+  <h2>ML-сервис и модели</h2>
+
+  <h3>Чем ML отличается от LLM</h3>
+  <p><b>ML-сервис</b> BPMSoft - это отдельный сервер с классическими моделями машинного обучения, которые учатся на истории записей компании и предсказывают поле новой записи. Языковая модель знает язык, но ничего не знает о ваших прошлых сделках. ML-модель, наоборот, ничего не понимает в тексте разговора, зато видит, что из тысячи сделок с такими полями закрылись триста. Поэтому «шанс сделки», «риск оттока клиента» и «что ещё ему предложить» - это ML-контур, а не LLM.</p>
+
+  <h3>Что нужно для запуска</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Что</th><th>Факт</th></tr></thead>
+    <tbody>
+      <tr><td>Сервер</td><td>Отдельная ВМ на Linux, Docker Compose или Kubernetes; 4 vCPU, 8 ГБ ОЗУ, 20 ГБ диска, без GPU; API на порту 5005<a class="ref" href="#s9">9</a></td></tr>
+      <tr><td>Дистрибутив и ключ</td><td>Через техподдержку BPMSoft; ключ <code>MLServiceAPIKey</code> нужен при любом размещении<a class="ref" href="#s7">7</a></td></tr>
+      <tr><td>Подключение</td><td>Справочник «Задачи машинного обучения», поле «Url сервиса» в каждой записи</td></tr>
+      <tr><td>Лицензия</td><td>На тип модели или экземпляр готовой; учёт минут обучения и числа запросов; неизрасходованный лимит сгорает<a class="ref" href="#s10">10</a></td></tr>
+      <tr><td>Данные для обучения</td><td>Для точности не ниже 50%: от 1 тыс. записей с числовыми данными, от 20 тыс. с текстовыми<a class="ref" href="#s11">11</a></td></tr>
+      <tr><td>Где хранятся данные</td><td>По заявлению вендора, бизнес-данные в сервисе не хранятся, только результаты</td></tr>
+      <tr><td>Исключение</td><td>«Сегментация» с LLM требует GPU с 48 ГБ памяти (RTX A6000 или A100 40 ГБ)<a class="ref" href="#s9">9</a></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Модели</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Тип модели</th><th>Алгоритм</th><th>Готовые модели</th><th>Для торговли</th></tr></thead>
+    <tbody>
+      <tr><td>Предиктивный скоринг</td><td>XGBoost</td><td>Лиды, продажи</td><td><span class="tag ok">высокий</span></td></tr>
+      <tr><td>Прогноз оттока</td><td>XGBoost</td><td>Контрагенты; при «Высокая» создаёт задачу</td><td><span class="tag ok">высокий</span></td></tr>
+      <tr><td>Рекомендации</td><td>ALS (разложение матрицы покупок)</td><td>Продукты для контакта и контрагента</td><td><span class="tag ok">высокий</span></td></tr>
+      <tr><td>Прогноз справочного поля</td><td>XGBoost</td><td>Сервис, приоритет, группа ответственных обращения</td><td><span class="tag r">низкий</span></td></tr>
+      <tr><td>Прогноз числового поля</td><td>XGBoost</td><td>Готовых нет</td><td><span class="tag p">средний</span></td></tr>
+      <tr><td>Похожесть текстов</td><td>TF-IDF и косинусная мера</td><td>Похожие обращения</td><td><span class="tag r">низкий</span></td></tr>
+      <tr><td>Сегментация</td><td>K-Prototypes, K-Modes, K-Means, SHAP</td><td>Контакты</td><td><span class="tag p">средний</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>Готовую модель «Предиктивный скоринг: Продажи» настроить нельзя: какие поля она берёт, документация не раскрывает. Свои колонки задаются в своей модели того же типа. После обучения модель показывает факторы с весами, а прогноз в процессе даёт шаг «Прогнозировать данные», который пишет результат в поле записи, например <code>Opportunity.PredictiveProbability</code><a class="ref" href="#s11">11</a>.</p>
+
+  <details><summary>Прогноз: что будет, если в свою модель скоринга продаж добавить колонками оценки звонков по сделке?</summary><p>После обучения модель покажет вес каждого фактора. Если пункт оценки звонка, например «выявил потребности», заметно связан с закрытием сделки, это первое измеримое доказательство пользы оценки звонков в деньгах. Цена: лицензия на модель, развёрнутый ML-сервис и несколько месяцев сделок, у которых есть и исход, и оценённые звонки.</p></details>
+</section>
+
+<section id="s-svc">
+  <span class="num">07</span>
+  <h2>Пересказ и ассистент «Софья»</h2>
+  <h3>AI пересказ</h3>
+  <p><b>«AI пересказ»</b> - это модуль, который делает краткую выжимку переписки по сделке или обращению и ставит тональность от 1 до 10. Он читает почту, портал, ленту и Telegram и показывает результат во вкладке «Хронология» разделов «Продажи» и «Обращения». Внутри работают свои модели FRED-T5 и ruBert, а не справочник «LLM модели». Для включения нужны отдельный «сервис краткой выжимки», ключ <code>CloudServicesAPIKey</code> от поддержки, системная настройка «URL для получения резюме» (on-site или облако, с «/» в конце) и пакет «Резюме»<a class="ref" href="#s12">12</a>. Где именно обрабатывается текст, если брать облачный адрес, документация не уточняет. Звонки модуль не пересказывает.</p>
+  <h3>Ассистент «Софья»</h3>
+  <p><b>«Софья»</b> - ассистент по корпоративной базе знаний: отвечает на вопросы сотрудников и даёт ссылки на статьи-источники. Это RAG (поиск по базе плюс генерация ответа) на модели под vLLM; вендор пишет, что ассистент «изолирован от внешних сервисов»<a class="ref" href="#s4">4</a>. Статья настройки закрыта входом, а в поиске встречалась пометка «недоступен для поставки, готовится новая версия». Новая версия анонсирована: «Софья 2.0» в BPMSoft 2.0.</p>
+</section>
+
+<section id="s-next">
+  <span class="num">08</span>
+  <h2>Анонсы: BPMSoft 2.0</h2>
+  <p>27.10.2026 вендор открыл Технологический центр в Москве и показал концепцию AI-driven low-code: настройка платформы и прикладные задачи через генеративный ИИ поверх привычного конструктора<a class="ref" href="#s13">13</a><a class="ref" href="#s14">14</a>. Это анонс: на 10.11.2026 версия 2.0 не вышла, документации по ней нет.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Что обещано</th><th>Суть</th><th>Статус</th></tr></thead>
+    <tbody>
+      <tr><td>Платформа ИИ-агентов</td><td>Управление агентами для прикладных задач; в дизайнере процессов новый элемент «ИИ-агент»</td><td><span class="tag p">30.11.2026, BPMSoft 2.0</span></td></tr>
+      <tr><td>«Софья 2.0»</td><td>Единая точка доступа ко всем новым ИИ-возможностям</td><td><span class="tag p">с 2.0</span></td></tr>
+      <tr><td>UBS AI через MCP</td><td>MCP (Model Context Protocol) - протокол, по которому агент получает инструменты от сервера. Здесь инструменты меняют конфигурацию: пакеты, объекты, страницы, правила, настройки, процессы; изменения можно проверить и откатить</td><td><span class="tag r">показано на демо</span></td></tr>
+      <tr><td>Вайб-кодинг</td><td>Настройка CRM по запросу на естественном языке: на демо в «Софью» загрузили ТЗ, и ИИ внёс изменения в проектный слой</td><td><span class="tag r">показано на демо</span></td></tr>
+      <tr><td>Вайб-аналитика</td><td>Подробностей нет</td><td><span class="tag no">только название</span></td></tr>
+      <tr><td>Guardrails</td><td>Встроенные ограничители поведения моделей и вызовов MCP</td><td><span class="tag no">только пересказ в поиске</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>Один кейс с цифрой: интегратор, внедрявший BPMSoft 1.9 для дистрибьютора, отдал ИИ-агенту серверный код получения и обработки данных, и работа заняла 4,5 часа вместо полутора рабочих дней. Там же оговорка: на простых задачах постановка агенту и приёмка стоят дороже ручной работы<a class="ref" href="#s16">16</a>. Важная граница: MCP из анонса даёт агенту доступ к конфигурации CRM, то есть помогает администратору настраивать систему. Даёт ли он внешнему агенту доступ к данным - сделкам, звонкам - в анонсах не сказано. Какие модели стоят за агентами и работают ли они в своей установке, тоже не сказано.</p>
+  <div class="q"><b>Вывод</b>До 30.11.2026 строить на анонсе нельзя: после выхода 2.0 нужно прочитать документацию и проверить, что из обещанного доступно в своей установке и какой лицензией.</div>
+</section>
+
+<section id="s-money">
+  <span class="num">09</span>
+  <h2>Лицензии и цена</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Что</th><th>Цена</th><th>Комментарий</th></tr></thead>
+    <tbody>
+      <tr><td>Элемент «Работа с LLM», справочник</td><td>В платформе</td><td>Отдельной лицензии в документации не названо</td></tr>
+      <tr><td>Приложения-агенты Магазина</td><td>Бесплатно</td><td>При действующей лицензии BPMSoft; нужна ли ещё «AI и ML» - не сказано</td></tr>
+      <tr><td>Лицензия «AI и ML инструменты»</td><td class="n">от 560 руб./польз./мес.</td><td>Без НДС, точная цена по заявке<a class="ref" href="#s4">4</a></td></tr>
+      <tr><td>ML-модели</td><td>Не опубликована</td><td>Минуты обучения и запросы по периодам</td></tr>
+      <tr><td>AP Распознавание речи</td><td>По запросу</td><td>Плюс свой сервер</td></tr>
+      <tr><td>Токены модели</td><td>По тарифу провайдера</td><td>Yandex Cloud - по тарифам Яндекса; своя модель - стоимость своего GPU</td></tr>
+    </tbody>
+  </table></div>
+  <p>Пример расчёта: если лицензия «AI и ML» действительно нужна на каждого пользователя, для 30 менеджеров нижняя граница - 30 × 560 = 16 800 руб. в месяц без НДС, до стоимости моделей и токенов. Это допущение: на какие функции она распространяется, вендор публично не раскрывает.</p>
+</section>
+
+<section id="s-data">
+  <span class="num">10</span>
+  <h2>Куда уходят данные</h2>
+  <p>В звонках, сделках и письмах есть персональные данные клиентов: имена, телефоны, иногда паспортные данные из договоров. Закон 152-ФЗ требует отвечать за то, кому они передаются. Сам глава вендора называл отправку ПДн в публичные LLM риском по 152-ФЗ<a class="ref" href="#s17">17</a>. Каждая ИИ-функция отправляет текст туда, куда указывает её настройка, поэтому решение принимается по таблице ниже.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Функция</th><th>Куда уходит текст</th><th>Кто решает</th></tr></thead>
+    <tbody>
+      <tr><td>«Работа с LLM» и все приложения Магазина</td><td>На API URL записи справочника</td><td>Администратор, выбирая запись</td></tr>
+      <tr><td>Предустановленные записи Yandex</td><td>Yandex Cloud, облако в РФ</td><td>Включаются ключом от поддержки</td></tr>
+      <tr><td>Запись со своей моделью (vLLM, Ollama)</td><td>На свой сервер, данные не покидают периметр</td><td>Нужна сеть от сервера CRM до модели</td></tr>
+      <tr><td>ML-сервис</td><td>На свою ВМ или в облако BPMSoft, по размещению</td><td>При развёртывании</td></tr>
+      <tr><td>AI пересказ</td><td>На «URL для получения резюме»: свой или облачный</td><td>Не описано подробно</td></tr>
+      <tr><td>AP Распознавание речи</td><td>Свой Docker-сервер</td><td>Аудио остаётся внутри</td></tr>
+    </tbody>
+  </table></div>
+  <div class="q"><b>Вывод</b>Для LLM-контура обещание «данные не уходят наружу» держится ровно на одной записи справочника. Если в нём есть и облачная, и своя модель, нужно проверить, какую берёт каждое приложение.</div>
+</section>
+
+<section id="s-stand">
+  <span class="num">11</span>
+  <h2>Что на тестовом стенде</h2>
+  <p>Документация описывает возможности. Что включено на деле, видно только в самой системе. 10.11.2026 тестовый стенд CRM торговой компании (копия рабочей системы) прочитан через OData только на чтение. Значения ключей не читались.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Что проверено</th><th>Что видно</th><th>Вывод</th></tr></thead>
+    <tbody>
+      <tr><td>Пакеты платформы</td><td>Есть пакет <code>AI</code> и пакеты ML: скоринг лидов и продаж, отток, классификация обращений, сегментация, похожесть текстов, рекомендации</td><td>Платформа уровня 1.9: механизмы на месте</td></tr>
+      <tr><td>Справочник «LLM модели»</td><td>Три записи вендора: GPT, GPT-lite и Qwen3-235B на Yandex Cloud; в адресе модели остался шаблон <code>[идентификатор_каталога]</code>; записи не менялись с 21.03.2026</td><td>Ни одна модель не подключена; снятая Яндексом Qwen3-235B не заменена</td></tr>
+      <tr><td>Типы API</td><td>Ollama, OpenAI, Yandex</td><td>Совпадает с документацией</td></tr>
+      <tr><td>Установленные приложения</td><td>22 приложения, среди них нет ни одного ИИ-агента Магазина</td><td>Анализ звонков, КП, анализ продаж не ставились</td></tr>
+      <tr><td>Модели ML</td><td>13 штатных моделей, все «Обучение не начато»; прогнозов нет</td><td>Скоринг не работает, поле вероятности у сделок пустое</td></tr>
+      <tr><td>Задачи ML</td><td>9 типов задач, «Url сервиса» пуст у всех</td><td>ML-сервис не подключён</td></tr>
+      <tr><td>Лимиты и системные настройки</td><td>Чтение запрещено правами или возвращает ошибку</td><td>Лицензии и ключи - вопрос к администратору CRM</td></tr>
+    </tbody>
+  </table></div>
+  <p>Данные для ML при этом есть. По проверке 09.11.2026 в системе десятки тысяч сделок с проставленными стадиями, исходом и причиной проигрыша, что выше порога вендора в 1 тыс. записей. Звонки привязаны к лидам и сделкам. Ручная вероятность у сделок заполнена редко, а предиктивная и рейтинг лида - нигде.</p>
+  <div class="q"><b>Вывод</b>Всё ИИ в этой CRM - потенциал, не работающая функция. Механизмы и данные на месте; не хватает записи модели, установленных приложений и ML-сервиса.</div>
+</section>
+
+<section id="s-gaps">
+  <span class="num">12</span>
+  <h2>Чего никто не знает</h2>
+  <p>Эти вопросы не закрываются чтением открытых источников. Каждый закрывается либо тестом на стенде, либо письмом вендору или администратору CRM.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Вопрос</th><th>Почему важен</th><th>Как закрыть</th></tr></thead>
+    <tbody>
+      <tr><td>Принимает ли справочник свой OpenAI-совместимый адрес: путь, ключ, HTTP, таймаут</td><td>От этого зависит, можно ли держать данные внутри</td><td>Тест на стенде с синтетикой</td></tr>
+      <tr><td>Какую запись справочника берёт каждое приложение</td><td>Иначе данные могут уйти не в ту модель</td><td>Открыть процессы приложений в дизайнере</td></tr>
+      <tr><td>Нужна ли лицензия «AI и ML» для приложений и элемента</td><td>Цена всего LLM-контура</td><td>Вендор</td></tr>
+      <tr><td>Цены ML-моделей и распознавания речи</td><td>Окупаемость скоринга</td><td>Вендор</td></tr>
+      <tr><td>Где обрабатывается AI пересказ</td><td>ПДн в переписке</td><td>Вендор</td></tr>
+      <tr><td>Что из BPMSoft 2.0 будет в своей установке и по какой лицензии</td><td>Агенты и MCP могут заменить часть своих интеграций</td><td>Документация после 30.11.2026</td></tr>
+      <tr><td>Даёт ли MCP доступ к данным, а не только к конфигурации</td><td>Внешний агент сейчас ходит в CRM через OData</td><td>Документация 2.0</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="s-decide">
+  <span class="num">13</span>
+  <h2>Что берём и решения дальше</h2>
+  <p>Варианты первого шага расставлены от дешёвого к дорогому. Каждый даёт видимый результат, по которому можно решать о следующем.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Вариант</th><th>Что даёт</th><th>Цена</th><th>Риск</th></tr></thead>
+    <tbody>
+      <tr><td>А. Своя модель в справочнике на стенде</td><td>Ответ на главный пробел: работает ли LLM-контур без облака</td><td>Пара часов; нужна своя модель, доступная из сети CRM</td><td>Только стенд, данные синтетические</td></tr>
+      <tr><td>Б. «Анализ звонков» против своего сервиса оценки</td><td>Цифра «что даёт свой сервис сверх бесплатного» на 20-30 звонках</td><td>День; установка пакета на стенд</td><td>Без варианта А анализ пойдёт в облако</td></tr>
+      <tr><td>В. «Анализ продаж» и «КП» на тестовой сделке</td><td>Наглядный показ руководству за неделю</td><td>Полдня после А</td><td>Польза в деньгах не измерена</td></tr>
+      <tr><td>Г. ML-скоринг сделок с оценками звонков</td><td>Связь качества звонков с закрытием сделок</td><td>Лицензия, ВМ, месяцы данных</td><td>Цена неизвестна, долгий путь</td></tr>
+      <tr><td>Д. Ждать BPMSoft 2.0</td><td>Агенты и MCP от вендора</td><td>Ноль до 30.11.2026</td><td>Анонс может сдвинуться или выйти урезанным</td></tr>
+    </tbody>
+  </table></div>
+  <p>Решения, которые нужны от владельца направления: разрешить ли записи на Yandex Cloud (данные в облако РФ) или держать только свою модель; кто ставит пакеты на стенд - администратор CRM или ты; писать ли вендору вопросы из раздела 12 сейчас или после выхода 2.0.</p>
+  <div class="q"><b>Рекомендация</b>Начать с А, сразу за ним Б, а вопросы вендору отправить одним письмом сейчас. А стоит пару часов и снимает главный пробел: без своей модели в справочнике любой следующий шаг либо отправляет данные в облако, либо не работает. Б превращает бесплатную функцию CRM в довод о цене своего сервиса. Г и Д не начинать до ответа вендора о ценах и документации 2.0.</div>
+</section>
+
+<section id="s-recall">
+  <span class="num">14</span>
+  <h2>Вопросы для возвращения</h2>
+  <p>Ответь своими словами, потом раскрой ответ.</p>
+  <details><summary>1. Назови три контура ИИ в BPMSoft и чем они отличаются.</summary><p>LLM-контур (справочник «LLM модели» и элемент «Работа с LLM», приложения Магазина поверх них), ML-сервис (классические модели на истории: скоринг, отток, рекомендации; отдельный сервер и лицензия), отдельные сервисы (AI пересказ на своих моделях и ассистент «Софья»).</p></details>
+  <details><summary>2. Где решается, уйдут ли данные звонка в облако, когда работает «Анализ звонков»?</summary><p>В поле «API URL» записи справочника «LLM модели», которую использует приложение.</p></details>
+  <details><summary>3. Почему «Анализ звонков» не заменяет распознавание речи?</summary><p>Он берёт готовый текст из поля «Транскрибация». Аудио в текст переводит отдельный платный сервис или свой.</p></details>
+  <details><summary>4. Чего нет у элемента «Работа с LLM» и что из этого следует?</summary><p>Нет системного промпта, JSON-схемы, температуры на вызов, файлов кроме PDF. Ответ - текст: где нужна структура, нужна проверка формата или свой сервис.</p></details>
+  <details><summary>5. Что нужно, чтобы заработал скоринг сделок?</summary><p>ML-сервис на отдельной ВМ, ключ от поддержки, лицензия на модель, обучение на тысячах сделок с исходом и шаг «Прогнозировать данные» в процессе.</p></details>
+  <details><summary>6. Что обещает BPMSoft 2.0 и почему на это пока нельзя опираться?</summary><p>Элемент «ИИ-агент», «Софью 2.0», доступ агентов к конфигурации по MCP, к 30.11.2026. Это анонс без документации: неизвестны модели, лицензия и работа в своей установке.</p></details>
+  <details><summary>7. Что на стенде уже готово и чего не хватает?</summary><p>Готовы пакеты платформы и данные. Не хватает подключённой модели в справочнике, установленных ИИ-приложений и ML-сервиса.</p></details>
+</section>
+
+<section id="sources">
+  <span class="num">15</span>
+  <h2>Источники</h2>
+  <p>Все ссылки проверены 10.11.2026, если не указано иное. Часть статей базы знаний BPMSoft отрисовывается скриптом; их содержание сверено через выгрузку текста. Статья ассистента «Софья» закрыта входом и не прочитана.</p>
+  <ol class="srclist">
+    <li id="s1"><span class="i">1</span><span><a href="https://edu.bpmsoft.ru/baza-znaniy/nastroyka-ai-instrumentov/element-biznes-protsessa-rabota-s-llm/">Элемент бизнес-процесса «Работа с LLM»</a>. <span class="w">Первоисточник, база знаний BPMSoft, версия 1.9: поля справочника, параметры, ограничения, пример.</span></span></li>
+    <li id="s2"><span class="i">2</span><span><a href="https://edu.bpmsoft.ru/obnovleniya-i-relizi/bpmsoft/opisanie-relizov/bpmsoft-reliz-1-9-section/bpmsoft-reliz-1-9/">Описание релиза BPMSoft 1.9</a>. <span class="w">Первоисточник, 19.02.2026; прочитано 28.10.2026.</span></span></li>
+    <li id="s3"><span class="i">3</span><span><a href="https://edu.bpmsoft.ru/obnovleniya-i-relizi/bpmsoft/istoria-relizov/">История релизов BPMSoft</a>. <span class="w">Первоисточник: даты версий 1.1-1.9.1.</span></span></li>
+    <li id="s4"><span class="i">4</span><span><a href="https://bpmsoft.ru/uslugi-avtomatizacii/ai-i-ml-instrumenty/">AI и ML инструменты</a>. <span class="w">Страница вендора: цена от 560 руб., список приложений и их статус, «Софья».</span></span></li>
+    <li id="s5"><span class="i">5</span><span><a href="https://edu.bpmsoft.ru/baza-znaniy/nastroyka-ai-instrumentov/ii-instrumenty-na-baze-llm/">ИИ-инструменты на базе LLM</a>. <span class="w">Первоисточник; прочитано 28.10.2026.</span></span></li>
+    <li id="s6"><span class="i">6</span><span><a href="https://market.bpmsoft.ru/catalog-prilozheniy/ii-agent-analiz-zvonkov-dlya-bpmsoft/">ИИ-агент: анализ звонков</a> и PDF-инструкции приложений Магазина. <span class="w">Первоисточник, версии 1.0 от 05-19.02.2026; прочитано 28.10.2026.</span></span></li>
+    <li id="s7"><span class="i">7</span><span><a href="https://edu.bpmsoft.ru/baza-znaniy/bpmsoft-ai/podklyuchenie-k-servisu-mashinnogo-obucheniya/">Подключение к сервису машинного обучения</a>. <span class="w">Первоисточник: ключи, справочник задач, облако; прочитано 28.10.2026.</span></span></li>
+    <li id="s8"><span class="i">8</span><span><a href="https://market.bpmsoft.ru/catalog-prilozheniy/ap_raspoznavanie_rechi_/">AP Распознавание речи</a>. <span class="w">Страница партнёра в Магазине и PDF от 09.02.2026; прочитано 28.10.2026.</span></span></li>
+    <li id="s9"><span class="i">9</span><span>Руководство администратора BPMSoft 1.9, раздел о развёртывании ML-сервиса. <span class="w">Первоисточник, PDF; прочитано 13.10.2026.</span></span></li>
+    <li id="s10"><span class="i">10</span><span><a href="https://edu.bpmsoft.ru/baza-znaniy/nastroyka-ml-modeley/">Настройка ML-моделей: лицензии</a>. <span class="w">Первоисточник; прочитано 13.10.2026.</span></span></li>
+    <li id="s11"><span class="i">11</span><span><a href="https://edu.bpmsoft.ru/baza-znaniy/bpmsoft-ai/iskusstvennyy-intellekt-v-bpmsoft/">Искусственный интеллект в BPMSoft</a>. <span class="w">Первоисточник: типы моделей, обучение, пороги; прочитано 13.10.2026.</span></span></li>
+    <li id="s12"><span class="i">12</span><span><a href="https://edu.bpmsoft.ru/baza-znaniy/modul-ai-pereskaz/modul-ai-pereskaz/">Модуль «AI пересказ»</a>. <span class="w">Первоисточник; прочитано 28.10.2026.</span></span></li>
+    <li id="s13"><span class="i">13</span><span><a href="https://bpmsoft.ru/presscenter/bpmsoft-otkryla-tekhnologicheskiy-tsentr-v-moskve-i-predstavila-kontseptsiyu-ai-driven-low-code/">BPMSoft открыла Технологический центр и представила концепцию AI-driven low-code</a>. <span class="w">Пресс-релиз вендора, 27-28.10.2026: BPMSoft 2.0, «Софья 2.0», UBS AI, MCP.</span></span></li>
+    <li id="s14"><span class="i">14</span><span><a href="https://www.computerra.ru/371811/bpmsoft-otkryla-tehnologicheskij-tsentr-v-moskve-i-predstavila-kontseptsiyu-ai-driven-low-code/">Компьютерра: тот же анонс</a>. <span class="w">Пересказ пресс-релиза, 28.10.2026; независимым подтверждением не является. Элемент «ИИ-агент» и Guardrails упомянуты в выдаче поиска со ссылкой на TAdviser, сама статья TAdviser не открылась.</span></span></li>
+    <li id="s15"><span class="i">15</span><span><a href="https://toolfox.ru/services/s/bpmsoft">ToolFox: BPMSoft</a>. <span class="w">Каталог: реестр российского ПО № 17372, сертификат ФСТЭК (март 2024), холдинг LANSOFT с мая 2024.</span></span></li>
+    <li id="s16"><span class="i">16</span><span><a href="https://bpmsoft.ru/presscenter/itorex-vnedril-platformu-bpmsoft-s-primeneniem-ii-dlya-upravleniya-b2b-distributsiey/">ITOREX внедрил BPMSoft с применением ИИ</a>. <span class="w">Кейс вендора, 02.11.2026: 4,5 часа вместо полутора дней, оговорка о простых задачах.</span></span></li>
+    <li id="s17"><span class="i">17</span><span>Пресс-центр BPMSoft, интервью генерального директора «ИИ - это инструмент...» (ЦИПР, 03.06.2025). <span class="w">Прочитано 28.10.2026, в разделе <a href="https://bpmsoft.ru/presscenter/">пресс-центра</a>; полный адрес статьи не сохранён.</span></span></li>
+    <li id="s18"><span class="i">18</span><span>Тестовый стенд CRM торговой компании. <span class="w">Чтение OData 09-10.11.2026: объекты <code>LlmModel</code>, <code>LlmModelApiType</code>, <code>SysInstalledApp</code>, <code>SysPackage</code>, <code>MLModel</code>, <code>MLProblemType</code>. Адрес и данные стенда в лекцию не включены.</span></span></li>
+  </ol>
+</section>
+</main>
+</div>
+</body>
+</html>
